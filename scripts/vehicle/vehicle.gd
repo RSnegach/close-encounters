@@ -136,52 +136,78 @@ func _ready() -> void:
 		linear_damp = 0.3
 
 
-## Called every physics tick (~60 Hz by default). Delegates force application
-## to the physics controller and processes player input if applicable.
+## _physics_process handles weapon firing only. All movement is in
+## _integrate_forces which is the proper Godot way to control RigidBody3D.
 func _physics_process(delta: float) -> void:
 	if not is_alive:
 		return
 
-	# --- Keep ground/water vehicles upright ---
-	# Apply a stabilizing torque that corrects any roll or pitch, keeping
-	# the vehicle's Y-axis aligned with world up.
-	if domain == "ground" or domain == "water":
-		_stabilize_upright(delta)
+	# Fire weapons when left mouse is held.
+	if is_player_controlled and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		fire_weapons(delta)
 
-	# Let the domain controller apply thrust, drag, lift, buoyancy, etc.
-	if physics_controller != null:
-		# If the player is driving, let the controller translate input to forces.
-		if is_player_controlled:
-			physics_controller.handle_input(self, delta)
-			# Debug: print once per second to verify input + forces are working.
-			if Engine.get_physics_frames() % 60 == 0:
-				var inp: Dictionary = get_input_vector()
-				print("[Vehicle] player=%s thrust=%.0f fwd=%.2f turn=%.2f spd=%.1f domain=%s" % [
-					is_player_controlled, total_thrust,
-					inp.get("forward", 0.0), inp.get("strafe", 0.0),
-					linear_velocity.length(), domain
-				])
-		physics_controller.apply_forces(self, delta)
 
-	# --- Direct movement fallback ---
-	# If the physics force system isn't moving us, drive velocity directly.
+## Called by the physics server with direct body state access.
+## This is the ONLY correct place to set velocity on a RigidBody3D.
+## See: https://docs.godotengine.org/en/stable/classes/class_rigidbody3d.html
+func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
+	if not is_alive:
+		return
+
+	var delta: float = state.step
+
+	# --- Player input movement ---
 	if is_player_controlled:
 		var inp: Dictionary = get_input_vector()
 		var fwd_in: float = inp.get("forward", 0.0)
 		var turn_in: float = inp.get("strafe", 0.0)
+		var fwd_dir: Vector3 = -state.transform.basis.z
+		fwd_dir.y = 0.0
+		fwd_dir = fwd_dir.normalized() if fwd_dir.length() > 0.001 else Vector3.FORWARD
+
+		# Forward/backward: accelerate toward target speed.
+		var max_speed: float = 15.0  # m/s
+		if total_thrust > 0 and total_mass > 0:
+			max_speed = total_thrust / total_mass * 0.7  # friction coefficient
 
 		if absf(fwd_in) > 0.01:
-			var fwd_dir: Vector3 = -global_transform.basis.z
-			var target_speed: float = 10.0 * fwd_in  # 10 m/s max
-			linear_velocity.x = fwd_dir.x * target_speed * 2.0 + linear_velocity.x * 0.95
-			linear_velocity.z = fwd_dir.z * target_speed * 2.0 + linear_velocity.z * 0.95
+			var target_vel: Vector3 = fwd_dir * fwd_in * max_speed
+			var current_vel: Vector3 = state.linear_velocity
+			# Blend toward target velocity (acceleration).
+			var accel: float = 8.0 * delta  # How fast we reach target speed.
+			current_vel.x = lerpf(current_vel.x, target_vel.x, accel)
+			current_vel.z = lerpf(current_vel.z, target_vel.z, accel)
+			state.linear_velocity = current_vel
+		else:
+			# Decelerate when no input (friction/braking).
+			var vel: Vector3 = state.linear_velocity
+			vel.x *= (1.0 - 3.0 * delta)
+			vel.z *= (1.0 - 3.0 * delta)
+			state.linear_velocity = vel
 
+		# Turning: directly set yaw angular velocity.
 		if absf(turn_in) > 0.01:
-			angular_velocity.y = -turn_in * 2.0
+			var ang: Vector3 = state.angular_velocity
+			ang.y = -turn_in * 3.0
+			state.angular_velocity = ang
+		else:
+			var ang: Vector3 = state.angular_velocity
+			ang.y *= 0.85  # Dampen yaw when not turning.
+			state.angular_velocity = ang
 
-	# Fire weapons when the fire action is held.
-	if is_player_controlled and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
-		fire_weapons(delta)
+		# Debug: once per second.
+		if Engine.get_physics_frames() % 60 == 0:
+			print("[Vehicle] fwd=%.2f turn=%.2f spd=%.1f vel=%s" % [
+				fwd_in, turn_in, state.linear_velocity.length(),
+				str(state.linear_velocity)
+			])
+
+	# --- Keep upright (ground/water vehicles) ---
+	if domain == "ground" or domain == "water":
+		var ang: Vector3 = state.angular_velocity
+		ang.x *= 0.8  # Dampen roll.
+		ang.z *= 0.8  # Dampen pitch.
+		state.angular_velocity = ang
 
 
 # ---------------------------------------------------------------------------
@@ -450,21 +476,6 @@ func get_center_of_mass_offset() -> Vector3:
 ##   fire     : bool
 ##   dive     : bool
 ##   surface  : bool
-## Apply a spring-like torque to keep the vehicle's local Y axis pointing
-## toward world UP. This prevents ground vehicles from rolling over.
-func _stabilize_upright(delta: float) -> void:
-	var current_up: Vector3 = global_transform.basis.y
-	var target_up: Vector3 = Vector3.UP
-	# Cross product gives the rotation axis needed to align current to target.
-	var correction: Vector3 = current_up.cross(target_up)
-	# The magnitude of the cross product is sin(angle) — proportional to error.
-	# Apply as a corrective torque (spring constant * error).
-	var strength: float = 20.0 * total_mass  # Scale with mass for consistency.
-	apply_torque(correction * strength * delta)
-	# Also zero out any existing angular velocity on X and Z to prevent wobble.
-	var av: Vector3 = angular_velocity
-	angular_velocity = Vector3(av.x * 0.9, av.y, av.z * 0.9)
-
 
 ## Tracks which keys are currently held down, set via _input().
 ## This bypasses all focus/action system issues.
