@@ -168,7 +168,13 @@ func is_valid_for_domain(domain: String) -> bool:
 	# Empty domains list means "works everywhere".
 	if domains.is_empty():
 		return true
-	return domain in domains
+	# Case-insensitive comparison — JSON stores lowercase ("ground"),
+	# but the UI uses title case ("Ground").
+	var lower_domain: String = domain.to_lower()
+	for d: String in domains:
+		if d.to_lower() == lower_domain:
+			return true
+	return false
 
 
 ## Retrieve a specific stat value by [param key] from the [member stats]

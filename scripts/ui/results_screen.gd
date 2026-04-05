@@ -93,7 +93,7 @@ func _ready() -> void:
 	menu_btn.pressed.connect(_on_menu_pressed)
 
 	# Notify GameManager
-	GameManager.change_state(GameManager.current_state.RESULTS if typeof(GameManager.current_state) == TYPE_INT else GameManager.RESULTS)
+	GameManager.change_state(GameManager.GameState.RESULTS)
 
 
 ## Populate the results screen with outcome and statistics.

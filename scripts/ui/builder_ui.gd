@@ -15,7 +15,7 @@ const COLOR_TEXT: Color     = Color("#eeeeee")
 const COLOR_GREEN: Color    = Color("#4ecca3")
 const COLOR_RED: Color      = Color("#e94560")
 const COLOR_YELLOW: Color   = Color("#f0c040")
-const PANEL_WIDTH: float    = 260.0
+const PANEL_WIDTH: float    = 220.0
 
 # ─── External references ─────────────────────────────────────────────────────
 var builder: Node = null          ## The VehicleBuilder node in the parent scene.
@@ -52,9 +52,10 @@ func _ready() -> void:
 	# search by class or group.  Adjust the path to your scene layout.
 	builder = _find_builder()
 
-	# ── Root HBoxContainer spanning the full screen ──
+	# ── Root HBoxContainer spanning the full screen with margins ──
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hbox.offset_right = -8   # Small right margin so panel stays on screen
 	hbox.add_theme_constant_override("separation", 0)
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hbox)
