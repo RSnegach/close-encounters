@@ -135,7 +135,12 @@ func _auto_initialize() -> void:
 
 	# --- Load the arena scene into the ArenaContainer sibling ---
 	var arena_path: String = ARENA_SCENES.get(match_domain, "")
-	if arena_path != "" and ResourceLoader.exists(arena_path):
+	print("[ArenaManager] Loading arena for domain '%s' -> '%s'" % [match_domain, arena_path])
+	if arena_path == "":
+		push_warning("[ArenaManager] No arena path for domain '%s'." % match_domain)
+	elif not ResourceLoader.exists(arena_path):
+		push_warning("[ArenaManager] Arena file not found: '%s'." % arena_path)
+	else:
 		var arena_scene: PackedScene = load(arena_path)
 		if arena_scene:
 			var arena_instance: Node3D = arena_scene.instantiate()
@@ -143,8 +148,10 @@ func _auto_initialize() -> void:
 			var container: Node = get_parent().find_child("ArenaContainer", false, false)
 			if container:
 				container.add_child(arena_instance)
+				print("[ArenaManager] Arena added to ArenaContainer.")
 			else:
 				get_parent().add_child(arena_instance)
+				print("[ArenaManager] Arena added to scene root (no ArenaContainer).")
 
 			# Grab spawn points from the loaded arena.
 			spawn_points.clear()
@@ -211,6 +218,10 @@ func _auto_initialize() -> void:
 				break
 		if player_v == null:
 			player_v = vehicles[0]
+
+		# Attach a follow camera to the player vehicle so we can see.
+		if player_v.has_method("attach_follow_camera"):
+			player_v.attach_follow_camera()
 
 		# Find the HUD in the UI layer.
 		var hud_node: Node = get_parent().find_child("HUD", true, false)

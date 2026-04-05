@@ -213,9 +213,31 @@ func setup_from_data(vehicle_data: Dictionary, target_domain: String) -> void:
 	# Compute aggregate mass / thrust / drag.
 	recalculate_stats()
 
+	# Set up the RigidBody3D mass from parts.
+	mass = maxf(total_mass, 1.0)
+
 	print("[Vehicle] Setup complete. %d part(s), domain='%s', mass=%.1f kg." % [
 		_get_unique_parts().size(), domain, total_mass
 	])
+
+
+## Attach a third-person follow camera to this vehicle. Call after
+## setup_from_data() and only for the local player's vehicle.
+func attach_follow_camera() -> void:
+	# Pivot follows the vehicle (child node, so it moves with us).
+	var pivot: Node3D = Node3D.new()
+	pivot.name = "CameraPivot"
+	add_child(pivot)
+
+	var cam: Camera3D = Camera3D.new()
+	cam.name = "FollowCamera"
+	# Offset: behind and above the vehicle, looking down at it.
+	cam.position = Vector3(0, 6, 12)
+	pivot.add_child(cam)
+	cam.look_at(global_position, Vector3.UP)
+	cam.current = true
+
+	print("[Vehicle] Follow camera attached.")
 
 
 # ---------------------------------------------------------------------------
