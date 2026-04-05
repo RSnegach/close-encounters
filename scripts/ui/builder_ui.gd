@@ -94,8 +94,8 @@ func _ready() -> void:
 	right_panel.add_child(_make_heading("Budget"))
 	budget_bar = BudgetBar.new()
 	right_panel.add_child(budget_bar)
-	var total_budget: int = GameManager.match_settings.get("budget", 3000)
-	budget_bar.setup(total_budget)
+	var display_budget: int = GameManager.match_settings.get("budget", 3000)
+	budget_bar.setup(display_budget)
 
 	# Vehicle stats panel
 	right_panel.add_child(_make_heading("Vehicle Stats"))
@@ -182,7 +182,9 @@ func _ready() -> void:
 # ─── Builder signal handlers ─────────────────────────────────────────────────
 
 ## A part was placed or removed — recalculate stats.
-func _on_build_changed(_part_data: Variant = null) -> void:
+## Accepts variable args because part_placed emits (data, pos) and
+## part_removed emits (pos) — we ignore the args and just refresh.
+func _on_build_changed(_a: Variant = null, _b: Variant = null) -> void:
 	_update_stats()
 
 
@@ -315,8 +317,19 @@ func _on_back_pressed() -> void:
 func _update_stats() -> void:
 	if not builder:
 		return
-	var parts: Array = builder.placed_parts if builder.get("placed_parts") else []
-	var stats: Variant = VehicleStats.calculate(parts, current_domain)
+	# placed_parts is a Dict[Vector3i -> PartNode]. Extract unique PartData objects.
+	var part_data_list: Array = []
+	var seen_ids: Dictionary = {}
+	var placed: Dictionary = builder.placed_parts
+	for cell: Variant in placed:
+		var node: Variant = placed[cell]
+		if node == null:
+			continue
+		var nid: int = node.get_instance_id()
+		if not seen_ids.has(nid):
+			seen_ids[nid] = true
+			part_data_list.append(node.part_data)
+	var stats: Variant = VehicleStats.calculate(part_data_list, current_domain)
 	if stats_panel and stats:
 		stats_panel.update_stats(stats)
 		stats_panel.update_domain_stats(stats, current_domain)

@@ -659,8 +659,9 @@ func _setup_orbit_camera() -> void:
 	camera.name = "BuildCamera"
 	# Offset the camera so it looks at the grid center from a comfortable distance.
 	camera.position = Vector3(0, 5, 12)
-	camera.look_at(Vector3.ZERO)
 	camera_pivot.add_child(camera)
+	# look_at must be called after adding to the tree.
+	camera.look_at(camera_pivot.global_position)
 
 
 ## Rotate the orbit pivot based on mouse drag delta.
