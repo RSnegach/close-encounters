@@ -163,8 +163,24 @@ func _physics_process(delta: float) -> void:
 				])
 		physics_controller.apply_forces(self, delta)
 
+	# --- Direct movement fallback ---
+	# If the physics force system isn't moving us, drive velocity directly.
+	if is_player_controlled:
+		var inp: Dictionary = get_input_vector()
+		var fwd_in: float = inp.get("forward", 0.0)
+		var turn_in: float = inp.get("strafe", 0.0)
+
+		if absf(fwd_in) > 0.01:
+			var fwd_dir: Vector3 = -global_transform.basis.z
+			var target_speed: float = 10.0 * fwd_in  # 10 m/s max
+			linear_velocity.x = fwd_dir.x * target_speed * 2.0 + linear_velocity.x * 0.95
+			linear_velocity.z = fwd_dir.z * target_speed * 2.0 + linear_velocity.z * 0.95
+
+		if absf(turn_in) > 0.01:
+			angular_velocity.y = -turn_in * 2.0
+
 	# Fire weapons when the fire action is held.
-	if is_player_controlled and Input.is_action_pressed("fire_primary"):
+	if is_player_controlled and inp.get("fire", false):
 		fire_weapons(delta)
 
 

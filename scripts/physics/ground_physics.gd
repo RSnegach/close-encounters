@@ -63,21 +63,16 @@ func apply_forces(vehicle: Vehicle, _delta: float) -> void:
 	var max_spd: float = get_max_speed(vehicle)
 
 	# --- Drive force ---
-	# Only apply thrust when below max speed to prevent infinite acceleration.
 	if absf(forward_input) > 0.01 and speed < max_spd:
-		# F = thrust * input * friction.
-		var drive_magnitude: float = vehicle.total_thrust * forward_input * friction_coefficient
-		vehicle.apply_central_force(forward_dir * drive_magnitude)
+		# Use impulse (instant velocity change) for reliable movement.
+		# Impulse = force * delta gives frame-rate-independent acceleration.
+		var drive_magnitude: float = vehicle.total_thrust * forward_input * friction_coefficient * _delta
+		vehicle.apply_central_impulse(forward_dir * drive_magnitude)
 
 	# --- Braking / rolling resistance ---
-	# When the player releases the throttle, apply a deceleration force
-	# opposite to the current velocity to bring the vehicle to a stop.
 	if absf(forward_input) < 0.01 and speed > 0.5:
 		var brake_dir: Vector3 = -vehicle.linear_velocity.normalized()
-		# Force = brake_force * mass. Multiply by delta to act as an impulse
-		# scaled to the frame, then clamp so we don't overshoot and reverse.
-		var brake_magnitude: float = brake_force * vehicle.total_mass
-		vehicle.apply_central_force(brake_dir * brake_magnitude)
+		vehicle.apply_central_impulse(brake_dir * brake_force * _delta)
 
 	# --- Turning ---
 	if absf(turn_input) > 0.01:
