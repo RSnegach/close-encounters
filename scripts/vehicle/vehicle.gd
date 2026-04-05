@@ -165,7 +165,8 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		var fwd_in: float = inp.get("forward", 0.0)
 
 		# --- Hull rotation: auto-follow camera yaw ---
-		var camera_yaw_rad: float = deg_to_rad(_camera_yaw)
+		# Camera yaw is offset by 180 degrees because we use +Z as forward.
+		var camera_yaw_rad: float = deg_to_rad(_camera_yaw) - PI
 		var current_yaw: float = state.transform.basis.get_euler().y
 		var yaw_diff: float = wrapf(camera_yaw_rad - current_yaw, -PI, PI)
 		var hull_turn_speed: float = 3.0
@@ -176,9 +177,11 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		state.angular_velocity = ang
 
 		# --- Forward/backward along hull facing direction ---
-		var hull_fwd: Vector3 = -state.transform.basis.z
+		# Use +Z as forward because the builder grid has +Z going "away"
+		# from the default camera, which is the visual "front" of the vehicle.
+		var hull_fwd: Vector3 = state.transform.basis.z
 		hull_fwd.y = 0.0
-		hull_fwd = hull_fwd.normalized() if hull_fwd.length() > 0.001 else Vector3.FORWARD
+		hull_fwd = hull_fwd.normalized() if hull_fwd.length() > 0.001 else Vector3.BACK
 
 		var max_speed: float = 15.0
 		if total_thrust > 0 and total_mass > 0:
@@ -338,7 +341,8 @@ func attach_follow_camera() -> void:
 	_camera_pivot.rotation_degrees.x = _camera_pitch
 
 	# Initialize camera yaw to match vehicle's current facing direction.
-	_camera_yaw = rad_to_deg(global_rotation.y)
+	# +180 because we use +Z as forward (opposite of Godot's -Z convention).
+	_camera_yaw = rad_to_deg(global_rotation.y) + 180.0
 
 	# Capture mouse for FPS-style look.
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -358,10 +362,11 @@ func _input(event: InputEvent) -> void:
 		var key_event: InputEventKey = event as InputEventKey
 		_keys_held[key_event.physical_keycode] = key_event.pressed
 
-	if _camera_pivot == null or not is_player_controlled:
+	if not is_player_controlled:
 		return
 
-	# Mouse movement: free-look camera.
+	# Mouse movement: free-look camera. Works even without camera pivot
+	# (stores yaw/pitch for when camera is attached).
 	if event is InputEventMouseMotion:
 		var motion: InputEventMouseMotion = event as InputEventMouseMotion
 		_camera_yaw -= motion.relative.x * 0.15
@@ -399,14 +404,20 @@ func _cycle_weapon(direction: int) -> void:
 func _process(_delta: float) -> void:
 	if _camera_pivot == null:
 		return
+
+	# Ensure mouse stays captured during gameplay.
+	if is_player_controlled and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
+		# Don't re-capture if paused (HUD sets VISIBLE when paused).
+		if not get_tree().paused:
+			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+
 	# Follow the vehicle's position but control rotation with mouse.
-	_camera_pivot.global_position = global_position + Vector3(0, 2, 0)
+	_camera_pivot.global_position = global_position + Vector3(0, 3, 0)
 	_camera_pivot.rotation_degrees = Vector3(_camera_pitch, _camera_yaw, 0)
 	if _camera:
 		_camera.position.z = _camera_distance
 
 	# Compute the aim direction: where the camera center (crosshair) points.
-	# This is the camera's forward direction (-Z in local space).
 	aim_direction = -_camera_pivot.global_transform.basis.z
 	aim_direction = aim_direction.normalized()
 
@@ -469,9 +480,9 @@ func get_speed() -> float:
 
 
 ## Return the vehicle's forward direction as a unit vector.
-## By convention, negative-Z is forward in Godot.
+## We use +Z as forward to match the builder grid visual orientation.
 func get_forward_direction() -> Vector3:
-	return -global_transform.basis.z
+	return global_transform.basis.z
 
 
 ## Compute a centre-of-mass offset from part positions and masses.
