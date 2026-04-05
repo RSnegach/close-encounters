@@ -1,0 +1,73 @@
+[gd_scene load_steps=9 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SubResource_skymat"]
+sky_top_color = Color(0.2, 0.4, 0.9, 1)
+sky_horizon_color = Color(0.55, 0.7, 0.95, 1)
+ground_bottom_color = Color(0.3, 0.5, 0.3, 1)
+ground_horizon_color = Color(0.55, 0.7, 0.95, 1)
+
+[sub_resource type="Sky" id="SubResource_sky"]
+sky_material = SubResource("SubResource_skymat")
+
+[sub_resource type="Environment" id="SubResource_env"]
+background_mode = 2
+sky = SubResource("SubResource_sky")
+ambient_light_color = Color(0.6, 0.65, 0.8, 1)
+ambient_light_energy = 0.7
+
+[sub_resource type="WorldBoundaryShape3D" id="SubResource_gndshape"]
+
+[sub_resource type="PlaneMesh" id="SubResource_gndmesh"]
+size = Vector2(400, 400)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_gndmat"]
+albedo_color = Color(0.3, 0.5, 0.25, 1)
+
+[sub_resource type="PlaneMesh" id="SubResource_cloudmesh"]
+size = Vector2(400, 400)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_cloudmat1"]
+transparency = 1
+albedo_color = Color(0.95, 0.95, 1, 0.15)
+shading_mode = 0
+
+[sub_resource type="StandardMaterial3D" id="SubResource_cloudmat2"]
+transparency = 1
+albedo_color = Color(0.9, 0.9, 0.95, 0.1)
+shading_mode = 0
+
+[node name="ArenaAir" type="Node3D"]
+
+[node name="GroundPlane" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="GroundPlane"]
+shape = SubResource("SubResource_gndshape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="GroundPlane"]
+mesh = SubResource("SubResource_gndmesh")
+material_override = SubResource("SubResource_gndmat")
+
+[node name="CloudLayer1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 500, 0)
+mesh = SubResource("SubResource_cloudmesh")
+material_override = SubResource("SubResource_cloudmat1")
+
+[node name="CloudLayer2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1000, 0)
+mesh = SubResource("SubResource_cloudmesh")
+material_override = SubResource("SubResource_cloudmat2")
+
+[node name="SpawnPoint1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -100, 200, 0)
+
+[node name="SpawnPoint2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 200, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 0, 500, 0)
+light_color = Color(1, 1, 0.95, 1)
+light_energy = 1.4
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("SubResource_env")

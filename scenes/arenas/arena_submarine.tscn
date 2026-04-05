@@ -1,0 +1,141 @@
+[gd_scene load_steps=13 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SubResource_skymat"]
+sky_top_color = Color(0.02, 0.05, 0.12, 1)
+sky_horizon_color = Color(0.05, 0.1, 0.2, 1)
+ground_bottom_color = Color(0.01, 0.02, 0.05, 1)
+ground_horizon_color = Color(0.05, 0.1, 0.2, 1)
+
+[sub_resource type="Sky" id="SubResource_sky"]
+sky_material = SubResource("SubResource_skymat")
+
+[sub_resource type="Environment" id="SubResource_env"]
+background_mode = 2
+sky = SubResource("SubResource_sky")
+ambient_light_color = Color(0.05, 0.1, 0.2, 1)
+ambient_light_energy = 0.15
+fog_enabled = true
+fog_light_color = Color(0.02, 0.06, 0.15, 1)
+fog_density = 0.01
+
+[sub_resource type="BoxMesh" id="SubResource_watervol"]
+size = Vector3(300, 600, 300)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_watermat"]
+transparency = 1
+albedo_color = Color(0.02, 0.08, 0.2, 0.3)
+shading_mode = 0
+
+[sub_resource type="WorldBoundaryShape3D" id="SubResource_floorshape"]
+
+[sub_resource type="PlaneMesh" id="SubResource_floormesh"]
+size = Vector2(300, 300)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_floormat"]
+albedo_color = Color(0.08, 0.06, 0.04, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_trenchwall1"]
+size = Vector3(10, 400, 300)
+
+[sub_resource type="BoxShape3D" id="SubResource_trenchwall2"]
+size = Vector3(10, 400, 300)
+
+[sub_resource type="BoxShape3D" id="SubResource_cave1shape"]
+size = Vector3(30, 20, 25)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_rockmat"]
+albedo_color = Color(0.15, 0.12, 0.1, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_cave2shape"]
+size = Vector3(25, 15, 30)
+
+[node name="ArenaSub" type="Node3D"]
+
+[node name="WaterVolume" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -300, 0)
+mesh = SubResource("SubResource_watervol")
+material_override = SubResource("SubResource_watermat")
+
+[node name="OceanFloor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -600, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="OceanFloor"]
+shape = SubResource("SubResource_floorshape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OceanFloor"]
+mesh = SubResource("SubResource_floormesh")
+material_override = SubResource("SubResource_floormat")
+
+[node name="TrenchWallLeft" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80, -300, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TrenchWallLeft"]
+shape = SubResource("SubResource_trenchwall1")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="TrenchWallLeft"]
+mesh = SubResource("SubResource_watervol")
+material_override = SubResource("SubResource_rockmat")
+transform = Transform3D(0.033, 0, 0, 0, 0.667, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="TrenchWallRight" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 80, -300, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TrenchWallRight"]
+shape = SubResource("SubResource_trenchwall2")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="TrenchWallRight"]
+mesh = SubResource("SubResource_watervol")
+material_override = SubResource("SubResource_rockmat")
+transform = Transform3D(0.033, 0, 0, 0, 0.667, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="Cave1" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, -400, -50)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Cave1"]
+shape = SubResource("SubResource_cave1shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Cave1"]
+mesh = SubResource("SubResource_watervol")
+material_override = SubResource("SubResource_rockmat")
+transform = Transform3D(0.1, 0, 0, 0, 0.033, 0, 0, 0, 0.083, 0, 0, 0)
+
+[node name="Cave2" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, -350, 60)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Cave2"]
+shape = SubResource("SubResource_cave2shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Cave2"]
+mesh = SubResource("SubResource_watervol")
+material_override = SubResource("SubResource_rockmat")
+transform = Transform3D(0.083, 0, 0, 0, 0.025, 0, 0, 0, 0.1, 0, 0, 0)
+
+[node name="DepthMarker_Safe" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -100, 0)
+
+[node name="DepthMarker_Danger" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -300, 0)
+
+[node name="DepthMarker_Crush" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -500, 0)
+
+[node name="SpawnPoint1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, -20, 0)
+
+[node name="SpawnPoint2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, -20, 0)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -50, 0)
+light_color = Color(0.1, 0.2, 0.4, 1)
+light_energy = 0.6
+omni_range = 200.0
+
+[node name="OmniLight3D2" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -300, 0)
+light_color = Color(0.05, 0.1, 0.25, 1)
+light_energy = 0.3
+omni_range = 150.0
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("SubResource_env")

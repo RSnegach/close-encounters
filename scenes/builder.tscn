@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_builder.gd" id="1_bldr"]
+[ext_resource type="Script" path="res://scripts/ui/builder_ui.gd" id="2_bui"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SubResource_sky"]
+
+[sub_resource type="Sky" id="SubResource_sky2"]
+sky_material = SubResource("SubResource_sky")
+
+[sub_resource type="Environment" id="SubResource_env"]
+background_mode = 2
+sky = SubResource("SubResource_sky2")
+ambient_light_color = Color(0.3, 0.3, 0.35, 1)
+ambient_light_energy = 0.5
+
+[node name="Builder" type="Node3D"]
+
+[node name="VehicleBuilder" type="Node3D" parent="."]
+script = ExtResource("1_bldr")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 10, 15, 10)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("SubResource_env")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="BuilderUI" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_bui")

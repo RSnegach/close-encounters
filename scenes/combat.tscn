@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/arena/arena_manager.gd" id="1_amgr"]
+[ext_resource type="Script" path="res://scripts/arena/arena_hazards.gd" id="2_ahaz"]
+[ext_resource type="Script" path="res://scripts/combat/damage_system.gd" id="3_dmg"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="4_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SubResource_sky1"]
+
+[sub_resource type="Sky" id="SubResource_sky2"]
+sky_material = SubResource("SubResource_sky1")
+
+[sub_resource type="Environment" id="SubResource_env1"]
+background_mode = 2
+sky = SubResource("SubResource_sky2")
+ambient_light_color = Color(0.4, 0.4, 0.45, 1)
+ambient_light_energy = 0.6
+
+[node name="Combat" type="Node3D"]
+
+[node name="ArenaContainer" type="Node3D" parent="."]
+
+[node name="ArenaManager" type="Node3D" parent="."]
+script = ExtResource("1_amgr")
+
+[node name="ArenaHazards" type="Node3D" parent="."]
+script = ExtResource("2_ahaz")
+
+[node name="DamageSystem" type="Node" parent="."]
+script = ExtResource("3_dmg")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 20, 30, 20)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("SubResource_env1")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("4_hud")

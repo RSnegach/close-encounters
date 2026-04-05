@@ -1,0 +1,126 @@
+[gd_scene load_steps=14 format=3]
+
+[sub_resource type="ProceduralSkyMaterial" id="SubResource_skymat"]
+sky_top_color = Color(0.3, 0.5, 0.85, 1)
+sky_horizon_color = Color(0.6, 0.75, 0.9, 1)
+ground_bottom_color = Color(0.15, 0.25, 0.45, 1)
+ground_horizon_color = Color(0.6, 0.75, 0.9, 1)
+
+[sub_resource type="Sky" id="SubResource_sky"]
+sky_material = SubResource("SubResource_skymat")
+
+[sub_resource type="Environment" id="SubResource_env"]
+background_mode = 2
+sky = SubResource("SubResource_sky")
+ambient_light_color = Color(0.45, 0.55, 0.7, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="PlaneMesh" id="SubResource_watermesh"]
+size = Vector2(300, 300)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_watermat"]
+transparency = 1
+albedo_color = Color(0.1, 0.35, 0.6, 0.65)
+metallic = 0.2
+roughness = 0.05
+
+[sub_resource type="WorldBoundaryShape3D" id="SubResource_floorshape"]
+
+[sub_resource type="PlaneMesh" id="SubResource_floormesh"]
+size = Vector2(300, 300)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_floormat"]
+albedo_color = Color(0.1, 0.15, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl1shape"]
+size = Vector3(18, 6, 14)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_islmat"]
+albedo_color = Color(0.45, 0.55, 0.3, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl2shape"]
+size = Vector3(12, 4, 10)
+
+[sub_resource type="StandardMaterial3D" id="SubResource_sandmat"]
+albedo_color = Color(0.8, 0.72, 0.5, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl3shape"]
+size = Vector3(22, 8, 16)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl4shape"]
+size = Vector3(10, 3, 10)
+
+[node name="ArenaWater" type="Node3D"]
+
+[node name="WaterSurface" type="MeshInstance3D" parent="."]
+mesh = SubResource("SubResource_watermesh")
+material_override = SubResource("SubResource_watermat")
+
+[node name="OceanFloor" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -50, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="OceanFloor"]
+shape = SubResource("SubResource_floorshape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="OceanFloor"]
+mesh = SubResource("SubResource_floormesh")
+material_override = SubResource("SubResource_floormat")
+
+[node name="Island1" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 1, 40)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Island1"]
+shape = SubResource("SubResource_isl1shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Island1"]
+mesh = SubResource("SubResource_watermesh")
+material_override = SubResource("SubResource_islmat")
+transform = Transform3D(0.06, 0, 0, 0, 0.02, 0, 0, 0, 0.047, 0, 0, 0)
+
+[node name="Island2" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0.5, -30)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Island2"]
+shape = SubResource("SubResource_isl2shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Island2"]
+mesh = SubResource("SubResource_watermesh")
+material_override = SubResource("SubResource_sandmat")
+transform = Transform3D(0.04, 0, 0, 0, 0.013, 0, 0, 0, 0.033, 0, 0, 0)
+
+[node name="Island3" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 2, -60)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Island3"]
+shape = SubResource("SubResource_isl3shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Island3"]
+mesh = SubResource("SubResource_watermesh")
+material_override = SubResource("SubResource_islmat")
+transform = Transform3D(0.073, 0, 0, 0, 0.027, 0, 0, 0, 0.053, 0, 0, 0)
+
+[node name="Island4" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0.5, 55)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Island4"]
+shape = SubResource("SubResource_isl4shape")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Island4"]
+mesh = SubResource("SubResource_watermesh")
+material_override = SubResource("SubResource_sandmat")
+transform = Transform3D(0.033, 0, 0, 0, 0.01, 0, 0, 0, 0.033, 0, 0, 0)
+
+[node name="SpawnPoint1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80, 0, 0)
+
+[node name="SpawnPoint2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 80, 0, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 0, 50, 0)
+light_color = Color(1, 0.98, 0.92, 1)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("SubResource_env")
