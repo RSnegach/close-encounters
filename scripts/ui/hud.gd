@@ -85,10 +85,9 @@ func _process(delta: float) -> void:
 	_update_ammo()
 
 	# ── Domain-specific info ──
-	if vehicle.has_method("get_hud_data"):
-		_update_domain_info(vehicle.get_hud_data())
-	elif vehicle.get("physics_controller") and vehicle.physics_controller.has_method("get_hud_data"):
-		_update_domain_info(vehicle.physics_controller.get_hud_data())
+	# Physics controllers' get_hud_data() expects the vehicle as an argument.
+	if vehicle.get("physics_controller") and vehicle.physics_controller.has_method("get_hud_data"):
+		_update_domain_info(vehicle.physics_controller.get_hud_data(vehicle))
 
 
 # ─── Health ──────────────────────────────────────────────────────────────────
