@@ -450,25 +450,39 @@ func _stabilize_upright(delta: float) -> void:
 	angular_velocity = Vector3(av.x * 0.9, av.y, av.z * 0.9)
 
 
+## Tracks which keys are currently held down, set via _input().
+## This bypasses all focus/action system issues.
+var _keys_held: Dictionary = {}
+
+
+## Capture raw key press/release events to track held keys.
+func _input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key_event: InputEventKey = event as InputEventKey
+		_keys_held[key_event.physical_keycode] = key_event.pressed
+
+
+func _is_key_held(keycode: int) -> bool:
+	return _keys_held.get(keycode, false)
+
+
 func get_input_vector() -> Dictionary:
-	# Use direct key checks because Input.get_axis with actions can fail
-	# when UI elements consume keyboard focus.
 	var fwd: float = 0.0
-	if Input.is_physical_key_pressed(KEY_W):
+	if _is_key_held(KEY_W):
 		fwd += 1.0
-	if Input.is_physical_key_pressed(KEY_S):
+	if _is_key_held(KEY_S):
 		fwd -= 1.0
 
 	var strafe: float = 0.0
-	if Input.is_physical_key_pressed(KEY_D):
+	if _is_key_held(KEY_D):
 		strafe += 1.0
-	if Input.is_physical_key_pressed(KEY_A):
+	if _is_key_held(KEY_A):
 		strafe -= 1.0
 
 	var pitch: float = 0.0
-	if Input.is_action_pressed("pitch_up"):
+	if _is_key_held(KEY_W):
 		pitch += 1.0
-	if Input.is_action_pressed("pitch_down"):
+	if _is_key_held(KEY_S):
 		pitch -= 1.0
 
 	return {
@@ -476,12 +490,12 @@ func get_input_vector() -> Dictionary:
 		"strafe": strafe,
 		"pitch": pitch,
 		"yaw": strafe,
-		"roll": Input.get_axis("roll_left", "roll_right"),
-		"throttle_up": Input.is_physical_key_pressed(KEY_R),
-		"throttle_down": Input.is_physical_key_pressed(KEY_F),
-		"fire": Input.is_action_pressed("fire_primary"),
-		"dive": Input.is_physical_key_pressed(KEY_F),
-		"surface": Input.is_physical_key_pressed(KEY_R),
+		"roll": 0.0,
+		"throttle_up": _is_key_held(KEY_R),
+		"throttle_down": _is_key_held(KEY_F),
+		"fire": Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT),
+		"dive": _is_key_held(KEY_F),
+		"surface": _is_key_held(KEY_R),
 	}
 
 
