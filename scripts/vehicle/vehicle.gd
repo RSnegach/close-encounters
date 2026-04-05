@@ -451,17 +451,37 @@ func _stabilize_upright(delta: float) -> void:
 
 
 func get_input_vector() -> Dictionary:
+	# Use direct key checks because Input.get_axis with actions can fail
+	# when UI elements consume keyboard focus.
+	var fwd: float = 0.0
+	if Input.is_physical_key_pressed(KEY_W):
+		fwd += 1.0
+	if Input.is_physical_key_pressed(KEY_S):
+		fwd -= 1.0
+
+	var strafe: float = 0.0
+	if Input.is_physical_key_pressed(KEY_D):
+		strafe += 1.0
+	if Input.is_physical_key_pressed(KEY_A):
+		strafe -= 1.0
+
+	var pitch: float = 0.0
+	if Input.is_action_pressed("pitch_up"):
+		pitch += 1.0
+	if Input.is_action_pressed("pitch_down"):
+		pitch -= 1.0
+
 	return {
-		"forward": Input.get_axis("move_backward", "move_forward"),
-		"strafe": Input.get_axis("move_left", "move_right"),
-		"pitch": Input.get_axis("pitch_down", "pitch_up"),
-		"yaw": Input.get_axis("move_left", "move_right"),
+		"forward": fwd,
+		"strafe": strafe,
+		"pitch": pitch,
+		"yaw": strafe,
 		"roll": Input.get_axis("roll_left", "roll_right"),
-		"throttle_up": Input.is_action_pressed("throttle_up"),
-		"throttle_down": Input.is_action_pressed("throttle_down"),
+		"throttle_up": Input.is_physical_key_pressed(KEY_R),
+		"throttle_down": Input.is_physical_key_pressed(KEY_F),
 		"fire": Input.is_action_pressed("fire_primary"),
-		"dive": Input.is_action_pressed("dive"),
-		"surface": Input.is_action_pressed("surface"),
+		"dive": Input.is_physical_key_pressed(KEY_F),
+		"surface": Input.is_physical_key_pressed(KEY_R),
 	}
 
 
