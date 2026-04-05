@@ -153,6 +153,14 @@ func _physics_process(delta: float) -> void:
 		# If the player is driving, let the controller translate input to forces.
 		if is_player_controlled:
 			physics_controller.handle_input(self, delta)
+			# Debug: print once per second to verify input + forces are working.
+			if Engine.get_physics_frames() % 60 == 0:
+				var inp: Dictionary = get_input_vector()
+				print("[Vehicle] player=%s thrust=%.0f fwd=%.2f turn=%.2f spd=%.1f domain=%s" % [
+					is_player_controlled, total_thrust,
+					inp.get("forward", 0.0), inp.get("strafe", 0.0),
+					linear_velocity.length(), domain
+				])
 		physics_controller.apply_forces(self, delta)
 
 	# Fire weapons when the fire action is held.

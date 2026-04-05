@@ -185,10 +185,9 @@ func _update_ammo() -> void:
 	var total_ammo: int = 0
 	if vehicle.get("weapons"):
 		for w: Variant in vehicle.weapons:
-			if w.get("current_ammo") != null:
-				total_ammo += int(w.current_ammo)
-			elif w.get("ammo") != null:
-				total_ammo += int(w.ammo)
+			# Ammo lives in part_data.stats["ammo"], not as a top-level property.
+			if w.get("part_data") != null and w.part_data.stats.has("ammo"):
+				total_ammo += int(w.part_data.stats["ammo"])
 	ammo_label.text = "AMMO: %d" % total_ammo
 
 
