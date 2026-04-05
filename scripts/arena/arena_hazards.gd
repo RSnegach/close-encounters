@@ -27,7 +27,7 @@ extends Node3D
 ## Emitted when a vehicle enters a hazard zone. UI can display a warning.
 ## [param vehicle] - The affected vehicle.
 ## [param message] - Human-readable warning string.
-signal hazard_warning(vehicle: Vehicle, message: String)
+signal hazard_warning(vehicle: Node, message: String)
 
 
 # ---------------------------------------------------------------------------
@@ -137,9 +137,9 @@ func _physics_process(delta: float) -> void:
 	var all_vehicles: Array[Node] = get_tree().get_nodes_in_group("vehicles")
 
 	for node: Node in all_vehicles:
-		if not node is Vehicle:
+		if not node is RigidBody3D:
 			continue
-		var vehicle: Vehicle = node as Vehicle
+		var vehicle: Node = node as Node
 		if not vehicle.is_alive:
 			continue
 
@@ -154,7 +154,7 @@ func _physics_process(delta: float) -> void:
 ##
 ## [param vehicle] - The vehicle to check.
 ## [param delta]   - Frame time in seconds (for DPS calculation).
-func _check_hazards(vehicle: Vehicle, delta: float) -> void:
+func _check_hazards(vehicle: Node, delta: float) -> void:
 	match domain:
 		"air":
 			_check_air_hazards(vehicle, delta)
@@ -168,7 +168,7 @@ func _check_hazards(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Air domain hazards: altitude ceiling and ground collision.
-func _check_air_hazards(vehicle: Vehicle, delta: float) -> void:
+func _check_air_hazards(vehicle: Node, delta: float) -> void:
 	var altitude: float = vehicle.global_position.y
 
 	# --- Altitude ceiling ---
@@ -197,7 +197,7 @@ func _check_air_hazards(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Water domain hazards: shallow water near arena edges.
-func _check_water_hazards(vehicle: Vehicle, delta: float) -> void:
+func _check_water_hazards(vehicle: Node, delta: float) -> void:
 	# Calculate horizontal distance from arena center (ignore Y).
 	var horizontal_pos: Vector2 = Vector2(vehicle.global_position.x, vehicle.global_position.z)
 	var dist_from_center: float = horizontal_pos.length()
@@ -212,7 +212,7 @@ func _check_water_hazards(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Submarine domain hazards: crush depth.
-func _check_submarine_hazards(vehicle: Vehicle, delta: float) -> void:
+func _check_submarine_hazards(vehicle: Node, delta: float) -> void:
 	var depth: float = vehicle.global_position.y  # Negative = deeper.
 
 	# --- Crush depth ---
@@ -235,7 +235,7 @@ func _check_submarine_hazards(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Space domain hazards: arena boundary radiation and asteroids.
-func _check_space_hazards(vehicle: Vehicle, delta: float) -> void:
+func _check_space_hazards(vehicle: Node, delta: float) -> void:
 	# --- Boundary radiation ---
 	var dist_from_center: float = vehicle.global_position.length()
 
@@ -261,7 +261,7 @@ func _check_space_hazards(vehicle: Vehicle, delta: float) -> void:
 ## [param vehicle] - The vehicle taking damage.
 ## [param damage]  - Amount of damage to apply.
 ## [param msg]     - Warning message for the UI.
-func _apply_hazard_damage(vehicle: Vehicle, damage: int, msg: String) -> void:
+func _apply_hazard_damage(vehicle: Node, damage: int, msg: String) -> void:
 	if vehicle == null or not vehicle.is_alive:
 		return
 	if damage <= 0:
@@ -296,7 +296,7 @@ func _apply_hazard_damage(vehicle: Vehicle, damage: int, msg: String) -> void:
 # ---------------------------------------------------------------------------
 
 ## Pick a random alive (non-destroyed) part from a vehicle.
-func _get_random_alive_part(vehicle: Vehicle) -> PartNode:
+func _get_random_alive_part(vehicle: Node) -> PartNode:
 	var alive_parts: Array[PartNode] = []
 	var seen: Dictionary = {}
 

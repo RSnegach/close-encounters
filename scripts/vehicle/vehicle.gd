@@ -195,6 +195,46 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		current_vel.z = cam_fwd.z * cam_speed
 		state.linear_velocity = current_vel
 
+	# --- AI movement (also via _integrate_forces for reliability) ---
+	if is_ai_controlled:
+		var max_speed: float = 10.0
+		if total_thrust > 0 and total_mass > 0:
+			max_speed = total_thrust / total_mass * 0.5
+
+		# AI controller stores input in _ai_input on the AIController child.
+		var ai_fwd: float = 0.0
+		var ai_turn: float = 0.0
+		for child: Node in get_children():
+			if child is AIController:
+				var ai: AIController = child as AIController
+				ai_fwd = ai._ai_input.get("forward", 0.0)
+				ai_turn = ai._ai_input.get("turn", 0.0)
+				break
+
+		# AI movement: forward along hull direction (flat).
+		var hull_fwd: Vector3 = -state.transform.basis.z
+		hull_fwd.y = 0.0
+		hull_fwd = hull_fwd.normalized() if hull_fwd.length() > 0.001 else Vector3.FORWARD
+
+		var current_vel: Vector3 = state.linear_velocity
+		var fwd_speed: float = current_vel.dot(hull_fwd)
+
+		if absf(ai_fwd) > 0.01:
+			fwd_speed = lerpf(fwd_speed, ai_fwd * max_speed, 5.0 * delta)
+		else:
+			fwd_speed *= (1.0 - 3.0 * delta)
+
+		current_vel.x = hull_fwd.x * fwd_speed
+		current_vel.z = hull_fwd.z * fwd_speed
+		state.linear_velocity = current_vel
+
+		# AI turning
+		var ang_ai: Vector3 = state.angular_velocity
+		ang_ai.y = -ai_turn * 2.0
+		ang_ai.x *= 0.8
+		ang_ai.z *= 0.8
+		state.angular_velocity = ang_ai
+
 	# --- Keep upright (ground/water vehicles) ---
 	if domain == "ground" or domain == "water":
 		var ang: Vector3 = state.angular_velocity

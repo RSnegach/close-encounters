@@ -57,7 +57,7 @@ var is_armed: bool = false
 ## [param source]      - The Vehicle that launched this missile.
 ## [param target_node] - The Node3D to track. Null means the missile flies
 ##                       straight (dumb-fire mode).
-func setup_guided(data: Dictionary, source: Vehicle, target_node: Node3D) -> void:
+func setup_guided(data: Dictionary, source: Node, target_node: Node3D) -> void:
 	# Configure the base Projectile fields first.
 	# Direction is toward the target if we have one; otherwise straight ahead.
 	var dir: Vector3
@@ -216,16 +216,16 @@ func detonate() -> void:
 ##
 ## [param firing_vehicle] - The vehicle doing the scanning. Enemies only.
 ## Returns null if no valid target is found within lock_range.
-func find_target(firing_vehicle: Vehicle) -> Node3D:
+func find_target(firing_vehicle: Node) -> Node3D:
 	var best_target: Node3D = null
 	var best_dist: float = lock_range
 
 	var all_vehicles: Array[Node] = get_tree().get_nodes_in_group("vehicles")
 
 	for node: Node in all_vehicles:
-		if not node is Vehicle:
+		if not node is RigidBody3D:
 			continue
-		var vehicle: Vehicle = node as Vehicle
+		var vehicle: Node = node as Node
 
 		# Skip self and dead vehicles.
 		if vehicle == firing_vehicle:

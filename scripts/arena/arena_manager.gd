@@ -36,7 +36,7 @@ signal match_ended(winner_id: int)
 
 ## Emitted when a vehicle is eliminated during the match. Useful for
 ## kill-feed UI, announcements, etc.
-signal vehicle_eliminated(vehicle: Vehicle)
+signal vehicle_eliminated(vehicle: Node)
 
 
 # ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ const ARENA_SCENES: Dictionary = {
 var spawn_points: Array[Vector3] = []
 
 ## All vehicles currently in the match (alive and dead).
-var vehicles: Array[Vehicle] = []
+var vehicles: Array[Node] = []
 
 ## Whether the match is currently active. False before start_match() and
 ## after _end_match().
@@ -223,8 +223,8 @@ func _auto_initialize() -> void:
 
 	# --- Hook up the HUD to the player vehicle ---
 	if vehicles.size() > 0:
-		var player_v: Vehicle = null
-		for v: Vehicle in vehicles:
+		var player_v: Node = null
+		for v: Node in vehicles:
 			if v.is_player_controlled:
 				player_v = v
 				break
@@ -283,7 +283,7 @@ func setup_match(match_domain: String, vehicle_data_list: Array) -> void:
 		var data: Dictionary = vehicle_data_list[i]
 
 		# Create a new Vehicle node.
-		var vehicle: Vehicle = Vehicle.new()
+		var vehicle: Node = Vehicle.new()
 		vehicle.name = "Vehicle_%d" % i
 
 		# Assign peer ID if present (for multiplayer attribution).
@@ -342,7 +342,7 @@ func start_match() -> void:
 	# --- Assign AI targets ---
 	# Each AI targets the nearest non-AI vehicle. In a 1v1 this is simple;
 	# in larger matches the AI picks the closest enemy.
-	for vehicle: Vehicle in vehicles:
+	for vehicle: Node in vehicles:
 		if not vehicle.is_ai_controlled:
 			continue
 
@@ -350,13 +350,13 @@ func start_match() -> void:
 		for child: Node in vehicle.get_children():
 			if child is AIController:
 				var ai: AIController = child as AIController
-				var ai_target: Vehicle = _find_target_for(vehicle)
+				var ai_target: Node = _find_target_for(vehicle)
 				var diff: String = GameManager.match_settings.get("ai_difficulty", "medium")
 				ai.setup(ai_target, diff)
 				break
 
 	# --- Unfreeze all vehicles ---
-	for vehicle: Vehicle in vehicles:
+	for vehicle: Node in vehicles:
 		vehicle.freeze = false
 
 	match_started.emit()
@@ -368,7 +368,7 @@ func start_match() -> void:
 ## End the match with a winner.
 ##
 ## [param winner] - The winning Vehicle, or null for a draw.
-func _end_match(winner: Vehicle) -> void:
+func _end_match(winner: Node) -> void:
 	is_match_active = false
 
 	var winner_id: int = -1
@@ -376,7 +376,7 @@ func _end_match(winner: Vehicle) -> void:
 		winner_id = winner.peer_id
 
 	# --- Freeze all remaining vehicles ---
-	for vehicle: Vehicle in vehicles:
+	for vehicle: Node in vehicles:
 		vehicle.freeze = true
 
 	match_ended.emit(winner_id)
@@ -392,13 +392,13 @@ func _end_match(winner: Vehicle) -> void:
 ## Check if the match should end. A match ends when zero or one vehicle
 ## remains alive.
 func _check_win_condition() -> void:
-	var alive_vehicles: Array[Vehicle] = []
-	for vehicle: Vehicle in vehicles:
+	var alive_vehicles: Array[Node] = []
+	for vehicle: Node in vehicles:
 		if vehicle.is_alive:
 			alive_vehicles.append(vehicle)
 
 	if alive_vehicles.size() <= 1:
-		var winner: Vehicle = alive_vehicles[0] if alive_vehicles.size() == 1 else null
+		var winner: Node = alive_vehicles[0] if alive_vehicles.size() == 1 else null
 		_end_match(winner)
 
 
@@ -407,10 +407,10 @@ func _check_win_condition() -> void:
 func _time_up() -> void:
 	print("[ArenaManager] Time's up! Determining winner by HP...")
 
-	var best_vehicle: Vehicle = null
+	var best_vehicle: Node = null
 	var best_hp_pct: float = -1.0
 
-	for vehicle: Vehicle in vehicles:
+	for vehicle: Node in vehicles:
 		if not vehicle.is_alive:
 			continue
 
@@ -427,13 +427,13 @@ func _time_up() -> void:
 # ---------------------------------------------------------------------------
 
 ## Called when a vehicle is destroyed (via vehicle.vehicle_destroyed signal).
-func _on_vehicle_destroyed(vehicle: Vehicle) -> void:
+func _on_vehicle_destroyed(vehicle: Node) -> void:
 	vehicle_eliminated.emit(vehicle)
 	print("[ArenaManager] Vehicle '%s' (peer %d) eliminated!" % [vehicle.name, vehicle.peer_id])
 
 
 ## Called when the DamageSystem reports a vehicle kill.
-func _on_vehicle_killed(vehicle: Vehicle) -> void:
+func _on_vehicle_killed(vehicle: Node) -> void:
 	# The DamageSystem already called vehicle.die(). We just emit our signal.
 	vehicle_eliminated.emit(vehicle)
 
@@ -444,7 +444,7 @@ func _on_vehicle_killed(vehicle: Vehicle) -> void:
 
 ## Calculate a vehicle's current HP as a percentage (0.0 - 1.0).
 ## Used for time-up tiebreaker.
-func _get_vehicle_hp_percent(vehicle: Vehicle) -> float:
+func _get_vehicle_hp_percent(vehicle: Node) -> float:
 	var current_total: float = 0.0
 	var max_total: float = 0.0
 	var seen: Dictionary = {}
@@ -467,11 +467,11 @@ func _get_vehicle_hp_percent(vehicle: Vehicle) -> float:
 
 ## Find the best target for an AI vehicle. Returns the nearest alive
 ## non-ally vehicle.
-func _find_target_for(ai_vehicle: Vehicle) -> Vehicle:
-	var best: Vehicle = null
+func _find_target_for(ai_vehicle: Node) -> Node:
+	var best: Node = null
 	var best_dist: float = INF
 
-	for vehicle: Vehicle in vehicles:
+	for vehicle: Node in vehicles:
 		if vehicle == ai_vehicle:
 			continue
 		if not vehicle.is_alive:

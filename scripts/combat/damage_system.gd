@@ -30,7 +30,7 @@ signal damage_dealt(target_part: PartNode, damage: int, source: Node)
 
 ## Emitted when a vehicle's control module is destroyed, killing the vehicle.
 ## [param vehicle] - the Vehicle that just died.
-signal vehicle_killed(vehicle: Vehicle)
+signal vehicle_killed(vehicle: Node)
 
 ## Emitted when a destroyed part triggers a secondary explosion (fuel or ammo).
 ## [param position] - world-space center of the explosion.
@@ -71,7 +71,7 @@ func apply_damage(
 		return
 
 	# --- Step 1: Find the vehicle that owns this part ---
-	var vehicle: Vehicle = _get_vehicle_from_part(target_part)
+	var vehicle: Node = _get_vehicle_from_part(target_part)
 
 	# --- Step 2: Calculate armor reduction ---
 	var effective_damage: int = damage
@@ -114,7 +114,7 @@ func apply_area_damage(
 	center: Vector3,
 	radius: float,
 	damage: int,
-	source_vehicle: Vehicle = null
+	source_vehicle: Node = null
 ) -> void:
 	if radius <= 0.0:
 		push_warning("[DamageSystem] apply_area_damage() called with radius <= 0.")
@@ -124,9 +124,9 @@ func apply_area_damage(
 	var all_vehicles: Array[Node] = get_tree().get_nodes_in_group("vehicles")
 
 	for node: Node in all_vehicles:
-		if not node is Vehicle:
+		if not node is RigidBody3D:
 			continue
-		var vehicle: Vehicle = node as Vehicle
+		var vehicle: Node = node as Node
 
 		# Skip the vehicle that caused the explosion (no self-damage).
 		if vehicle == source_vehicle:
@@ -166,7 +166,7 @@ func apply_area_damage(
 ## [param effect_type] - One of: "fire", "flooding", "pressure_breach".
 ## [param duration]    - How long the effect lasts in seconds.
 func apply_status_effect(
-	vehicle: Vehicle,
+	vehicle: Node,
 	effect_type: String,
 	duration: float
 ) -> void:
@@ -215,7 +215,7 @@ func apply_status_effect(
 ## Returns true if the vehicle should be considered dead.
 ## A vehicle dies when its control module (cockpit / bridge / guidance
 ## computer) is destroyed.
-func check_vehicle_death(vehicle: Vehicle) -> bool:
+func check_vehicle_death(vehicle: Node) -> bool:
 	if vehicle == null:
 		return false
 	if vehicle.control_module == null:
@@ -252,7 +252,7 @@ func _check_chain_reaction(destroyed_part: PartNode) -> void:
 		])
 
 		# Apply the blast to nearby vehicles.
-		var vehicle: Vehicle = _get_vehicle_from_part(destroyed_part)
+		var vehicle: Node = _get_vehicle_from_part(destroyed_part)
 		apply_area_damage(part_pos, explosion_radius, explosion_damage, vehicle)
 
 		# Set the parent vehicle on fire.
@@ -272,7 +272,7 @@ func _check_chain_reaction(destroyed_part: PartNode) -> void:
 			part_pos, explosion_radius, explosion_damage
 		])
 
-		var vehicle: Vehicle = _get_vehicle_from_part(destroyed_part)
+		var vehicle: Node = _get_vehicle_from_part(destroyed_part)
 		apply_area_damage(part_pos, explosion_radius, explosion_damage, vehicle)
 
 		chain_reaction.emit(part_pos, explosion_radius, explosion_damage)
@@ -290,7 +290,7 @@ func _check_chain_reaction(destroyed_part: PartNode) -> void:
 ## contribute to the reduction.
 ##
 ## Returns the total armor reduction as a float.
-func _find_adjacent_armor(part: PartNode, vehicle: Vehicle) -> float:
+func _find_adjacent_armor(part: PartNode, vehicle: Node) -> float:
 	var total_armor: float = 0.0
 	var pos: Vector3i = part.grid_position
 
@@ -334,18 +334,18 @@ func _find_adjacent_armor(part: PartNode, vehicle: Vehicle) -> float:
 
 ## Walk up the scene tree from a PartNode to find its parent Vehicle.
 ## Returns null if the part is not a child of a Vehicle.
-func _get_vehicle_from_part(part: PartNode) -> Vehicle:
+func _get_vehicle_from_part(part: PartNode) -> Node:
 	var parent: Node = part.get_parent()
 	while parent != null:
-		if parent is Vehicle:
-			return parent as Vehicle
+		if parent is RigidBody3D:
+			return parent as Node
 		parent = parent.get_parent()
 	return null
 
 
 ## Find the closest alive (non-destroyed) part on a vehicle to a world
 ## position. Used by area damage to determine which part takes the hit.
-func _find_closest_part(vehicle: Vehicle, world_pos: Vector3) -> PartNode:
+func _find_closest_part(vehicle: Node, world_pos: Vector3) -> PartNode:
 	var closest: PartNode = null
 	var closest_dist: float = INF
 

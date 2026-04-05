@@ -57,7 +57,7 @@ var damage_per_tick: int = 5
 
 ## Reference to the vehicle this effect is applied to. Stored so we can
 ## access its parts, mass, etc. without walking the tree every tick.
-var vehicle: Vehicle = null
+var vehicle: Node = null
 
 ## Master on/off flag. Set to false when the effect expires.
 var is_active: bool = true
@@ -73,7 +73,7 @@ var is_active: bool = true
 ## [param dur]    - How long the effect lasts in seconds.
 ## [param dpt]    - Damage per tick (or mass increase rate for FLOODING).
 ## [param target] - The Vehicle this effect is applied to.
-func setup(type: EffectType, dur: float, dpt: int, target: Vehicle) -> void:
+func setup(type: EffectType, dur: float, dpt: int, target: Node) -> void:
 	effect_type = type
 	duration = dur
 	damage_per_tick = dpt

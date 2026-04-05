@@ -65,7 +65,7 @@ var is_armed: bool = false
 ##                       "noise_level" (float), "arm_distance" (float).
 ## [param source]      - The Vehicle that launched this torpedo.
 ## [param target_node] - The Node3D to track (enemy vehicle or part).
-func setup_torpedo(data: Dictionary, source: Vehicle, target_node: Node3D) -> void:
+func setup_torpedo(data: Dictionary, source: Node, target_node: Node3D) -> void:
 	# Set up the base projectile (speed, damage, range, etc.).
 	var dir: Vector3
 	if target_node != null and is_instance_valid(target_node):

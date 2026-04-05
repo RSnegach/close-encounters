@@ -49,7 +49,7 @@ var distance_traveled: float = 0.0
 
 ## Reference to the Vehicle that fired this projectile. Used to prevent
 ## self-damage and for kill attribution.
-var source_vehicle: Vehicle = null
+var source_vehicle: Node = null
 
 ## The behaviour mode of this projectile. See the class doc for details.
 ## Values: "hitscan", "ballistic", "guided", "area"
@@ -143,7 +143,7 @@ func _physics_process(delta: float) -> void:
 ##                  "gravity" (float, optional).
 ## [param source] - The Vehicle that fired this projectile.
 ## [param dir]    - The initial travel direction (should be normalized).
-func setup(data: Dictionary, source: Vehicle, dir: Vector3) -> void:
+func setup(data: Dictionary, source: Node, dir: Vector3) -> void:
 	# Read stats from the weapon data, falling back to sensible defaults.
 	speed = float(data.get("projectile_speed", 100.0))
 	damage = int(data.get("damage", 10))

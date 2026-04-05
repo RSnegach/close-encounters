@@ -15,7 +15,7 @@
 ## engagement distance, and whether the AI uses advanced tactics like lead
 ## prediction and domain-specific maneuvers.
 ##
-## The AI generates an input dictionary (same format as Vehicle.get_input_vector())
+## The AI generates an input dictionary (same format as Node.get_input_vector())
 ## that the vehicle's physics controller consumes. This means AI vehicles move
 ## using the exact same physics as player vehicles -- no cheating.
 class_name AIController
@@ -43,10 +43,10 @@ enum AIState {
 
 ## The Vehicle node this AI controls. Set automatically if the AIController
 ## is added as a child of a Vehicle; otherwise set via [method setup].
-var vehicle: Vehicle = null
+var vehicle: Node = null
 
 ## The enemy Vehicle this AI is currently targeting.
-var target: Vehicle = null
+var target: Node = null
 
 ## Current AI state. Transitions are handled in [method _update_state].
 var current_state: AIState = AIState.IDLE
@@ -123,8 +123,8 @@ var _ai_input: Dictionary = {}
 ## Find the parent Vehicle if we're a direct child of one.
 func _ready() -> void:
 	# Auto-detect the parent vehicle.
-	if get_parent() is Vehicle:
-		vehicle = get_parent() as Vehicle
+	if get_parent() is RigidBody3D:
+		vehicle = get_parent() as Node
 
 
 ## Run the AI every physics frame. The reaction timer ensures the AI only
@@ -161,10 +161,10 @@ func _physics_process(delta: float) -> void:
 ##
 ## [param target_vehicle] - The enemy Vehicle to fight.
 ## [param diff]           - Difficulty: "easy", "medium", or "hard".
-func setup(target_vehicle: Vehicle, diff: String) -> void:
+func setup(target_vehicle: Node, diff: String) -> void:
 	# If vehicle wasn't auto-detected, try the parent again.
-	if vehicle == null and get_parent() is Vehicle:
-		vehicle = get_parent() as Vehicle
+	if vehicle == null and get_parent() is RigidBody3D:
+		vehicle = get_parent() as Node
 
 	target = target_vehicle
 	difficulty = diff
@@ -501,8 +501,8 @@ func _aim_at_target() -> Vector3:
 
 	# --- Lead prediction (hard difficulty only) ---
 	# Estimate where the target will be when the projectile arrives.
-	if difficulty == "hard" and target is Vehicle:
-		var target_vehicle: Vehicle = target as Vehicle
+	if difficulty == "hard" and target is RigidBody3D:
+		var target_vehicle: Node = target as Node
 		var dist: float = to_target.length()
 		# Assume projectile speed of ~100 m/s for lead calculation.
 		var projectile_speed: float = 100.0
@@ -530,16 +530,16 @@ func _aim_at_target() -> Vector3:
 
 ## Scan for a new target when the current one is dead or null.
 ## Returns the nearest alive enemy Vehicle, or null if none found.
-func _find_new_target() -> Vehicle:
-	var best: Vehicle = null
+func _find_new_target() -> Node:
+	var best: Node = null
 	var best_dist: float = INF
 
 	var all_vehicles: Array[Node] = get_tree().get_nodes_in_group("vehicles")
 
 	for node: Node in all_vehicles:
-		if not node is Vehicle:
+		if not node is RigidBody3D:
 			continue
-		var v: Vehicle = node as Vehicle
+		var v: Node = node as Node
 
 		# Skip self, dead vehicles, and allies (for future team modes).
 		if v == vehicle:
@@ -614,27 +614,10 @@ func _apply_input(delta: float) -> void:
 	if vehicle == null:
 		return
 
-	# --- Movement: apply forces directly to the vehicle ---
-	# The physics controllers read from Input actions (player only), so the AI
-	# drives the RigidBody3D directly using the same force model.
-	if vehicle.physics_controller != null:
-		var move_dir: Vector3 = Vector3.ZERO
-		var fwd: Vector3 = -vehicle.global_transform.basis.z
-		var right_dir: Vector3 = vehicle.global_transform.basis.x
-
-		var forward_input: float = _ai_input.get("forward", 0.0)
-		var strafe_input: float = _ai_input.get("strafe", 0.0)
-		move_dir = fwd * forward_input + right_dir * strafe_input
-
-		if move_dir.length() > 0.01:
-			# Apply thrust force matching what GroundPhysics does for players.
-			var drive_force: float = vehicle.total_thrust * 0.7  # friction_coefficient
-			vehicle.apply_central_force(move_dir.normalized() * drive_force)
-
-		# Turning
-		var turn_input: float = _ai_input.get("turn", 0.0)
-		if absf(turn_input) > 0.01:
-			vehicle.apply_torque(Vector3.UP * turn_input * vehicle.total_mass * 2.0)
+	# Movement is handled in Vehicle._integrate_forces() which reads
+	# _ai_input from this controller. No forces applied here — doing so
+	# from _physics_process is unreliable for RigidBody3D.
+	pass
 
 	# --- Weapons: fire when the AI decides to ---
 	if _ai_input.get("fire", false):

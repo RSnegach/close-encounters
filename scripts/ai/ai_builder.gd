@@ -58,7 +58,7 @@ const CATEGORY_PRIORITY: Dictionary = {
 ## [param difficulty] - AI difficulty: "easy", "medium", or "hard".
 ##                      Harder AI gets better part selections.
 ##
-## Returns a Dictionary in the same format as Vehicle.setup_from_data():
+## Returns a Dictionary in the same format as Node.setup_from_data():
 ##   { "parts": [ { "id": "...", "grid_position": [x, y, z] }, ... ],
 ##     "domain": "ground" }
 static func build_vehicle(domain: String, budget: int, difficulty: String) -> Dictionary:

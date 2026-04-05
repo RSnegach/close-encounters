@@ -104,7 +104,7 @@ func _process(delta: float) -> void:
 ## [param explosion_damage] - Damage at the epicenter (0 = visual only).
 ## [param source]           - The vehicle that caused this explosion. It
 ##                            will be excluded from its own area damage.
-func setup(explosion_radius: float, explosion_damage: int, source: Vehicle = null) -> void:
+func setup(explosion_radius: float, explosion_damage: int, source: Node = null) -> void:
 	radius = explosion_radius
 	damage = explosion_damage
 
@@ -168,7 +168,7 @@ func _create_visual() -> void:
 ##
 ## [param source] - The vehicle that caused the explosion (excluded from
 ##                  self-damage).
-func _apply_blast_damage(source: Vehicle) -> void:
+func _apply_blast_damage(source: Node) -> void:
 	# Look up the DamageSystem in the scene tree.
 	var damage_system: DamageSystem = _find_damage_system()
 	if damage_system != null:
