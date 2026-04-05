@@ -103,6 +103,15 @@ func _ready() -> void:
 	stats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right_panel.add_child(stats_panel)
 
+	# Y-layer indicator
+	right_panel.add_child(_separator())
+	var layer_label: Label = Label.new()
+	layer_label.name = "LayerLabel"
+	layer_label.text = "Layer: 0  (Q/E or Shift+Scroll)"
+	layer_label.add_theme_font_size_override("font_size", 13)
+	layer_label.add_theme_color_override("font_color", COLOR_YELLOW)
+	right_panel.add_child(layer_label)
+
 	# ── Action buttons ──
 	right_panel.add_child(_separator())
 
@@ -169,6 +178,9 @@ func _ready() -> void:
 	save_dialog.confirmed.connect(_on_save_confirmed)
 	load_dialog.confirmed.connect(_on_load_confirmed)
 
+	# Initial stats refresh
+	_update_stats()
+
 	# Listen to builder events so budget & stats stay up-to-date
 	if builder:
 		if builder.has_signal("part_placed"):
@@ -177,6 +189,14 @@ func _ready() -> void:
 			builder.part_removed.connect(_on_build_changed)
 		if builder.has_signal("budget_changed"):
 			builder.budget_changed.connect(_on_budget_changed)
+
+
+## Update the Y-layer label each frame.
+func _process(_delta: float) -> void:
+	if builder:
+		var layer_lbl: Label = right_panel.find_child("LayerLabel", false, false) as Label
+		if layer_lbl:
+			layer_lbl.text = "Layer: %d  (Q/E)" % builder.current_y_layer
 
 
 # ─── Builder signal handlers ─────────────────────────────────────────────────

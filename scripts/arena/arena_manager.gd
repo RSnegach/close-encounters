@@ -121,6 +121,102 @@ func _ready() -> void:
 
 	print("[ArenaManager] Ready. %d spawn point(s) found." % spawn_points.size())
 
+	# --- Auto-initialize from GameManager if we have match data ---
+	# This lets the combat scene work without external setup calls.
+	call_deferred("_auto_initialize")
+
+
+## Automatically load the arena, spawn vehicles, and start the match
+## using data from GameManager.match_settings. Deferred so the full
+## scene tree is ready first.
+func _auto_initialize() -> void:
+	var settings: Dictionary = GameManager.match_settings
+	var match_domain: String = settings.get("domain", "Ground").to_lower()
+
+	# --- Load the arena scene into the ArenaContainer sibling ---
+	var arena_path: String = ARENA_SCENES.get(match_domain, "")
+	if arena_path != "" and ResourceLoader.exists(arena_path):
+		var arena_scene: PackedScene = load(arena_path)
+		if arena_scene:
+			var arena_instance: Node3D = arena_scene.instantiate()
+			# Find ArenaContainer sibling in the combat scene.
+			var container: Node = get_parent().find_child("ArenaContainer", false, false)
+			if container:
+				container.add_child(arena_instance)
+			else:
+				get_parent().add_child(arena_instance)
+
+			# Grab spawn points from the loaded arena.
+			spawn_points.clear()
+			for child: Node in arena_instance.get_children():
+				if child.name.begins_with("SpawnPoint") and child is Node3D:
+					spawn_points.append((child as Node3D).global_position)
+			if spawn_points.is_empty():
+				spawn_points.append(Vector3(-20.0, 1.0, 0.0))
+				spawn_points.append(Vector3(20.0, 1.0, 0.0))
+
+			print("[ArenaManager] Loaded arena: %s (%d spawn points)" % [arena_path, spawn_points.size()])
+
+	# --- Build vehicle data list ---
+	var vehicle_data_list: Array = []
+
+	# Player vehicle from builder.
+	var player_vehicle: Variant = settings.get("player_vehicle", null)
+	if player_vehicle is Dictionary:
+		var player_data: Dictionary = player_vehicle.duplicate()
+		player_data["peer_id"] = 1
+		player_data["is_ai"] = false
+		vehicle_data_list.append(player_data)
+	else:
+		# No vehicle data — create a minimal fallback so there's something to see.
+		push_warning("[ArenaManager] No player vehicle data found. Using fallback.")
+		vehicle_data_list.append({
+			"parts": [
+				{"id": "cockpit", "grid_position": [3, 0, 3]},
+				{"id": "light_frame", "grid_position": [3, 0, 2]},
+				{"id": "light_frame", "grid_position": [3, 0, 4]},
+				{"id": "small_wheel", "grid_position": [2, 0, 2]},
+				{"id": "small_wheel", "grid_position": [4, 0, 2]},
+				{"id": "small_wheel", "grid_position": [2, 0, 4]},
+				{"id": "small_wheel", "grid_position": [4, 0, 4]},
+				{"id": "machine_gun", "grid_position": [3, 1, 3]},
+			],
+			"domain": match_domain,
+			"peer_id": 1,
+			"is_ai": false,
+		})
+
+	# Solo mode: add an AI opponent.
+	var mode: String = settings.get("mode", "solo")
+	if mode == "solo":
+		var difficulty: String = settings.get("ai_difficulty", "medium")
+		var ai_budget: int = settings.get("budget", 1500)
+		if ai_budget <= 0:
+			ai_budget = 3000
+		var ai_vehicle_data: Dictionary = AIBuilder.build_vehicle(match_domain, ai_budget, difficulty)
+		ai_vehicle_data["peer_id"] = 2
+		ai_vehicle_data["is_ai"] = true
+		vehicle_data_list.append(ai_vehicle_data)
+
+	# --- Setup and start ---
+	setup_match(match_domain, vehicle_data_list)
+	start_match()
+
+	# --- Hook up the HUD to the player vehicle ---
+	if vehicles.size() > 0:
+		var player_v: Vehicle = null
+		for v: Vehicle in vehicles:
+			if v.is_player_controlled:
+				player_v = v
+				break
+		if player_v == null:
+			player_v = vehicles[0]
+
+		# Find the HUD in the UI layer.
+		var hud_node: Node = get_parent().find_child("HUD", true, false)
+		if hud_node and hud_node.has_method("setup"):
+			hud_node.setup(player_v)
+
 
 ## Every physics frame, advance the match timer and check for win conditions.
 func _physics_process(delta: float) -> void:

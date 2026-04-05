@@ -117,6 +117,9 @@ var raycast_plane: StaticBody3D = null
 ## The grid cell the mouse is currently hovering over. Updated every frame.
 var _hovered_cell: Vector3i = Vector3i.ZERO
 
+## The active Y-layer for placement. Change with Shift+Scroll or Q/E keys.
+var current_y_layer: int = 0
+
 ## Whether the player is currently dragging to orbit the camera.
 var _is_orbiting: bool = false
 
@@ -163,11 +166,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.button_index == MOUSE_BUTTON_MIDDLE:
 			_is_orbiting = mb.pressed
 
-		# Scroll wheel: zoom camera
+		# Scroll wheel: Shift+Scroll changes Y layer, plain scroll zooms camera
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
-			_zoom_camera(-1.0)
+			if mb.shift_pressed:
+				current_y_layer = mini(current_y_layer + 1, grid_size.y - 1)
+				print("[Builder] Y-layer: %d" % current_y_layer)
+			else:
+				_zoom_camera(-1.0)
 		if mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
-			_zoom_camera(1.0)
+			if mb.shift_pressed:
+				current_y_layer = maxi(current_y_layer - 1, 0)
+				print("[Builder] Y-layer: %d" % current_y_layer)
+			else:
+				_zoom_camera(1.0)
 
 	# --- Mouse motion: orbit camera or update hover cell ---
 	if event is InputEventMouseMotion:
@@ -177,12 +188,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			_hovered_cell = _get_grid_position_from_mouse()
 
-	# --- Keyboard: toggle delete mode ---
+	# --- Keyboard shortcuts ---
 	if event is InputEventKey:
 		var key: InputEventKey = event as InputEventKey
-		if key.pressed and key.physical_keycode == KEY_X:
-			is_delete_mode = not is_delete_mode
-			print("[Builder] Delete mode: %s" % ("ON" if is_delete_mode else "OFF"))
+		if key.pressed:
+			match key.physical_keycode:
+				KEY_X:
+					is_delete_mode = not is_delete_mode
+					print("[Builder] Delete mode: %s" % ("ON" if is_delete_mode else "OFF"))
+				KEY_Q:
+					# Move placement layer up
+					current_y_layer = mini(current_y_layer + 1, grid_size.y - 1)
+					print("[Builder] Y-layer: %d" % current_y_layer)
+				KEY_E:
+					# Move placement layer down
+					current_y_layer = maxi(current_y_layer - 1, 0)
+					print("[Builder] Y-layer: %d" % current_y_layer)
 
 
 # ---------------------------------------------------------------------------
@@ -618,13 +639,13 @@ func _get_grid_position_from_mouse() -> Vector3i:
 	var ray_origin: Vector3 = camera.project_ray_origin(mouse_pos)
 	var ray_dir: Vector3 = camera.project_ray_normal(mouse_pos)
 
-	# Intersect with the horizontal plane at the currently viewed Y layer.
-	# For simplicity, we always use y = 0.
-	# Plane: y = 0 -> t = -origin.y / dir.y (avoid division by zero).
+	# Intersect with the horizontal plane at the current Y layer.
+	# Plane equation: y = current_y_layer * cell_size
+	var plane_y: float = current_y_layer * cell_size
 	if absf(ray_dir.y) < 0.0001:
 		return Vector3i.ZERO
 
-	var t: float = -ray_origin.y / ray_dir.y
+	var t: float = (plane_y - ray_origin.y) / ray_dir.y
 	if t < 0.0:
 		return Vector3i.ZERO
 
@@ -632,7 +653,7 @@ func _get_grid_position_from_mouse() -> Vector3i:
 
 	# Snap the hit point to the nearest grid cell.
 	var gx: int = int(floorf(hit_point.x / cell_size))
-	var gy: int = 0  # ground layer
+	var gy: int = current_y_layer
 	var gz: int = int(floorf(hit_point.z / cell_size))
 
 	# Clamp to grid bounds.
