@@ -156,44 +156,132 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 	var delta: float = state.step
 
-	# --- Player input movement (WoT style) ---
-	# W/S moves toward/away from where the camera points (projected to ground).
-	# The hull automatically rotates to face the movement direction.
+	# --- Player input movement ---
 	if is_player_controlled:
 		var inp: Dictionary = get_input_vector()
 		var fwd_in: float = inp.get("forward", 0.0)
+		var strafe_in: float = inp.get("strafe", 0.0)
 
-		# --- Compute camera's horizontal look direction ---
+		# Camera direction (horizontal).
 		var cam_yaw_rad: float = deg_to_rad(_camera_yaw)
 		var cam_fwd: Vector3 = Vector3(sin(cam_yaw_rad), 0.0, cos(cam_yaw_rad)).normalized()
+		var cam_right: Vector3 = Vector3(cos(cam_yaw_rad), 0.0, -sin(cam_yaw_rad)).normalized()
 
-		# --- Hull rotation: turn the vehicle body to face camera direction ---
-		var current_yaw: float = state.transform.basis.get_euler().y
-		var target_yaw: float = atan2(cam_fwd.x, cam_fwd.z)
-		var yaw_diff: float = wrapf(target_yaw - current_yaw, -PI, PI)
-		var ang: Vector3 = state.angular_velocity
-		ang.y = yaw_diff * 3.0  # Hull turn speed.
-		ang.x *= 0.8
-		ang.z *= 0.8
-		state.angular_velocity = ang
-
-		# --- Movement: W/S along camera direction ---
+		# Max speed from stats.
 		var max_speed: float = 15.0
 		if total_thrust > 0 and total_mass > 0:
 			max_speed = total_thrust / total_mass * 0.7
 
 		var current_vel: Vector3 = state.linear_velocity
-		var cam_speed: float = current_vel.dot(cam_fwd)
 
-		if absf(fwd_in) > 0.01:
-			cam_speed = lerpf(cam_speed, fwd_in * max_speed, 8.0 * delta)
-		else:
-			cam_speed *= (1.0 - 5.0 * delta)
+		match domain:
+			"ground", "water":
+				# WoT style: hull follows camera, W/S moves along camera dir.
+				# No strafing for tracked/wheeled vehicles.
+				var current_yaw: float = state.transform.basis.get_euler().y
+				var target_yaw: float = atan2(cam_fwd.x, cam_fwd.z)
+				var yaw_diff: float = wrapf(target_yaw - current_yaw, -PI, PI)
+				var ang: Vector3 = state.angular_velocity
+				ang.y = yaw_diff * 3.0
+				ang.x *= 0.8
+				ang.z *= 0.8
+				state.angular_velocity = ang
 
-		# Move only along camera direction — no sideways sliding.
-		current_vel.x = cam_fwd.x * cam_speed
-		current_vel.z = cam_fwd.z * cam_speed
-		state.linear_velocity = current_vel
+				var cam_speed: float = current_vel.dot(cam_fwd)
+				if absf(fwd_in) > 0.01:
+					cam_speed = lerpf(cam_speed, fwd_in * max_speed, 8.0 * delta)
+				else:
+					cam_speed *= (1.0 - 5.0 * delta)
+				current_vel.x = cam_fwd.x * cam_speed
+				current_vel.z = cam_fwd.z * cam_speed
+				state.linear_velocity = current_vel
+
+			"air":
+				# Flight: W/S = pitch (climb/dive via camera pitch), A/D = roll.
+				# Thrust always forward along hull direction.
+				var cam_pitch_rad: float = deg_to_rad(_camera_pitch)
+				var fly_dir: Vector3 = Vector3(
+					sin(cam_yaw_rad) * cos(cam_pitch_rad),
+					sin(cam_pitch_rad),
+					cos(cam_yaw_rad) * cos(cam_pitch_rad)
+				).normalized()
+
+				# Hull follows full 3D camera direction.
+				var current_yaw_a: float = state.transform.basis.get_euler().y
+				var target_yaw_a: float = atan2(cam_fwd.x, cam_fwd.z)
+				var yaw_diff_a: float = wrapf(target_yaw_a - current_yaw_a, -PI, PI)
+				var ang_a: Vector3 = state.angular_velocity
+				ang_a.y = yaw_diff_a * 2.0
+				# A/D = barrel roll.
+				ang_a.z = strafe_in * 3.0
+				state.angular_velocity = ang_a
+
+				var fly_speed: float = current_vel.dot(fly_dir)
+				if absf(fwd_in) > 0.01:
+					fly_speed = lerpf(fly_speed, fwd_in * max_speed, 5.0 * delta)
+				else:
+					fly_speed *= (1.0 - 2.0 * delta)
+				state.linear_velocity = fly_dir * fly_speed
+
+			"submarine":
+				# 3D underwater movement: W/S forward/back, R/F dive/surface.
+				var current_yaw_s: float = state.transform.basis.get_euler().y
+				var target_yaw_s: float = atan2(cam_fwd.x, cam_fwd.z)
+				var yaw_diff_s: float = wrapf(target_yaw_s - current_yaw_s, -PI, PI)
+				var ang_s: Vector3 = state.angular_velocity
+				ang_s.y = yaw_diff_s * 2.0
+				ang_s.x *= 0.8
+				ang_s.z *= 0.8
+				state.angular_velocity = ang_s
+
+				var sub_speed: float = current_vel.dot(cam_fwd)
+				if absf(fwd_in) > 0.01:
+					sub_speed = lerpf(sub_speed, fwd_in * max_speed, 5.0 * delta)
+				else:
+					sub_speed *= (1.0 - 3.0 * delta)
+				current_vel.x = cam_fwd.x * sub_speed
+				current_vel.z = cam_fwd.z * sub_speed
+				# R/F for vertical movement.
+				if inp.get("surface", false):
+					current_vel.y = lerpf(current_vel.y, 5.0, 3.0 * delta)
+				elif inp.get("dive", false):
+					current_vel.y = lerpf(current_vel.y, -5.0, 3.0 * delta)
+				else:
+					current_vel.y *= (1.0 - 2.0 * delta)
+				state.linear_velocity = current_vel
+
+			"space":
+				# Newtonian: 6DOF. W/S = thrust forward/back, A/D = strafe.
+				var current_yaw_sp: float = state.transform.basis.get_euler().y
+				var target_yaw_sp: float = atan2(cam_fwd.x, cam_fwd.z)
+				var yaw_diff_sp: float = wrapf(target_yaw_sp - current_yaw_sp, -PI, PI)
+				var ang_sp: Vector3 = state.angular_velocity
+				ang_sp.y = yaw_diff_sp * 2.0
+				state.angular_velocity = ang_sp
+
+				# Thrust in camera direction (no drag in space).
+				if absf(fwd_in) > 0.01:
+					var thrust_dir: Vector3 = cam_fwd * fwd_in
+					current_vel += thrust_dir * max_speed * 2.0 * delta
+				if absf(strafe_in) > 0.01:
+					current_vel += cam_right * strafe_in * max_speed * delta
+				# R/F for vertical.
+				if inp.get("surface", false):
+					current_vel.y += max_speed * delta
+				elif inp.get("dive", false):
+					current_vel.y -= max_speed * delta
+				state.linear_velocity = current_vel
+
+			_:
+				# Fallback: same as ground.
+				var cam_speed_f: float = current_vel.dot(cam_fwd)
+				if absf(fwd_in) > 0.01:
+					cam_speed_f = lerpf(cam_speed_f, fwd_in * max_speed, 8.0 * delta)
+				else:
+					cam_speed_f *= (1.0 - 5.0 * delta)
+				current_vel.x = cam_fwd.x * cam_speed_f
+				current_vel.z = cam_fwd.z * cam_speed_f
+				state.linear_velocity = current_vel
 
 	# --- AI movement (also via _integrate_forces for reliability) ---
 	if is_ai_controlled:
