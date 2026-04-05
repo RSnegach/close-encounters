@@ -48,7 +48,12 @@ var has_tracks: bool = false
 ##   brake_force   = -velocity_direction * brake_force * mass   (when idle)
 ##   turn_torque   = input_strafe * turn_speed / max(speed, 1)
 ##   max_speed     = total_thrust / max(mass, 1) * friction_coefficient
-func apply_forces(vehicle: Vehicle, delta: float) -> void:
+func apply_forces(vehicle: Vehicle, _delta: float) -> void:
+	# Only read keyboard input for player-controlled vehicles.
+	# AI vehicles get their forces from AIController instead.
+	if not vehicle.is_player_controlled:
+		return
+
 	var input: Dictionary = vehicle.get_input_vector()
 	var forward_input: float = input.get("forward", 0.0)
 	var turn_input: float = input.get("strafe", 0.0)

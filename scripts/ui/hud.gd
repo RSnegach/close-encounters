@@ -280,15 +280,27 @@ func _create_health_bar() -> void:
 
 ## Bottom bar: speed on the left, ammo in the centre, domain info on the right.
 func _create_bottom_bar() -> void:
+	# Dark semi-transparent panel behind the bottom readouts.
+	var panel: PanelContainer = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	panel.offset_top    = -80
+	panel.offset_left   = 0
+	panel.offset_right  = 0
+	panel.offset_bottom = 0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var panel_style: StyleBoxFlat = StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.0, 0.0, 0.0, 0.6)
+	panel_style.content_margin_left   = 16
+	panel_style.content_margin_right  = 16
+	panel_style.content_margin_top    = 8
+	panel_style.content_margin_bottom = 8
+	panel.add_theme_stylebox_override("panel", panel_style)
+	add_child(panel)
+
 	var hbox: HBoxContainer = HBoxContainer.new()
-	hbox.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	hbox.offset_top    = -80
-	hbox.offset_left   = 16
-	hbox.offset_right  = -16
-	hbox.offset_bottom = -16
 	hbox.add_theme_constant_override("separation", 20)
 	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(hbox)
+	panel.add_child(hbox)
 
 	# Speed (left)
 	speed_label = Label.new()

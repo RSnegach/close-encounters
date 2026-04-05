@@ -627,13 +627,14 @@ func _apply_input(delta: float) -> void:
 		move_dir = fwd * forward_input + right_dir * strafe_input
 
 		if move_dir.length() > 0.01:
-			var thrust: float = vehicle.total_thrust * move_dir.normalized().length()
-			vehicle.apply_central_force(move_dir.normalized() * thrust * delta * 60.0)
+			# Apply thrust force matching what GroundPhysics does for players.
+			var drive_force: float = vehicle.total_thrust * 0.7  # friction_coefficient
+			vehicle.apply_central_force(move_dir.normalized() * drive_force)
 
 		# Turning
 		var turn_input: float = _ai_input.get("turn", 0.0)
 		if absf(turn_input) > 0.01:
-			vehicle.apply_torque(Vector3.UP * turn_input * 500.0 * delta)
+			vehicle.apply_torque(Vector3.UP * turn_input * vehicle.total_mass * 2.0)
 
 	# --- Weapons: fire when the AI decides to ---
 	if _ai_input.get("fire", false):
