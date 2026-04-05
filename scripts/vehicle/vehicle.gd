@@ -170,20 +170,23 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 		if total_thrust > 0 and total_mass > 0:
 			max_speed = total_thrust / total_mass * 0.7  # friction coefficient
 
+		# Decompose current velocity into forward and sideways components.
+		# Only the forward component is kept — tracks can't slide sideways.
+		var current_vel: Vector3 = state.linear_velocity
+		var forward_speed: float = current_vel.dot(fwd_dir)  # Speed along forward axis.
+
 		if absf(fwd_in) > 0.01:
-			var target_vel: Vector3 = fwd_dir * fwd_in * max_speed
-			var current_vel: Vector3 = state.linear_velocity
-			# Blend toward target velocity (acceleration).
-			var accel: float = 8.0 * delta  # How fast we reach target speed.
-			current_vel.x = lerpf(current_vel.x, target_vel.x, accel)
-			current_vel.z = lerpf(current_vel.z, target_vel.z, accel)
-			state.linear_velocity = current_vel
+			# Accelerate toward target speed along forward axis only.
+			var target_speed_val: float = fwd_in * max_speed
+			forward_speed = lerpf(forward_speed, target_speed_val, 8.0 * delta)
 		else:
-			# Decelerate when no input (friction/braking).
-			var vel: Vector3 = state.linear_velocity
-			vel.x *= (1.0 - 3.0 * delta)
-			vel.z *= (1.0 - 3.0 * delta)
-			state.linear_velocity = vel
+			# Brake when no input.
+			forward_speed *= (1.0 - 5.0 * delta)
+
+		# Reconstruct velocity: only forward component + preserve Y (gravity).
+		current_vel.x = fwd_dir.x * forward_speed
+		current_vel.z = fwd_dir.z * forward_speed
+		state.linear_velocity = current_vel
 
 		# Turning: directly set yaw angular velocity.
 		if absf(turn_in) > 0.01:
@@ -552,16 +555,82 @@ func fire_weapons(delta: float) -> void:
 
 
 ## Create and launch a projectile from the given weapon part.
-## The projectile scene is determined by the weapon's stats.projectile field.
 func _spawn_projectile(weapon: PartNode) -> void:
-	var projectile_id: String = str(weapon.part_data.stats.get("projectile", "bullet_default"))
+	var stats: Dictionary = weapon.part_data.stats
+	var damage: int = int(stats.get("damage", 10))
+	var speed: float = 80.0  # Projectile speed in m/s.
+	var max_range: float = float(stats.get("range", 100))
 
-	# TODO: ProjectileFactory.create(projectile_id, weapon.global_position,
-	#        get_forward_direction(), peer_id)
-	# For now, print a placeholder message.
-	print("[Vehicle] FIRE projectile '%s' from weapon '%s'." % [
-		projectile_id, weapon.part_data.part_name
-	])
+	# Decrease ammo.
+	var ammo: int = int(stats.get("ammo", 0))
+	if ammo <= 0:
+		return  # Out of ammo.
+	stats["ammo"] = ammo - 1
+
+	# Spawn position: weapon's world position, offset forward slightly.
+	var fire_dir: Vector3 = get_forward_direction()
+	var spawn_pos: Vector3 = weapon.global_position + fire_dir * 1.5
+
+	# Create the projectile as a simple moving node.
+	var bullet: Node3D = Node3D.new()
+	bullet.name = "Bullet"
+	bullet.global_position = spawn_pos
+
+	# Visual: small bright elongated box.
+	var mesh_inst: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(0.1, 0.1, 0.4)
+	mesh_inst.mesh = box
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color.YELLOW
+	mat.emission_enabled = true
+	mat.emission = Color.YELLOW
+	mat.emission_energy_multiplier = 3.0
+	mesh_inst.material_override = mat
+	bullet.add_child(mesh_inst)
+
+	# Attach a script-like behavior via a simple child node with a script.
+	# Instead of a full Projectile class, use metadata + the scene tree.
+	bullet.set_meta("direction", fire_dir)
+	bullet.set_meta("speed", speed)
+	bullet.set_meta("damage", damage)
+	bullet.set_meta("max_range", max_range)
+	bullet.set_meta("traveled", 0.0)
+	bullet.set_meta("source_vehicle", self)
+
+	# Add to the scene root so it persists independently of the vehicle.
+	get_tree().current_scene.add_child(bullet)
+	bullet.global_position = spawn_pos
+	bullet.look_at(spawn_pos + fire_dir)
+
+	# Use set_process to move the bullet. We'll attach a callable via a timer.
+	# Simpler approach: use a dedicated _process on a helper script.
+	var script_text: String = """
+extends Node3D
+
+var direction: Vector3
+var speed: float
+var damage: int
+var max_range: float
+var traveled: float = 0.0
+
+func _ready():
+	direction = get_meta("direction", Vector3.FORWARD)
+	speed = get_meta("speed", 80.0)
+	damage = get_meta("damage", 10)
+	max_range = get_meta("max_range", 100.0)
+
+func _physics_process(delta):
+	var move = direction * speed * delta
+	global_position += move
+	traveled += speed * delta
+	if traveled > max_range:
+		queue_free()
+"""
+	var script: GDScript = GDScript.new()
+	script.source_code = script_text
+	script.reload()
+	bullet.set_script(script)
 
 
 # ---------------------------------------------------------------------------

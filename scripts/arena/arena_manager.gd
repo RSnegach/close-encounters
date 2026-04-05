@@ -214,6 +214,9 @@ func _auto_initialize() -> void:
 		ai_vehicle_data["is_ai"] = true
 		vehicle_data_list.append(ai_vehicle_data)
 
+	# --- Create invisible arena boundary walls ---
+	_create_arena_walls()
+
 	# --- Setup and start ---
 	setup_match(match_domain, vehicle_data_list)
 	start_match()
@@ -481,6 +484,35 @@ func _find_target_for(ai_vehicle: Vehicle) -> Vehicle:
 			best = vehicle
 
 	return best
+
+
+## Create four invisible walls around the arena to prevent vehicles from
+## driving off the edge. Walls are tall StaticBody3D boxes.
+func _create_arena_walls() -> void:
+	var arena_half: float = 80.0   # Arena is roughly 160m x 160m.
+	var wall_height: float = 20.0
+	var wall_thick: float = 2.0
+
+	# Four walls: +X, -X, +Z, -Z
+	var wall_configs: Array = [
+		{"pos": Vector3(arena_half, wall_height * 0.5, 0), "size": Vector3(wall_thick, wall_height, arena_half * 2)},
+		{"pos": Vector3(-arena_half, wall_height * 0.5, 0), "size": Vector3(wall_thick, wall_height, arena_half * 2)},
+		{"pos": Vector3(0, wall_height * 0.5, arena_half), "size": Vector3(arena_half * 2, wall_height, wall_thick)},
+		{"pos": Vector3(0, wall_height * 0.5, -arena_half), "size": Vector3(arena_half * 2, wall_height, wall_thick)},
+	]
+
+	for config: Dictionary in wall_configs:
+		var wall: StaticBody3D = StaticBody3D.new()
+		wall.name = "ArenaWall"
+		wall.global_position = config["pos"]
+		var col: CollisionShape3D = CollisionShape3D.new()
+		var shape: BoxShape3D = BoxShape3D.new()
+		shape.size = config["size"]
+		col.shape = shape
+		wall.add_child(col)
+		add_child(wall)
+
+	print("[ArenaManager] Arena boundary walls created.")
 
 
 ## Get the arena scene path for a given domain. Used by the lobby or main
