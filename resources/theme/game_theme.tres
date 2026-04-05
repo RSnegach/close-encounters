@@ -6,6 +6,11 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.2, 0.3, 0.5)
 
 [sub_resource type="StyleBoxFlat" id="SubResource_btn_normal"]
 bg_color = Color(0.059, 0.204, 0.376, 1)
@@ -129,7 +134,7 @@ corner_radius_bottom_left = 3
 [resource]
 default_font_size = 16
 
-Button/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+Button/colors/font_color = Color(0.933, 0.933, 0.933, 1)
 Button/colors/font_hover_color = Color(0.914, 0.271, 0.376, 1)
 Button/colors/font_pressed_color = Color(1, 0.4, 0.5, 1)
 Button/colors/font_disabled_color = Color(0.4, 0.4, 0.45, 1)
@@ -141,12 +146,12 @@ Button/styles/pressed = SubResource("SubResource_btn_pressed")
 Button/styles/disabled = SubResource("SubResource_btn_disabled")
 Button/styles/focus = SubResource("SubResource_btn_focus")
 
-Label/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+Label/colors/font_color = Color(0.933, 0.933, 0.933, 1)
 Label/font_sizes/font_size = 16
 
 Panel/styles/panel = SubResource("SubResource_panel_bg")
 
-LineEdit/colors/font_color = Color(0.9, 0.9, 0.9, 1)
+LineEdit/colors/font_color = Color(0.933, 0.933, 0.933, 1)
 LineEdit/colors/caret_color = Color(0.914, 0.271, 0.376, 1)
 LineEdit/colors/font_placeholder_color = Color(0.5, 0.5, 0.55, 1)
 LineEdit/font_sizes/font_size = 16

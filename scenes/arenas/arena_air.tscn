@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="SubResource_skymat"]
 sky_top_color = Color(0.2, 0.4, 0.9, 1)
