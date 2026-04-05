@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
 [sub_resource type="ProceduralSkyMaterial" id="SubResource_skymat"]
 sky_top_color = Color(0.3, 0.5, 0.85, 1)
@@ -20,7 +20,7 @@ size = Vector2(300, 300)
 
 [sub_resource type="StandardMaterial3D" id="SubResource_watermat"]
 transparency = 1
-albedo_color = Color(0.1, 0.35, 0.6, 0.65)
+albedo_color = Color(0.102, 0.302, 0.502, 0.7)
 metallic = 0.2
 roughness = 0.05
 
@@ -30,19 +30,21 @@ roughness = 0.05
 size = Vector2(300, 300)
 
 [sub_resource type="StandardMaterial3D" id="SubResource_floormat"]
-albedo_color = Color(0.1, 0.15, 0.3, 1)
+albedo_color = Color(0.039, 0.102, 0.188, 1)
 
-[sub_resource type="BoxShape3D" id="SubResource_isl1shape"]
-size = Vector3(18, 6, 14)
+[sub_resource type="BoxMesh" id="SubResource_islmesh"]
 
 [sub_resource type="StandardMaterial3D" id="SubResource_islmat"]
 albedo_color = Color(0.45, 0.55, 0.3, 1)
 
-[sub_resource type="BoxShape3D" id="SubResource_isl2shape"]
-size = Vector3(12, 4, 10)
-
 [sub_resource type="StandardMaterial3D" id="SubResource_sandmat"]
 albedo_color = Color(0.8, 0.72, 0.5, 1)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl1shape"]
+size = Vector3(18, 6, 14)
+
+[sub_resource type="BoxShape3D" id="SubResource_isl2shape"]
+size = Vector3(12, 4, 10)
 
 [sub_resource type="BoxShape3D" id="SubResource_isl3shape"]
 size = Vector3(22, 8, 16)
@@ -73,9 +75,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 1, 40)
 shape = SubResource("SubResource_isl1shape")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Island1"]
-mesh = SubResource("SubResource_watermesh")
+mesh = SubResource("SubResource_islmesh")
 material_override = SubResource("SubResource_islmat")
-transform = Transform3D(0.06, 0, 0, 0, 0.02, 0, 0, 0, 0.047, 0, 0, 0)
+transform = Transform3D(9, 0, 0, 0, 3, 0, 0, 0, 7, 0, 0, 0)
 
 [node name="Island2" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0.5, -30)
@@ -84,9 +86,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0.5, -30)
 shape = SubResource("SubResource_isl2shape")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Island2"]
-mesh = SubResource("SubResource_watermesh")
+mesh = SubResource("SubResource_islmesh")
 material_override = SubResource("SubResource_sandmat")
-transform = Transform3D(0.04, 0, 0, 0, 0.013, 0, 0, 0, 0.033, 0, 0, 0)
+transform = Transform3D(6, 0, 0, 0, 2, 0, 0, 0, 5, 0, 0, 0)
 
 [node name="Island3" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 2, -60)
@@ -95,9 +97,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 2, -60)
 shape = SubResource("SubResource_isl3shape")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Island3"]
-mesh = SubResource("SubResource_watermesh")
+mesh = SubResource("SubResource_islmesh")
 material_override = SubResource("SubResource_islmat")
-transform = Transform3D(0.073, 0, 0, 0, 0.027, 0, 0, 0, 0.053, 0, 0, 0)
+transform = Transform3D(11, 0, 0, 0, 4, 0, 0, 0, 8, 0, 0, 0)
 
 [node name="Island4" type="StaticBody3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0.5, 55)
@@ -106,15 +108,15 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0.5, 55)
 shape = SubResource("SubResource_isl4shape")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Island4"]
-mesh = SubResource("SubResource_watermesh")
+mesh = SubResource("SubResource_islmesh")
 material_override = SubResource("SubResource_sandmat")
-transform = Transform3D(0.033, 0, 0, 0, 0.01, 0, 0, 0, 0.033, 0, 0, 0)
+transform = Transform3D(5, 0, 0, 0, 1.5, 0, 0, 0, 5, 0, 0, 0)
 
 [node name="SpawnPoint1" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -80, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -40, 0, 0)
 
 [node name="SpawnPoint2" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 80, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 0)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866, -0.433, 0.25, 0, 0.5, 0.866, -0.5, -0.75, 0.433, 0, 50, 0)
