@@ -31,19 +31,19 @@ extends RefCounted
 ## frame by the Vehicle. [param delta] is the frame timestep in seconds.
 ##
 ## The base implementation does nothing. Every subclass MUST override this.
-func apply_forces(_vehicle: Vehicle, _delta: float) -> void:
+func apply_forces(_vehicle: RigidBody3D, _delta: float) -> void:
 	pass
 
 
 ## Return the theoretical maximum speed (m/s) this vehicle can reach under
 ## full power with its current stats. Used for HUD gauges and AI planning.
-func get_max_speed(_vehicle: Vehicle) -> float:
+func get_max_speed(_vehicle: RigidBody3D) -> float:
 	return 0.0
 
 
 ## Return the vehicle's current scalar speed (m/s).
 ## The default implementation uses the RigidBody3D's linear_velocity magnitude.
-func get_current_speed(vehicle: Vehicle) -> float:
+func get_current_speed(vehicle: RigidBody3D) -> float:
 	return vehicle.linear_velocity.length()
 
 
@@ -57,14 +57,14 @@ func get_domain() -> String:
 ## Called every physics frame when the vehicle is player-controlled.
 ##
 ## The base implementation does nothing. Override per domain.
-func handle_input(_vehicle: Vehicle, _delta: float) -> void:
+func handle_input(_vehicle: RigidBody3D, _delta: float) -> void:
 	pass
 
 
 ## Return a Dictionary of domain-specific data for the HUD to display.
 ## At minimum, every domain should include "speed". Subclasses add things
 ## like altitude, fuel, depth, throttle, etc.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	return {
 		"speed": get_current_speed(vehicle),
 	}

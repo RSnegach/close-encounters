@@ -64,7 +64,7 @@ var yaw_torque: float = 6.0
 # ---------------------------------------------------------------------------
 
 ## Apply submarine forces every physics frame.
-func apply_forces(vehicle: Vehicle, delta: float) -> void:
+func apply_forces(vehicle: RigidBody3D, delta: float) -> void:
 	var input: Dictionary = vehicle.get_input_vector()
 	current_depth = vehicle.global_position.y
 
@@ -139,7 +139,7 @@ func apply_forces(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Input is handled inside apply_forces for submarines.
-func handle_input(_vehicle: Vehicle, _delta: float) -> void:
+func handle_input(_vehicle: RigidBody3D, _delta: float) -> void:
 	pass
 
 
@@ -149,13 +149,13 @@ func get_domain() -> String:
 
 
 ## Max speed for submarines: limited by thrust vs water resistance.
-func get_max_speed(vehicle: Vehicle) -> float:
+func get_max_speed(vehicle: RigidBody3D) -> float:
 	var resist: float = maxf(water_resistance * vehicle.total_mass * 0.01, 0.01)
 	return sqrt(vehicle.total_thrust / resist)
 
 
 ## HUD data for submarines.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	var speed: float = get_current_speed(vehicle)
 
 	# Depth as a positive number (meters below surface) for display.
@@ -187,7 +187,7 @@ func get_hud_data(vehicle: Vehicle) -> Dictionary:
 
 ## When below crush depth, deal pressure damage to random hull parts every
 ## frame. The damage rate is pressure_damage_rate HP per second.
-func _apply_pressure_damage(vehicle: Vehicle, delta: float) -> void:
+func _apply_pressure_damage(vehicle: RigidBody3D, delta: float) -> void:
 	# How much depth below crush (positive number = how far past the limit).
 	var over_depth: float = crush_depth - current_depth  # both are negative, so this is positive
 	if over_depth <= 0.0:

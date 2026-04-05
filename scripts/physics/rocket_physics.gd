@@ -79,7 +79,7 @@ const RCS_TRANSLATION_FORCE: float = 500.0
 # ---------------------------------------------------------------------------
 
 ## Apply rocket forces every physics frame.
-func apply_forces(vehicle: Vehicle, delta: float) -> void:
+func apply_forces(vehicle: RigidBody3D, delta: float) -> void:
 	var input: Dictionary = vehicle.get_input_vector()
 	var altitude: float = vehicle.global_position.y
 	var speed: float = vehicle.linear_velocity.length()
@@ -120,7 +120,7 @@ func apply_forces(vehicle: Vehicle, delta: float) -> void:
 
 ## Translate input into rotation torques. Delegates to atmospheric or space
 ## handling depending on phase.
-func handle_input(vehicle: Vehicle, _delta: float) -> void:
+func handle_input(vehicle: RigidBody3D, _delta: float) -> void:
 	var input: Dictionary = vehicle.get_input_vector()
 
 	var pitch_input: float = input.get("pitch", 0.0)
@@ -154,7 +154,7 @@ func get_domain() -> String:
 
 ## Max speed depends on phase. In atmosphere: terminal velocity from
 ## thrust vs drag. In space: effectively infinite (Newtonian).
-func get_max_speed(vehicle: Vehicle) -> float:
+func get_max_speed(vehicle: RigidBody3D) -> float:
 	if is_in_space:
 		# No max speed in space. Return current speed + 1 as a placeholder.
 		return vehicle.linear_velocity.length() + 1.0
@@ -165,7 +165,7 @@ func get_max_speed(vehicle: Vehicle) -> float:
 
 
 ## HUD data for rockets.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	var speed: float = get_current_speed(vehicle)
 	var altitude: float = vehicle.global_position.y
 
@@ -202,7 +202,7 @@ func get_hud_data(vehicle: Vehicle) -> Dictionary:
 
 ## Calculate max_fuel from the vehicle's fuel tank and booster parts.
 ## Called once during Vehicle.setup_from_data() after parts are created.
-func setup_fuel(vehicle: Vehicle) -> void:
+func setup_fuel(vehicle: RigidBody3D) -> void:
 	max_fuel = 0.0
 
 	var seen: Dictionary = {}
@@ -232,7 +232,7 @@ func setup_fuel(vehicle: Vehicle) -> void:
 
 ## Apply gravity and atmospheric drag during the launch phase.
 func _apply_atmospheric_forces(
-	vehicle: Vehicle, _delta: float, altitude: float, speed: float
+	vehicle: RigidBody3D, _delta: float, altitude: float, speed: float
 ) -> void:
 	# --- Gravity ---
 	# F = m * g, directed downward. Godot's built-in gravity is disabled for
@@ -256,7 +256,7 @@ func _apply_atmospheric_forces(
 
 ## Apply space-specific forces (RCS translation).
 func _apply_space_forces(
-	vehicle: Vehicle, _delta: float, input: Dictionary
+	vehicle: RigidBody3D, _delta: float, input: Dictionary
 ) -> void:
 	# In space, WASD can also apply small RCS translation forces for docking
 	# and fine manoeuvring (in addition to the rotation handled in handle_input).
@@ -274,7 +274,7 @@ func _apply_space_forces(
 
 ## Current thrust-to-weight ratio at the current throttle level.
 ## TWR = (total_thrust * throttle) / (mass * g).
-func _get_twr(vehicle: Vehicle) -> float:
+func _get_twr(vehicle: RigidBody3D) -> float:
 	var weight: float = vehicle.total_mass * GRAVITY
 	if weight <= 0.0:
 		return 0.0

@@ -62,7 +62,7 @@ var waterline_damping: float = 5.0
 # ---------------------------------------------------------------------------
 
 ## Apply water-surface forces every physics frame.
-func apply_forces(vehicle: Vehicle, delta: float) -> void:
+func apply_forces(vehicle: RigidBody3D, delta: float) -> void:
 	wave_time += delta
 
 	var hull_volume: float = _get_hull_volume(vehicle)
@@ -132,14 +132,14 @@ func apply_forces(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Input handling is merged into apply_forces for water vehicles.
-func handle_input(_vehicle: Vehicle, _delta: float) -> void:
+func handle_input(_vehicle: RigidBody3D, _delta: float) -> void:
 	pass
 
 
 ## Theoretical max speed based on thrust vs hull drag.
 ## At terminal velocity: thrust = drag_coeff * hull_vol * v^2
 ## => v = sqrt(thrust / (drag_coeff * hull_vol)).
-func get_max_speed(vehicle: Vehicle) -> float:
+func get_max_speed(vehicle: RigidBody3D) -> float:
 	var vol: float = maxf(_get_hull_volume(vehicle), 1.0)
 	var denom: float = hull_drag_coefficient * vol
 	if denom <= 0.0:
@@ -153,7 +153,7 @@ func get_domain() -> String:
 
 
 ## HUD data for watercraft.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	var speed: float = get_current_speed(vehicle)
 	var fwd: Vector3 = vehicle.get_forward_direction()
 
@@ -193,7 +193,7 @@ func get_hud_data(vehicle: Vehicle) -> Dictionary:
 
 ## Sum up the hull volume from the vehicle's hull / keel parts.
 ## Volume is computed as the product of each hull part's grid size.
-func _get_hull_volume(vehicle: Vehicle) -> float:
+func _get_hull_volume(vehicle: RigidBody3D) -> float:
 	var volume: float = 0.0
 	var seen: Dictionary = {}
 

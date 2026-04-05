@@ -78,7 +78,7 @@ const STALL_DRAG_MULTIPLIER: float = 3.0
 # ---------------------------------------------------------------------------
 
 ## Apply aerodynamic forces every physics frame.
-func apply_forces(vehicle: Vehicle, delta: float) -> void:
+func apply_forces(vehicle: RigidBody3D, delta: float) -> void:
 	var speed: float = vehicle.linear_velocity.length()
 	current_altitude = vehicle.global_position.y
 	var wing: float = _get_wing_area(vehicle)
@@ -142,7 +142,7 @@ func apply_forces(vehicle: Vehicle, delta: float) -> void:
 
 
 ## Translate player input into pitch and roll torques.
-func handle_input(vehicle: Vehicle, _delta: float) -> void:
+func handle_input(vehicle: RigidBody3D, _delta: float) -> void:
 	var input: Dictionary = vehicle.get_input_vector()
 	var pitch_input: float = input.get("pitch", 0.0)
 	var roll_input: float = input.get("roll", 0.0)
@@ -160,7 +160,7 @@ func handle_input(vehicle: Vehicle, _delta: float) -> void:
 
 ## Theoretical top speed: the speed at which thrust equals drag.
 ## thrust = drag_coeff * v^2  =>  v = sqrt(thrust / drag_coeff).
-func get_max_speed(vehicle: Vehicle) -> float:
+func get_max_speed(vehicle: RigidBody3D) -> float:
 	var d: float = maxf(vehicle.total_drag, 0.01)
 	return sqrt(vehicle.total_thrust / d)
 
@@ -172,7 +172,7 @@ func get_domain() -> String:
 
 ## HUD data for aircraft: speed, altitude, throttle, stall status, heading,
 ## and pitch angle.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	var speed: float = get_current_speed(vehicle)
 	var fwd: Vector3 = vehicle.get_forward_direction()
 
@@ -203,7 +203,7 @@ func get_hud_data(vehicle: Vehicle) -> Dictionary:
 ## Aerodynamic frame parts each contribute approximately 2.0 m^2.
 ## Uses a seen-set to avoid double-counting multi-cell parts that occupy
 ## more than one grid cell in the parts dictionary.
-func _get_wing_area(vehicle: Vehicle) -> float:
+func _get_wing_area(vehicle: RigidBody3D) -> float:
 	var area: float = 0.0
 	var seen: Dictionary = {}
 

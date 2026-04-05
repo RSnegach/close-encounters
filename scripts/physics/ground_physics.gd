@@ -48,7 +48,7 @@ var has_tracks: bool = false
 ##   brake_force   = -velocity_direction * brake_force * mass   (when idle)
 ##   turn_torque   = input_strafe * turn_speed / max(speed, 1)
 ##   max_speed     = total_thrust / max(mass, 1) * friction_coefficient
-func apply_forces(vehicle: Vehicle, _delta: float) -> void:
+func apply_forces(vehicle: RigidBody3D, _delta: float) -> void:
 	# Only read keyboard input for player-controlled vehicles.
 	# AI vehicles get their forces from AIController instead.
 	if not vehicle.is_player_controlled:
@@ -93,14 +93,14 @@ func apply_forces(vehicle: Vehicle, _delta: float) -> void:
 
 ## Read player input and directly drive the vehicle. For ground vehicles,
 ## handle_input is merged into apply_forces since all input maps to forces.
-func handle_input(_vehicle: Vehicle, _delta: float) -> void:
+func handle_input(_vehicle: RigidBody3D, _delta: float) -> void:
 	# Input is read inside apply_forces via vehicle.get_input_vector().
 	pass
 
 
 ## Theoretical top speed (m/s) at full throttle on a flat surface.
 ## Formula: thrust / mass * friction. This is a simplified model.
-func get_max_speed(vehicle: Vehicle) -> float:
+func get_max_speed(vehicle: RigidBody3D) -> float:
 	var m: float = maxf(vehicle.total_mass, 1.0)
 	return vehicle.total_thrust / m * friction_coefficient
 
@@ -111,7 +111,7 @@ func get_domain() -> String:
 
 
 ## HUD data for ground vehicles: speed, heading, and a pseudo gear number.
-func get_hud_data(vehicle: Vehicle) -> Dictionary:
+func get_hud_data(vehicle: RigidBody3D) -> Dictionary:
 	var speed: float = get_current_speed(vehicle)
 	var max_spd: float = get_max_speed(vehicle)
 
@@ -140,7 +140,7 @@ func get_hud_data(vehicle: Vehicle) -> Dictionary:
 
 ## Count how many propulsion parts are wheel or track type. Used for traction
 ## calculations.
-func _count_wheels(vehicle: Vehicle) -> int:
+func _count_wheels(vehicle: RigidBody3D) -> int:
 	var count: int = 0
 	for part: PartNode in vehicle.propulsion_parts:
 		if part.part_data == null:
@@ -154,7 +154,7 @@ func _count_wheels(vehicle: Vehicle) -> int:
 ## Compute a traction multiplier based on wheel / track count and type.
 ## More wheels = better grip = tighter turns.
 ## Returns a value roughly in the range 0.5 .. 2.0.
-func _get_traction(vehicle: Vehicle) -> float:
+func _get_traction(vehicle: RigidBody3D) -> float:
 	var wheel_count: int = _count_wheels(vehicle)
 	if wheel_count <= 0:
 		return 0.5  # No wheels -- very poor traction (hovercraft-like)
