@@ -97,16 +97,22 @@ func _process(delta: float) -> void:
 func _update_health() -> void:
 	var current_hp: float = 0.0
 	var max_hp: float     = 0.0
-	if vehicle.get("parts"):
-		for part: Variant in vehicle.parts:
-			if part.get("current_hp") != null:
-				current_hp += part.current_hp
-			elif part.get("hp") != null:
-				current_hp += part.hp
-			if part.get("max_hp") != null:
-				max_hp += part.max_hp
-			elif part.get("hp") != null:
-				max_hp += part.hp
+	if vehicle.get("parts") and vehicle.parts is Dictionary:
+		# vehicle.parts is Dict[Vector3i -> PartNode]. Iterate values and
+		# deduplicate (multi-cell parts appear multiple times).
+		var seen: Dictionary = {}
+		for cell: Variant in vehicle.parts:
+			var part_node: Variant = vehicle.parts[cell]
+			if part_node == null:
+				continue
+			var nid: int = part_node.get_instance_id()
+			if seen.has(nid):
+				continue
+			seen[nid] = true
+			if part_node.get("current_hp") != null:
+				current_hp += part_node.current_hp
+			if part_node.get("part_data") != null and part_node.part_data.get("hp") != null:
+				max_hp += part_node.part_data.hp
 	else:
 		# Fallback: vehicle exposes total values directly
 		current_hp = vehicle.get("current_hp") if vehicle.get("current_hp") != null else 0.0
