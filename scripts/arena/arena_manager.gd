@@ -109,15 +109,22 @@ func _ready() -> void:
 		spawn_points.append(Vector3(-20.0, 3.0, 0.0))
 		spawn_points.append(Vector3(20.0, 3.0, 0.0))
 
-	# --- Create the DamageSystem ---
-	damage_system = DamageSystem.new()
-	damage_system.name = "DamageSystem"
-	# Add to a group so projectiles/explosions can find it easily.
+	# --- Find or create the DamageSystem ---
+	# The combat.tscn may already have a DamageSystem node. Reuse it if so.
+	var existing_ds: Node = get_parent().find_child("DamageSystem", false, false) if get_parent() else null
+	if existing_ds and existing_ds is DamageSystem:
+		damage_system = existing_ds as DamageSystem
+		print("[ArenaManager] Reusing existing DamageSystem.")
+	else:
+		damage_system = DamageSystem.new()
+		damage_system.name = "DamageSystem"
+		add_child(damage_system)
+		print("[ArenaManager] Created new DamageSystem.")
 	damage_system.add_to_group("damage_system")
-	add_child(damage_system)
 
-	# Connect DamageSystem signals.
-	damage_system.vehicle_killed.connect(_on_vehicle_killed)
+	# Connect DamageSystem signals if the signal exists.
+	if damage_system.has_signal("vehicle_killed"):
+		damage_system.vehicle_killed.connect(_on_vehicle_killed)
 
 	print("[ArenaManager] Ready. %d spawn point(s) found." % spawn_points.size())
 
@@ -130,7 +137,9 @@ func _ready() -> void:
 ## using data from GameManager.match_settings. Deferred so the full
 ## scene tree is ready first.
 func _auto_initialize() -> void:
+	print("[ArenaManager] _auto_initialize starting...")
 	var settings: Dictionary = GameManager.match_settings
+	print("[ArenaManager] match_settings = %s" % str(settings))
 	var match_domain: String = settings.get("domain", "Ground").to_lower()
 
 	# --- Load the arena scene into the ArenaContainer sibling ---
