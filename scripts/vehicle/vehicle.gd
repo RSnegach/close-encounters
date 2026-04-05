@@ -322,11 +322,16 @@ var _camera_yaw: float = 0.0
 var _camera_pitch: float = -15.0  # Slightly looking down.
 var _camera_distance: float = 14.0
 
-## Attach a third-person follow camera with mouse-look support.
-## Right-click drag orbits the camera around the vehicle.
+## Index of the currently active weapon group. Cycled with scroll wheel or number keys.
+var active_weapon_index: int = -1  # -1 = all weapons fire.
+
+## The direction the camera is looking, used for aiming weapons at the crosshair.
+var aim_direction: Vector3 = Vector3.FORWARD
+
+
+## Attach a third-person follow camera. Mouse movement controls the camera
+## freely (like World of Tanks), and the crosshair is used for aiming.
 func attach_follow_camera() -> void:
-	# The pivot is a child of the vehicle so it follows movement,
-	# but we control its rotation independently for mouse look.
 	_camera_pivot = Node3D.new()
 	_camera_pivot.name = "CameraPivot"
 	_camera_pivot.top_level = true  # Don't inherit vehicle rotation.
@@ -337,47 +342,80 @@ func attach_follow_camera() -> void:
 	_camera.position = Vector3(0, 0, _camera_distance)
 	_camera_pivot.add_child(_camera)
 	_camera.current = true
-
-	# Apply initial pitch.
 	_camera_pivot.rotation_degrees.x = _camera_pitch
 
-	# Capture mouse for look controls.
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	# Capture mouse so it doesn't leave the window.
+	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
-	print("[Vehicle] Follow camera attached.")
+	print("[Vehicle] Follow camera attached. Mouse captured for aiming.")
 
 
-## Handle mouse input for camera orbiting. Called from _unhandled_input.
+## Handle mouse movement for free-look camera and weapon cycling.
 func _unhandled_input(event: InputEvent) -> void:
 	if _camera_pivot == null or not is_player_controlled:
 		return
 
-	# Right-click drag to orbit camera.
-	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+	# Mouse movement: free-look camera (always active, no button needed).
+	if event is InputEventMouseMotion:
 		var motion: InputEventMouseMotion = event as InputEventMouseMotion
-		_camera_yaw -= motion.relative.x * 0.3
-		_camera_pitch -= motion.relative.y * 0.3
-		_camera_pitch = clampf(_camera_pitch, -80.0, 10.0)
+		_camera_yaw -= motion.relative.x * 0.15
+		_camera_pitch -= motion.relative.y * 0.15
+		_camera_pitch = clampf(_camera_pitch, -60.0, 20.0)
 
-	# Scroll to zoom.
+	# Scroll wheel: cycle active weapon.
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.pressed:
 			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
-				_camera_distance = maxf(_camera_distance - 1.0, 5.0)
+				_cycle_weapon(1)
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				_camera_distance = minf(_camera_distance + 1.0, 40.0)
+				_cycle_weapon(-1)
+
+	# Number keys 1-9: select weapon directly. 0 = all weapons.
+	if event is InputEventKey:
+		var key: InputEventKey = event as InputEventKey
+		if key.pressed:
+			if key.physical_keycode == KEY_0:
+				active_weapon_index = -1
+				print("[Vehicle] All weapons active.")
+			elif key.physical_keycode >= KEY_1 and key.physical_keycode <= KEY_9:
+				var idx: int = key.physical_keycode - KEY_1
+				if idx < weapons.size():
+					active_weapon_index = idx
+					print("[Vehicle] Weapon %d active: %s" % [idx + 1, weapons[idx].part_data.part_name])
 
 
-## Update camera position to follow vehicle each frame.
+## Cycle through weapons. direction=1 for next, -1 for previous.
+func _cycle_weapon(direction: int) -> void:
+	if weapons.is_empty():
+		return
+	# -1 means "all weapons". Cycling from -1 goes to 0, and past the end wraps to -1.
+	active_weapon_index += direction
+	if active_weapon_index >= weapons.size():
+		active_weapon_index = -1  # Wrap to "all".
+	elif active_weapon_index < -1:
+		active_weapon_index = weapons.size() - 1
+
+	if active_weapon_index == -1:
+		print("[Vehicle] All weapons active.")
+	else:
+		print("[Vehicle] Weapon %d: %s" % [active_weapon_index + 1, weapons[active_weapon_index].part_data.part_name])
+
+
+## Update camera position and compute aim direction each frame.
 func _process(_delta: float) -> void:
 	if _camera_pivot == null:
 		return
-	# Follow the vehicle's position but not rotation.
+	# Follow the vehicle's position but control rotation with mouse.
 	_camera_pivot.global_position = global_position + Vector3(0, 2, 0)
 	_camera_pivot.rotation_degrees = Vector3(_camera_pitch, _camera_yaw, 0)
 	if _camera:
 		_camera.position.z = _camera_distance
+
+	# Compute the aim direction: where the camera center (crosshair) points.
+	# This is the camera's forward direction (-Z in local space).
+	aim_direction = -_camera_pivot.global_transform.basis.z
+	aim_direction = aim_direction.normalized()
 
 
 # ---------------------------------------------------------------------------
@@ -533,10 +571,15 @@ func get_input_vector() -> Dictionary:
 # Weapons
 # ---------------------------------------------------------------------------
 
-## Iterate cached weapon parts and fire any whose cooldown has elapsed.
-## Each weapon stores a "_fire_cooldown" metadata float that counts down.
+## Fire weapons that match the current active_weapon_index selection.
+## -1 = fire all weapons. Otherwise, fire only the selected weapon.
 func fire_weapons(delta: float) -> void:
-	for weapon: PartNode in weapons:
+	for i: int in range(weapons.size()):
+		# Skip weapons not in the active selection.
+		if active_weapon_index >= 0 and i != active_weapon_index:
+			continue
+
+		var weapon: PartNode = weapons[i]
 		if not weapon.is_functional():
 			continue
 
@@ -545,10 +588,8 @@ func fire_weapons(delta: float) -> void:
 		cooldown -= delta
 
 		if cooldown <= 0.0:
-			# Determine fire rate from the weapon's stats (shots per second).
 			var fire_rate: float = float(weapon.part_data.stats.get("fire_rate", 1.0))
 			cooldown = 1.0 / maxf(fire_rate, 0.1)
-
 			_spawn_projectile(weapon)
 
 		weapon.set_meta(META_COOLDOWN, cooldown)
@@ -567,8 +608,10 @@ func _spawn_projectile(weapon: PartNode) -> void:
 		return  # Out of ammo.
 	stats["ammo"] = ammo - 1
 
-	# Spawn position: weapon's world position, offset forward slightly.
-	var fire_dir: Vector3 = get_forward_direction()
+	# Aim toward the crosshair (camera direction) if available.
+	var fire_dir: Vector3 = aim_direction if aim_direction.length() > 0.5 else get_forward_direction()
+	fire_dir.y = clampf(fire_dir.y, -0.5, 0.5)  # Limit vertical aim angle.
+	fire_dir = fire_dir.normalized()
 	var spawn_pos: Vector3 = weapon.global_position + fire_dir * 1.5
 
 	# Create the projectile as a simple moving node.
