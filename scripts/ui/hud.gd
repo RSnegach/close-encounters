@@ -33,6 +33,8 @@ var crosshair: Control         ## Small centred cross.
 var damage_flash: ColorRect    ## Full-screen red flash on taking damage.
 var kill_feed: VBoxContainer   ## Top-right scrolling destruction messages.
 var game_over_label: Label     ## Large centred "VICTORY" / "DEFEATED" text.
+var pause_panel: PanelContainer ## Escape menu overlay.
+var is_paused: bool = false     ## Whether the game is currently paused.
 
 # ─── Internal state ──────────────────────────────────────────────────────────
 var flash_timer: float = 0.0   ## Remaining seconds for damage flash.
@@ -50,6 +52,7 @@ func _ready() -> void:
 	_create_damage_flash()
 	_create_kill_feed()
 	_create_game_over_label()
+	_create_pause_menu()
 
 
 ## Bind the HUD to a specific Vehicle node.
@@ -88,6 +91,46 @@ func _process(delta: float) -> void:
 	# Physics controllers' get_hud_data() expects the vehicle as an argument.
 	if vehicle.get("physics_controller") and vehicle.physics_controller.has_method("get_hud_data"):
 		_update_domain_info(vehicle.physics_controller.get_hud_data(vehicle))
+
+
+# ─── Pause menu ──────────────────────────────────────────────────────────────
+
+## Toggle pause when Escape is pressed.
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey:
+		var key: InputEventKey = event as InputEventKey
+		if key.pressed and key.physical_keycode == KEY_ESCAPE:
+			_toggle_pause()
+			get_viewport().set_input_as_handled()
+
+
+## Pause or unpause the game.
+func _toggle_pause() -> void:
+	is_paused = not is_paused
+	get_tree().paused = is_paused
+	pause_panel.visible = is_paused
+	# Show mouse cursor when paused so buttons are clickable.
+	if is_paused:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+
+func _on_resume_pressed() -> void:
+	_toggle_pause()
+
+
+func _on_restart_pressed() -> void:
+	get_tree().paused = false
+	is_paused = false
+	GameManager.change_scene("res://scenes/builder.tscn")
+
+
+func _on_quit_to_menu_pressed() -> void:
+	get_tree().paused = false
+	is_paused = false
+	NetworkManager.disconnect_game()
+	GameManager.change_scene("res://scenes/main_menu.tscn")
 
 
 # ─── Health ──────────────────────────────────────────────────────────────────
@@ -396,3 +439,95 @@ func _create_game_over_label() -> void:
 	game_over_label.visible = false
 	game_over_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(game_over_label)
+
+
+## Pause menu overlay — shown when Escape is pressed.
+func _create_pause_menu() -> void:
+	pause_panel = PanelContainer.new()
+	pause_panel.set_anchors_preset(Control.PRESET_CENTER)
+	pause_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	pause_panel.grow_vertical   = Control.GROW_DIRECTION_BOTH
+	pause_panel.custom_minimum_size = Vector2(300, 280)
+	pause_panel.visible = false
+	# This node must NOT be ignored by mouse so buttons work.
+	pause_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	# Must keep processing while paused so we can unpause.
+	pause_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# Dark panel background
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(0.05, 0.05, 0.1, 0.9)
+	style.border_color = Color("#e94560")
+	style.border_width_top    = 2
+	style.border_width_bottom = 2
+	style.border_width_left   = 2
+	style.border_width_right  = 2
+	style.corner_radius_top_left     = 8
+	style.corner_radius_top_right    = 8
+	style.corner_radius_bottom_left  = 8
+	style.corner_radius_bottom_right = 8
+	style.content_margin_top    = 20
+	style.content_margin_bottom = 20
+	style.content_margin_left   = 20
+	style.content_margin_right  = 20
+	pause_panel.add_theme_stylebox_override("panel", style)
+
+	var vbox: VBoxContainer = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	pause_panel.add_child(vbox)
+
+	# Title
+	var title: Label = Label.new()
+	title.text = "PAUSED"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 32)
+	title.add_theme_color_override("font_color", Color("#e94560"))
+	vbox.add_child(title)
+
+	# Spacer
+	var spacer: Control = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 8)
+	vbox.add_child(spacer)
+
+	# Resume button
+	var resume_btn: Button = _create_pause_button("Resume")
+	resume_btn.pressed.connect(_on_resume_pressed)
+	vbox.add_child(resume_btn)
+
+	# Restart (back to builder)
+	var restart_btn: Button = _create_pause_button("Restart (Builder)")
+	restart_btn.pressed.connect(_on_restart_pressed)
+	vbox.add_child(restart_btn)
+
+	# Quit to menu
+	var quit_btn: Button = _create_pause_button("Quit to Menu")
+	quit_btn.pressed.connect(_on_quit_to_menu_pressed)
+	vbox.add_child(quit_btn)
+
+	add_child(pause_panel)
+
+
+## Helper to create a styled button for the pause menu.
+func _create_pause_button(text: String) -> Button:
+	var btn: Button = Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(250, 44)
+	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_color_override("font_color", Color("#eeeeee"))
+	var sn: StyleBoxFlat = StyleBoxFlat.new()
+	sn.bg_color = Color("#0f3460")
+	sn.corner_radius_top_left     = 6
+	sn.corner_radius_top_right    = 6
+	sn.corner_radius_bottom_left  = 6
+	sn.corner_radius_bottom_right = 6
+	sn.content_margin_top    = 8
+	sn.content_margin_bottom = 8
+	btn.add_theme_stylebox_override("normal", sn)
+	var sh: StyleBoxFlat = sn.duplicate()
+	sh.bg_color = Color("#0f3460").lightened(0.15)
+	btn.add_theme_stylebox_override("hover", sh)
+	var sp: StyleBoxFlat = sn.duplicate()
+	sp.bg_color = Color("#e94560")
+	btn.add_theme_stylebox_override("pressed", sp)
+	return btn
