@@ -655,17 +655,11 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	bullet.look_at(spawn_pos + fire_dir)
 
 	# Connect the area's body_entered signal for hit detection.
-	area.body_entered.connect(func(body: Node) -> void:
-		if body == self:
-			return  # Don't damage ourselves.
-		if body is Vehicle:
-			var target_vehicle: Vehicle = body as Vehicle
-			# Deal damage to the vehicle.
-			var dmg: int = bullet.get_meta("damage", 10)
-			_deal_damage_to_vehicle(target_vehicle, dmg)
-		# Destroy bullet on any hit.
-		bullet.queue_free()
-	)
+	# Store references in metadata so the callback can access them.
+	area.set_meta("_source_vehicle", self)
+	area.set_meta("_bullet_ref", bullet)
+	area.set_meta("_damage", damage)
+	area.body_entered.connect(_on_bullet_hit.bind(area))
 
 	# Animate: fly forward, despawn at max range.
 	var travel_time: float = max_range / speed
@@ -675,8 +669,23 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	tween.tween_callback(bullet.queue_free)
 
 
+## Called when a bullet's Area3D overlaps a physics body.
+func _on_bullet_hit(body: Node, area: Area3D) -> void:
+	var source = area.get_meta("_source_vehicle", null)
+	if body == source:
+		return  # Don't damage ourselves.
+	var bullet_node: Node = area.get_meta("_bullet_ref", null)
+	var dmg: int = area.get_meta("_damage", 10)
+	# Check if it's a RigidBody3D with parts (i.e., a vehicle).
+	if body is RigidBody3D and body.has_method("die"):
+		_deal_damage_to_vehicle(body, dmg)
+	# Destroy bullet on any hit.
+	if bullet_node != null and is_instance_valid(bullet_node):
+		bullet_node.queue_free()
+
+
 ## Deal damage to a target vehicle by reducing HP on a random alive part.
-func _deal_damage_to_vehicle(target: Vehicle, dmg: int) -> void:
+func _deal_damage_to_vehicle(target: RigidBody3D, dmg: int) -> void:
 	# Find alive parts and damage one.
 	var alive_parts: Array[PartNode] = []
 	var seen: Dictionary = {}
