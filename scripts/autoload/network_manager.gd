@@ -331,8 +331,12 @@ func receive_vehicle_data(data: Dictionary) -> void:
 ## Set this player's ready state and notify all peers.
 func set_player_ready(ready: bool) -> void:
 	var my_id: int = get_peer_id()
+	if my_id == 0:
+		my_id = 1  # Solo mode fallback.
 	player_ready_states[my_id] = ready
-	_on_player_ready.rpc(my_id, ready)
+	# Only RPC if we have an active multiplayer peer.
+	if peer != null:
+		_on_player_ready.rpc(my_id, ready)
 	_check_all_ready()
 
 

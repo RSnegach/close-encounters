@@ -614,10 +614,26 @@ func _apply_input(delta: float) -> void:
 	if vehicle == null:
 		return
 
-	# --- Movement: feed the AI input to the physics controller ---
+	# --- Movement: apply forces directly to the vehicle ---
+	# The physics controllers read from Input actions (player only), so the AI
+	# drives the RigidBody3D directly using the same force model.
 	if vehicle.physics_controller != null:
-		# Override the vehicle's input source with our AI-generated input.
-		vehicle.physics_controller.apply_forces_with_input(vehicle, _ai_input, delta)
+		var move_dir: Vector3 = Vector3.ZERO
+		var fwd: Vector3 = -vehicle.global_transform.basis.z
+		var right_dir: Vector3 = vehicle.global_transform.basis.x
+
+		var forward_input: float = _ai_input.get("forward", 0.0)
+		var strafe_input: float = _ai_input.get("strafe", 0.0)
+		move_dir = fwd * forward_input + right_dir * strafe_input
+
+		if move_dir.length() > 0.01:
+			var thrust: float = vehicle.total_thrust * move_dir.normalized().length()
+			vehicle.apply_central_force(move_dir.normalized() * thrust * delta * 60.0)
+
+		# Turning
+		var turn_input: float = _ai_input.get("turn", 0.0)
+		if absf(turn_input) > 0.01:
+			vehicle.apply_torque(Vector3.UP * turn_input * 500.0 * delta)
 
 	# --- Weapons: fire when the AI decides to ---
 	if _ai_input.get("fire", false):
