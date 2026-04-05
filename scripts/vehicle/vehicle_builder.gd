@@ -126,6 +126,14 @@ var _is_orbiting: bool = false
 ## Ghost material instance (reused and recolored each frame).
 var _ghost_material: StandardMaterial3D = null
 
+## Undo/redo history. Each entry is a Dictionary:
+##   { "action": "place"|"remove", "part_id": String, "grid_pos": Vector3i }
+## For "remove", also stores the part_id so we can re-place it on undo.
+var _undo_stack: Array[Dictionary] = []
+
+## Actions that were undone and can be redone.
+var _redo_stack: Array[Dictionary] = []
+
 
 # ---------------------------------------------------------------------------
 # Engine callbacks
@@ -192,6 +200,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey:
 		var key: InputEventKey = event as InputEventKey
 		if key.pressed:
+			# Ctrl+Z = undo, Ctrl+Y or Ctrl+Shift+Z = redo
+			if key.ctrl_pressed:
+				match key.physical_keycode:
+					KEY_Z:
+						if key.shift_pressed:
+							redo()
+						else:
+							undo()
+					KEY_Y:
+						redo()
+				return
+
 			match key.physical_keycode:
 				KEY_X:
 					is_delete_mode = not is_delete_mode
@@ -243,7 +263,12 @@ func place_part(data: PartData, pos: Vector3i) -> bool:
 				placed_parts[pos + Vector3i(x, y, z)] = part_node
 
 	# Deduct cost.
-	budget_remaining -= data.cost
+	if budget_remaining >= 0:
+		budget_remaining -= data.cost
+
+	# Record in undo history.
+	_undo_stack.append({"action": "place", "part_id": data.id, "grid_pos": pos})
+	_redo_stack.clear()  # New action invalidates redo history.
 
 	part_placed.emit(data, pos)
 	budget_changed.emit(budget_remaining)
@@ -269,7 +294,13 @@ func remove_part(pos: Vector3i) -> bool:
 		placed_parts.erase(key)
 
 	# Refund the cost.
-	budget_remaining += part_data.cost
+	if budget_remaining >= 0:
+		budget_remaining += part_data.cost
+
+	# Record in undo history (store the part ID and its origin position).
+	var origin_pos: Vector3i = part_node.grid_position
+	_undo_stack.append({"action": "remove", "part_id": part_data.id, "grid_pos": origin_pos})
+	_redo_stack.clear()
 
 	# Remove the node from the scene tree.
 	part_node.queue_free()
@@ -405,6 +436,91 @@ func clear_build() -> void:
 	placed_parts.clear()
 	# Reset budget to whatever was configured by setup().
 	# (budget_remaining is set externally via setup().)
+
+
+## Undo the last place or remove action.
+func undo() -> void:
+	if _undo_stack.is_empty():
+		return
+
+	var entry: Dictionary = _undo_stack.pop_back()
+	var action: String = entry.get("action", "")
+	var part_id: String = entry.get("part_id", "")
+	var gpos: Vector3i = entry.get("grid_pos", Vector3i.ZERO)
+
+	if action == "place":
+		# Undo a placement → remove the part (without recording history).
+		_remove_part_no_history(gpos)
+		_redo_stack.append(entry)
+	elif action == "remove":
+		# Undo a removal → re-place the part (without recording history).
+		var pd: PartData = PartRegistry.get_part(part_id)
+		if pd:
+			_place_part_no_history(pd, gpos)
+		_redo_stack.append(entry)
+
+	print("[Builder] Undo: %s %s at %s" % [action, part_id, str(gpos)])
+
+
+## Redo the last undone action.
+func redo() -> void:
+	if _redo_stack.is_empty():
+		return
+
+	var entry: Dictionary = _redo_stack.pop_back()
+	var action: String = entry.get("action", "")
+	var part_id: String = entry.get("part_id", "")
+	var gpos: Vector3i = entry.get("grid_pos", Vector3i.ZERO)
+
+	if action == "place":
+		# Redo a placement → place the part again.
+		var pd: PartData = PartRegistry.get_part(part_id)
+		if pd:
+			_place_part_no_history(pd, gpos)
+		_undo_stack.append(entry)
+	elif action == "remove":
+		# Redo a removal → remove the part again.
+		_remove_part_no_history(gpos)
+		_undo_stack.append(entry)
+
+	print("[Builder] Redo: %s %s at %s" % [action, part_id, str(gpos)])
+
+
+## Place a part without recording it in the undo history.
+## Used internally by undo/redo to avoid infinite loops.
+func _place_part_no_history(data: PartData, pos: Vector3i) -> void:
+	var part_node: PartNode = PartFactory.create_part(data, pos)
+	if part_node == null:
+		return
+	add_child(part_node)
+	part_node.position = Vector3(pos) * cell_size
+	for x: int in range(data.size.x):
+		for y: int in range(data.size.y):
+			for z: int in range(data.size.z):
+				placed_parts[pos + Vector3i(x, y, z)] = part_node
+	if budget_remaining >= 0:
+		budget_remaining -= data.cost
+	part_placed.emit(data, pos)
+	budget_changed.emit(budget_remaining)
+
+
+## Remove a part without recording it in the undo history.
+func _remove_part_no_history(pos: Vector3i) -> void:
+	if not placed_parts.has(pos):
+		return
+	var part_node: PartNode = placed_parts[pos]
+	var part_data: PartData = part_node.part_data
+	var keys_to_erase: Array[Vector3i] = []
+	for cell: Vector3i in placed_parts:
+		if placed_parts[cell] == part_node:
+			keys_to_erase.append(cell)
+	for key: Vector3i in keys_to_erase:
+		placed_parts.erase(key)
+	if budget_remaining >= 0:
+		budget_remaining += part_data.cost
+	part_node.queue_free()
+	part_removed.emit(pos)
+	budget_changed.emit(budget_remaining)
 
 
 ## Return the total cost of all placed parts.
