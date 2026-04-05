@@ -157,47 +157,42 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	var delta: float = state.step
 
 	# --- Player input movement (WoT style) ---
-	# Hull auto-rotates to face the camera direction. W/S moves
-	# forward/backward in the hull's facing direction. A/D disabled
-	# for ground/water/submarine.
+	# W/S moves toward/away from where the camera points (projected to ground).
+	# The hull automatically rotates to face the movement direction.
 	if is_player_controlled:
 		var inp: Dictionary = get_input_vector()
 		var fwd_in: float = inp.get("forward", 0.0)
 
-		# --- Hull rotation: auto-follow camera yaw ---
-		# Camera yaw is offset by 180 degrees because we use +Z as forward.
-		var camera_yaw_rad: float = deg_to_rad(_camera_yaw) - PI
+		# --- Compute camera's horizontal look direction ---
+		var cam_yaw_rad: float = deg_to_rad(_camera_yaw)
+		var cam_fwd: Vector3 = Vector3(sin(cam_yaw_rad), 0.0, cos(cam_yaw_rad)).normalized()
+
+		# --- Hull rotation: turn the vehicle body to face camera direction ---
 		var current_yaw: float = state.transform.basis.get_euler().y
-		var yaw_diff: float = wrapf(camera_yaw_rad - current_yaw, -PI, PI)
-		var hull_turn_speed: float = 3.0
+		var target_yaw: float = atan2(cam_fwd.x, cam_fwd.z)
+		var yaw_diff: float = wrapf(target_yaw - current_yaw, -PI, PI)
 		var ang: Vector3 = state.angular_velocity
-		ang.y = yaw_diff * hull_turn_speed
-		ang.x *= 0.8  # Dampen roll.
-		ang.z *= 0.8  # Dampen pitch.
+		ang.y = yaw_diff * 3.0  # Hull turn speed.
+		ang.x *= 0.8
+		ang.z *= 0.8
 		state.angular_velocity = ang
 
-		# --- Forward/backward along hull facing direction ---
-		# Use +Z as forward because the builder grid has +Z going "away"
-		# from the default camera, which is the visual "front" of the vehicle.
-		var hull_fwd: Vector3 = state.transform.basis.z
-		hull_fwd.y = 0.0
-		hull_fwd = hull_fwd.normalized() if hull_fwd.length() > 0.001 else Vector3.BACK
-
+		# --- Movement: W/S along camera direction ---
 		var max_speed: float = 15.0
 		if total_thrust > 0 and total_mass > 0:
 			max_speed = total_thrust / total_mass * 0.7
 
 		var current_vel: Vector3 = state.linear_velocity
-		var forward_speed: float = current_vel.dot(hull_fwd)
+		var cam_speed: float = current_vel.dot(cam_fwd)
 
 		if absf(fwd_in) > 0.01:
-			forward_speed = lerpf(forward_speed, fwd_in * max_speed, 8.0 * delta)
+			cam_speed = lerpf(cam_speed, fwd_in * max_speed, 8.0 * delta)
 		else:
-			forward_speed *= (1.0 - 5.0 * delta)
+			cam_speed *= (1.0 - 5.0 * delta)
 
-		# Only forward/backward — no sideways sliding.
-		current_vel.x = hull_fwd.x * forward_speed
-		current_vel.z = hull_fwd.z * forward_speed
+		# Move only along camera direction — no sideways sliding.
+		current_vel.x = cam_fwd.x * cam_speed
+		current_vel.z = cam_fwd.z * cam_speed
 		state.linear_velocity = current_vel
 
 	# --- Keep upright (ground/water vehicles) ---
@@ -346,7 +341,11 @@ func attach_follow_camera() -> void:
 
 	# Capture mouse for FPS-style look.
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	print("[Vehicle] Follow camera attached (WoT style).")
+	# Ensure this node processes input.
+	set_process_input(true)
+	print("[Vehicle] Follow camera attached. In tree: %s, processing: %s" % [
+		is_inside_tree(), is_processing_input()
+	])
 
 
 ## Tracks which keys are currently held down.
@@ -355,25 +354,33 @@ var _keys_held: Dictionary = {}
 func _is_key_held(keycode: int) -> bool:
 	return _keys_held.get(keycode, false)
 
-## Handle ALL input including mouse motion.
+## Handle ALL input. Using _input (not _unhandled_input) so mouse motion
+## isn't consumed by UI controls.
 func _input(event: InputEvent) -> void:
 	# Track key presses for movement.
 	if event is InputEventKey:
 		var key_event: InputEventKey = event as InputEventKey
 		_keys_held[key_event.physical_keycode] = key_event.pressed
+		# Weapon select via number keys.
+		if key_event.pressed and is_player_controlled:
+			if key_event.physical_keycode == KEY_0:
+				active_weapon_index = -1
+			elif key_event.physical_keycode >= KEY_1 and key_event.physical_keycode <= KEY_9:
+				var idx: int = key_event.physical_keycode - KEY_1
+				if idx < weapons.size():
+					active_weapon_index = idx
 
 	if not is_player_controlled:
 		return
 
-	# Mouse movement: free-look camera. Works even without camera pivot
-	# (stores yaw/pitch for when camera is attached).
+	# Mouse movement: free-look camera.
 	if event is InputEventMouseMotion:
 		var motion: InputEventMouseMotion = event as InputEventMouseMotion
 		_camera_yaw -= motion.relative.x * 0.15
 		_camera_pitch -= motion.relative.y * 0.15
 		_camera_pitch = clampf(_camera_pitch, -60.0, 20.0)
 
-	# Scroll wheel: cycle active weapon.
+	# Scroll wheel: cycle active weapon. Ignore middle button.
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.pressed:
@@ -381,6 +388,9 @@ func _input(event: InputEvent) -> void:
 				_cycle_weapon(1)
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				_cycle_weapon(-1)
+			# Block middle mouse from propagating (prevents view breakage).
+			if mb.button_index == MOUSE_BUTTON_MIDDLE:
+				get_viewport().set_input_as_handled()
 
 
 ## Cycle through weapons. direction=1 for next, -1 for previous.
