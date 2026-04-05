@@ -106,8 +106,8 @@ func _ready() -> void:
 			"[ArenaManager] No SpawnPoint* children found. "
 			+ "Using default spawn positions."
 		)
-		spawn_points.append(Vector3(-20.0, 0.0, 0.0))
-		spawn_points.append(Vector3(20.0, 0.0, 0.0))
+		spawn_points.append(Vector3(-20.0, 3.0, 0.0))
+		spawn_points.append(Vector3(20.0, 3.0, 0.0))
 
 	# --- Create the DamageSystem ---
 	damage_system = DamageSystem.new()

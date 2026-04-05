@@ -95,23 +95,29 @@ var propulsion_parts: Array[PartNode] = []
 ## based on the current domain so the right default behaviour applies before
 ## the physics controller takes over.
 func _ready() -> void:
-	# Ground and water vehicles use normal gravity.
-	# Air vehicles use reduced gravity (lift is handled by the controller).
-	# Space vehicles disable gravity entirely.
+	# --- Collision layers ---
+	# Layer 1 = vehicles. Mask all physics layers so we collide with everything.
+	collision_layer = 1
+	collision_mask = 0xFFFFFFFF  # Collide with all layers.
+
+	# --- Contact monitoring for damage detection ---
+	contact_monitor = true
+	max_contacts_reported = 4
+
+	# --- Gravity per domain ---
 	match domain:
 		"ground":
 			gravity_scale = 1.0
 		"air":
-			gravity_scale = 1.0  # Lift counteracts gravity in AirPhysics
+			gravity_scale = 1.0
 		"water":
-			gravity_scale = 1.0  # Buoyancy counteracts gravity in WaterPhysics
+			gravity_scale = 1.0
 		"submarine":
-			gravity_scale = 0.0  # Buoyancy managed entirely by SubmarinePhysics
+			gravity_scale = 0.0
 		"space":
-			gravity_scale = 0.0  # No gravity in space; RocketPhysics adds it during launch
+			gravity_scale = 0.0
 		_:
 			gravity_scale = 1.0
-			push_warning("[Vehicle] Unknown domain '%s'. Defaulting gravity_scale to 1.0." % domain)
 
 
 ## Called every physics tick (~60 Hz by default). Delegates force application
