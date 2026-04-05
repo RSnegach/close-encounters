@@ -180,7 +180,7 @@ func _physics_process(delta: float) -> void:
 			angular_velocity.y = -turn_in * 2.0
 
 	# Fire weapons when the fire action is held.
-	if is_player_controlled and inp.get("fire", false):
+	if is_player_controlled and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		fire_weapons(delta)
 
 
