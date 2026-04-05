@@ -345,8 +345,13 @@ func attach_follow_camera() -> void:
 	print("[Vehicle] Follow camera attached (WoT style).")
 
 
-## Handle ALL input including mouse motion. Using _input instead of
-## _unhandled_input so mouse events aren't consumed by UI first.
+## Tracks which keys are currently held down.
+var _keys_held: Dictionary = {}
+
+func _is_key_held(keycode: int) -> bool:
+	return _keys_held.get(keycode, false)
+
+## Handle ALL input including mouse motion.
 func _input(event: InputEvent) -> void:
 	# Track key presses for movement.
 	if event is InputEventKey:
@@ -507,19 +512,6 @@ func get_center_of_mass_offset() -> Vector3:
 ##   surface  : bool
 
 ## Tracks which keys are currently held down, set via _input().
-## This bypasses all focus/action system issues.
-var _keys_held: Dictionary = {}
-
-
-## Capture raw key press/release events to track held keys.
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey:
-		var key_event: InputEventKey = event as InputEventKey
-		_keys_held[key_event.physical_keycode] = key_event.pressed
-
-
-func _is_key_held(keycode: int) -> bool:
-	return _keys_held.get(keycode, false)
 
 
 func get_input_vector() -> Dictionary:
