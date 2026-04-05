@@ -119,12 +119,34 @@ func _ready() -> void:
 		_:
 			gravity_scale = 1.0
 
+	# --- Stabilization ---
+	# Ground/water vehicles should stay upright. High angular damping prevents
+	# tumbling, and we lock X/Z rotation for ground vehicles.
+	if domain == "ground" or domain == "water":
+		angular_damp = 5.0       # Strong angular damping to prevent tumbling.
+		linear_damp = 0.5        # Slight linear damping for natural deceleration.
+	elif domain == "air":
+		angular_damp = 1.0
+		linear_damp = 0.0
+	elif domain == "space":
+		angular_damp = 0.2
+		linear_damp = 0.0
+	else:
+		angular_damp = 2.0
+		linear_damp = 0.3
+
 
 ## Called every physics tick (~60 Hz by default). Delegates force application
 ## to the physics controller and processes player input if applicable.
 func _physics_process(delta: float) -> void:
 	if not is_alive:
 		return
+
+	# --- Keep ground/water vehicles upright ---
+	# Apply a stabilizing torque that corrects any roll or pitch, keeping
+	# the vehicle's Y-axis aligned with world up.
+	if domain == "ground" or domain == "water":
+		_stabilize_upright(delta)
 
 	# Let the domain controller apply thrust, drag, lift, buoyancy, etc.
 	if physics_controller != null:
@@ -240,23 +262,69 @@ func setup_from_data(vehicle_data: Dictionary, target_domain: String) -> void:
 	])
 
 
-## Attach a third-person follow camera to this vehicle. Call after
-## setup_from_data() and only for the local player's vehicle.
-func attach_follow_camera() -> void:
-	# Pivot follows the vehicle (child node, so it moves with us).
-	var pivot: Node3D = Node3D.new()
-	pivot.name = "CameraPivot"
-	add_child(pivot)
+## Reference to camera pivot for mouse look (set by attach_follow_camera).
+var _camera_pivot: Node3D = null
+var _camera: Camera3D = null
+var _camera_yaw: float = 0.0
+var _camera_pitch: float = -15.0  # Slightly looking down.
+var _camera_distance: float = 14.0
 
-	var cam: Camera3D = Camera3D.new()
-	cam.name = "FollowCamera"
-	# Offset: behind and above the vehicle, looking down at it.
-	cam.position = Vector3(0, 6, 12)
-	pivot.add_child(cam)
-	cam.look_at(global_position, Vector3.UP)
-	cam.current = true
+## Attach a third-person follow camera with mouse-look support.
+## Right-click drag orbits the camera around the vehicle.
+func attach_follow_camera() -> void:
+	# The pivot is a child of the vehicle so it follows movement,
+	# but we control its rotation independently for mouse look.
+	_camera_pivot = Node3D.new()
+	_camera_pivot.name = "CameraPivot"
+	_camera_pivot.top_level = true  # Don't inherit vehicle rotation.
+	add_child(_camera_pivot)
+
+	_camera = Camera3D.new()
+	_camera.name = "FollowCamera"
+	_camera.position = Vector3(0, 0, _camera_distance)
+	_camera_pivot.add_child(_camera)
+	_camera.current = true
+
+	# Apply initial pitch.
+	_camera_pivot.rotation_degrees.x = _camera_pitch
+
+	# Capture mouse for look controls.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	print("[Vehicle] Follow camera attached.")
+
+
+## Handle mouse input for camera orbiting. Called from _unhandled_input.
+func _unhandled_input(event: InputEvent) -> void:
+	if _camera_pivot == null or not is_player_controlled:
+		return
+
+	# Right-click drag to orbit camera.
+	if event is InputEventMouseMotion and Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT):
+		var motion: InputEventMouseMotion = event as InputEventMouseMotion
+		_camera_yaw -= motion.relative.x * 0.3
+		_camera_pitch -= motion.relative.y * 0.3
+		_camera_pitch = clampf(_camera_pitch, -80.0, 10.0)
+
+	# Scroll to zoom.
+	if event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.pressed:
+			if mb.button_index == MOUSE_BUTTON_WHEEL_UP:
+				_camera_distance = maxf(_camera_distance - 1.0, 5.0)
+			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				_camera_distance = minf(_camera_distance + 1.0, 40.0)
+
+
+## Update camera position to follow vehicle each frame.
+func _process(_delta: float) -> void:
+	if _camera_pivot == null:
+		return
+	# Follow the vehicle's position but not rotation.
+	_camera_pivot.global_position = global_position + Vector3(0, 2, 0)
+	_camera_pivot.rotation_degrees = Vector3(_camera_pitch, _camera_yaw, 0)
+	if _camera:
+		_camera.position.z = _camera_distance
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +426,22 @@ func get_center_of_mass_offset() -> Vector3:
 ##   fire     : bool
 ##   dive     : bool
 ##   surface  : bool
+## Apply a spring-like torque to keep the vehicle's local Y axis pointing
+## toward world UP. This prevents ground vehicles from rolling over.
+func _stabilize_upright(delta: float) -> void:
+	var current_up: Vector3 = global_transform.basis.y
+	var target_up: Vector3 = Vector3.UP
+	# Cross product gives the rotation axis needed to align current to target.
+	var correction: Vector3 = current_up.cross(target_up)
+	# The magnitude of the cross product is sin(angle) — proportional to error.
+	# Apply as a corrective torque (spring constant * error).
+	var strength: float = 20.0 * total_mass  # Scale with mass for consistency.
+	apply_torque(correction * strength * delta)
+	# Also zero out any existing angular velocity on X and Z to prevent wobble.
+	var av: Vector3 = angular_velocity
+	angular_velocity = Vector3(av.x * 0.9, av.y, av.z * 0.9)
+
+
 func get_input_vector() -> Dictionary:
 	return {
 		"forward": Input.get_axis("move_backward", "move_forward"),
