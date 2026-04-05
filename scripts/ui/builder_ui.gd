@@ -52,6 +52,11 @@ func _ready() -> void:
 	# search by class or group.  Adjust the path to your scene layout.
 	builder = _find_builder()
 
+	# Initialize the builder with the current domain and budget.
+	if builder:
+		var total_budget: int = GameManager.match_settings.get("budget", 3000)
+		builder.setup(current_domain, total_budget)
+
 	# ── Root HBoxContainer spanning the full screen with margins ──
 	var hbox: HBoxContainer = HBoxContainer.new()
 	hbox.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -324,16 +329,16 @@ func _update_stats() -> void:
 
 # ─── Utility: find builder node ─────────────────────────────────────────────
 
-## Walk up to the scene root and look for a node in the "builder" group,
-## or one named "VehicleBuilder".  Returns null if nothing found.
+## Search the entire scene tree for the VehicleBuilder node.
+## Checks the "builder" group first, then searches by node name from root.
 func _find_builder() -> Node:
 	var builders: Array[Node] = get_tree().get_nodes_in_group("builder")
 	if builders.size() > 0:
 		return builders[0]
-	# Fallback: look for a node by name in the parent
-	var parent: Node = get_parent()
-	if parent:
-		var found: Node = parent.find_child("VehicleBuilder", true, false)
+	# Search from the scene root so we find siblings outside our CanvasLayer.
+	var root: Node = get_tree().current_scene
+	if root:
+		var found: Node = root.find_child("VehicleBuilder", true, false)
 		if found:
 			return found
 	return null

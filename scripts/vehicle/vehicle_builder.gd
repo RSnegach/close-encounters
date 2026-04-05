@@ -194,7 +194,8 @@ func _unhandled_input(event: InputEvent) -> void:
 ## [param p_budget] is the starting dollar amount.
 func setup(p_domain: String, p_budget: int) -> void:
 	build_domain = p_domain
-	budget_remaining = p_budget
+	# Budget of 0 means "Unlimited" — use -1 internally to bypass checks.
+	budget_remaining = -1 if p_budget <= 0 else p_budget
 	clear_build()
 	budget_changed.emit(budget_remaining)
 
@@ -408,8 +409,8 @@ func get_total_mass() -> float:
 ## Check whether [param data] can legally be placed at [param pos].
 ## Considers grid bounds, cell overlap, budget, and domain compatibility.
 func _can_place_part(data: PartData, pos: Vector3i) -> bool:
-	# Budget check.
-	if data.cost > budget_remaining:
+	# Budget check. A budget_remaining of -1 means unlimited (skip the check).
+	if budget_remaining >= 0 and data.cost > budget_remaining:
 		return false
 
 	# Domain check: the part must list the current build domain in its domains.
