@@ -198,6 +198,19 @@ func setup_from_data(vehicle_data: Dictionary, target_domain: String) -> void:
 		# Position the part in local space based on its grid cell.
 		part_node.position = Vector3(grid_pos) * CELL_SIZE
 
+		# IMPORTANT: In Godot 4, CollisionShape3D must be a DIRECT child of
+		# the RigidBody3D to work. The PartNode creates one as its own child,
+		# but that makes it a grandchild of the Vehicle, which Godot ignores.
+		# Reparent the collision shape to be a direct child of the Vehicle.
+		if part_node.collision_shape != null:
+			var col: CollisionShape3D = part_node.collision_shape
+			part_node.remove_child(col)
+			add_child(col)
+			# Position the collision shape at the part's location.
+			col.position = part_node.position
+			# Keep a reference on the PartNode so damage code can still find it.
+			part_node.collision_shape = col
+
 		# Restore HP if provided (e.g. from a mid-match save).
 		if part_entry.has("current_hp"):
 			part_node.current_hp = int(part_entry["current_hp"])
