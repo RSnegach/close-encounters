@@ -156,54 +156,46 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 	var delta: float = state.step
 
-	# --- Player input movement ---
+	# --- Player input movement (WoT style) ---
+	# Hull auto-rotates to face the camera direction. W/S moves
+	# forward/backward in the hull's facing direction. A/D disabled
+	# for ground/water/submarine.
 	if is_player_controlled:
 		var inp: Dictionary = get_input_vector()
 		var fwd_in: float = inp.get("forward", 0.0)
-		var turn_in: float = inp.get("strafe", 0.0)
-		var fwd_dir: Vector3 = -state.transform.basis.z
-		fwd_dir.y = 0.0
-		fwd_dir = fwd_dir.normalized() if fwd_dir.length() > 0.001 else Vector3.FORWARD
 
-		# Forward/backward: accelerate toward target speed.
-		var max_speed: float = 15.0  # m/s
+		# --- Hull rotation: auto-follow camera yaw ---
+		var camera_yaw_rad: float = deg_to_rad(_camera_yaw)
+		var current_yaw: float = state.transform.basis.get_euler().y
+		var yaw_diff: float = wrapf(camera_yaw_rad - current_yaw, -PI, PI)
+		var hull_turn_speed: float = 3.0
+		var ang: Vector3 = state.angular_velocity
+		ang.y = yaw_diff * hull_turn_speed
+		ang.x *= 0.8  # Dampen roll.
+		ang.z *= 0.8  # Dampen pitch.
+		state.angular_velocity = ang
+
+		# --- Forward/backward along hull facing direction ---
+		var hull_fwd: Vector3 = -state.transform.basis.z
+		hull_fwd.y = 0.0
+		hull_fwd = hull_fwd.normalized() if hull_fwd.length() > 0.001 else Vector3.FORWARD
+
+		var max_speed: float = 15.0
 		if total_thrust > 0 and total_mass > 0:
-			max_speed = total_thrust / total_mass * 0.7  # friction coefficient
+			max_speed = total_thrust / total_mass * 0.7
 
-		# Decompose current velocity into forward and sideways components.
-		# Only the forward component is kept — tracks can't slide sideways.
 		var current_vel: Vector3 = state.linear_velocity
-		var forward_speed: float = current_vel.dot(fwd_dir)  # Speed along forward axis.
+		var forward_speed: float = current_vel.dot(hull_fwd)
 
 		if absf(fwd_in) > 0.01:
-			# Accelerate toward target speed along forward axis only.
-			var target_speed_val: float = fwd_in * max_speed
-			forward_speed = lerpf(forward_speed, target_speed_val, 8.0 * delta)
+			forward_speed = lerpf(forward_speed, fwd_in * max_speed, 8.0 * delta)
 		else:
-			# Brake when no input.
 			forward_speed *= (1.0 - 5.0 * delta)
 
-		# Reconstruct velocity: only forward component + preserve Y (gravity).
-		current_vel.x = fwd_dir.x * forward_speed
-		current_vel.z = fwd_dir.z * forward_speed
+		# Only forward/backward — no sideways sliding.
+		current_vel.x = hull_fwd.x * forward_speed
+		current_vel.z = hull_fwd.z * forward_speed
 		state.linear_velocity = current_vel
-
-		# Turning: directly set yaw angular velocity.
-		if absf(turn_in) > 0.01:
-			var ang: Vector3 = state.angular_velocity
-			ang.y = -turn_in * 3.0
-			state.angular_velocity = ang
-		else:
-			var ang: Vector3 = state.angular_velocity
-			ang.y *= 0.85  # Dampen yaw when not turning.
-			state.angular_velocity = ang
-
-		# Debug: once per second.
-		if Engine.get_physics_frames() % 60 == 0:
-			print("[Vehicle] fwd=%.2f turn=%.2f spd=%.1f vel=%s" % [
-				fwd_in, turn_in, state.linear_velocity.length(),
-				str(state.linear_velocity)
-			])
 
 	# --- Keep upright (ground/water vehicles) ---
 	if domain == "ground" or domain == "water":
@@ -329,8 +321,9 @@ var active_weapon_index: int = -1  # -1 = all weapons fire.
 var aim_direction: Vector3 = Vector3.FORWARD
 
 
-## Attach a third-person follow camera. Mouse movement controls the camera
-## freely (like World of Tanks), and the crosshair is used for aiming.
+## Attach a third-person follow camera (WoT style).
+## Mouse freely controls the camera. The vehicle hull rotates to follow
+## the camera direction. Forward/backward moves in the hull's facing direction.
 func attach_follow_camera() -> void:
 	_camera_pivot = Node3D.new()
 	_camera_pivot.name = "CameraPivot"
@@ -344,18 +337,26 @@ func attach_follow_camera() -> void:
 	_camera.current = true
 	_camera_pivot.rotation_degrees.x = _camera_pitch
 
-	# Capture mouse so it doesn't leave the window.
+	# Initialize camera yaw to match vehicle's current facing direction.
+	_camera_yaw = rad_to_deg(global_rotation.y)
+
+	# Capture mouse for FPS-style look.
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	print("[Vehicle] Follow camera attached (WoT style).")
 
-	print("[Vehicle] Follow camera attached. Mouse captured for aiming.")
 
+## Handle ALL input including mouse motion. Using _input instead of
+## _unhandled_input so mouse events aren't consumed by UI first.
+func _input(event: InputEvent) -> void:
+	# Track key presses for movement.
+	if event is InputEventKey:
+		var key_event: InputEventKey = event as InputEventKey
+		_keys_held[key_event.physical_keycode] = key_event.pressed
 
-## Handle mouse movement for free-look camera and weapon cycling.
-func _unhandled_input(event: InputEvent) -> void:
 	if _camera_pivot == null or not is_player_controlled:
 		return
 
-	# Mouse movement: free-look camera (always active, no button needed).
+	# Mouse movement: free-look camera.
 	if event is InputEventMouseMotion:
 		var motion: InputEventMouseMotion = event as InputEventMouseMotion
 		_camera_yaw -= motion.relative.x * 0.15
@@ -370,19 +371,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				_cycle_weapon(1)
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				_cycle_weapon(-1)
-
-	# Number keys 1-9: select weapon directly. 0 = all weapons.
-	if event is InputEventKey:
-		var key: InputEventKey = event as InputEventKey
-		if key.pressed:
-			if key.physical_keycode == KEY_0:
-				active_weapon_index = -1
-				print("[Vehicle] All weapons active.")
-			elif key.physical_keycode >= KEY_1 and key.physical_keycode <= KEY_9:
-				var idx: int = key.physical_keycode - KEY_1
-				if idx < weapons.size():
-					active_weapon_index = idx
-					print("[Vehicle] Weapon %d active: %s" % [idx + 1, weapons[idx].part_data.part_name])
 
 
 ## Cycle through weapons. direction=1 for next, -1 for previous.
@@ -631,17 +619,77 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	mesh_inst.material_override = mat
 	bullet.add_child(mesh_inst)
 
+	# Use an Area3D so we can detect overlaps with other vehicles.
+	var area: Area3D = Area3D.new()
+	area.name = "BulletArea"
+	# Small sphere collision for hit detection.
+	var area_col: CollisionShape3D = CollisionShape3D.new()
+	var sphere: SphereShape3D = SphereShape3D.new()
+	sphere.radius = 0.3
+	area_col.shape = sphere
+	area.add_child(area_col)
+	area.collision_layer = 2  # Projectile layer.
+	area.collision_mask = 1   # Detect vehicles.
+	bullet.add_child(area)
+
+	# Store damage on the bullet for collision handling.
+	bullet.set_meta("damage", damage)
+	bullet.set_meta("source", self)
+
 	# Add to scene and position.
 	get_tree().current_scene.add_child(bullet)
 	bullet.global_position = spawn_pos
 	bullet.look_at(spawn_pos + fire_dir)
 
-	# Animate the bullet using a Tween — flies to end position then despawns.
+	# Connect the area's body_entered signal for hit detection.
+	area.body_entered.connect(func(body: Node) -> void:
+		if body == self:
+			return  # Don't damage ourselves.
+		if body is Vehicle:
+			var target_vehicle: Vehicle = body as Vehicle
+			# Deal damage to the vehicle.
+			var dmg: int = bullet.get_meta("damage", 10)
+			_deal_damage_to_vehicle(target_vehicle, dmg)
+		# Destroy bullet on any hit.
+		bullet.queue_free()
+	)
+
+	# Animate: fly forward, despawn at max range.
 	var travel_time: float = max_range / speed
 	var end_pos: Vector3 = spawn_pos + fire_dir * max_range
 	var tween: Tween = bullet.create_tween()
 	tween.tween_property(bullet, "global_position", end_pos, travel_time)
 	tween.tween_callback(bullet.queue_free)
+
+
+## Deal damage to a target vehicle by reducing HP on a random alive part.
+func _deal_damage_to_vehicle(target: Vehicle, dmg: int) -> void:
+	# Find alive parts and damage one.
+	var alive_parts: Array[PartNode] = []
+	var seen: Dictionary = {}
+	for cell: Vector3i in target.parts:
+		var part: PartNode = target.parts[cell]
+		var nid: int = part.get_instance_id()
+		if seen.has(nid) or part.is_destroyed:
+			continue
+		seen[nid] = true
+		alive_parts.append(part)
+
+	if alive_parts.is_empty():
+		return
+
+	# Pick a random part to damage.
+	var hit_part: PartNode = alive_parts[randi() % alive_parts.size()]
+	hit_part.current_hp -= dmg
+	if hit_part.current_hp <= 0:
+		hit_part.current_hp = 0
+		hit_part.is_destroyed = true
+		if hit_part.has_signal("part_destroyed"):
+			hit_part.part_destroyed.emit()
+
+	# Check if vehicle should die (control module destroyed).
+	if target.control_module != null and target.control_module.is_destroyed:
+		target.die()
 
 
 # ---------------------------------------------------------------------------
