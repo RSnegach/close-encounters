@@ -185,8 +185,10 @@ func _update_ammo() -> void:
 	var total_ammo: int = 0
 	if vehicle.get("weapons"):
 		for w: Variant in vehicle.weapons:
-			# Ammo lives in part_data.stats["ammo"], not as a top-level property.
-			if w.get("part_data") != null and w.part_data.stats.has("ammo"):
+			# Per-weapon ammo tracked via metadata, falls back to stats max.
+			if w.has_meta("_current_ammo"):
+				total_ammo += int(w.get_meta("_current_ammo"))
+			elif w.get("part_data") != null and w.part_data.stats.has("ammo"):
 				total_ammo += int(w.part_data.stats["ammo"])
 	ammo_label.text = "AMMO: %d" % total_ammo
 

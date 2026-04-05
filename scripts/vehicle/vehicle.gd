@@ -602,11 +602,13 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	var speed: float = 80.0  # Projectile speed in m/s.
 	var max_range: float = float(stats.get("range", 100))
 
-	# Decrease ammo.
-	var ammo: int = int(stats.get("ammo", 0))
-	if ammo <= 0:
+	# Track ammo per-weapon using metadata (NOT part_data.stats which is shared).
+	var max_ammo: int = int(stats.get("ammo", 0))
+	var current_ammo: int = weapon.get_meta("_current_ammo", max_ammo)
+	if current_ammo <= 0:
 		return  # Out of ammo.
-	stats["ammo"] = ammo - 1
+	current_ammo -= 1
+	weapon.set_meta("_current_ammo", current_ammo)
 
 	# Aim toward the crosshair (camera direction) if available.
 	var fire_dir: Vector3 = aim_direction if aim_direction.length() > 0.5 else get_forward_direction()
@@ -614,12 +616,9 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	fire_dir = fire_dir.normalized()
 	var spawn_pos: Vector3 = weapon.global_position + fire_dir * 1.5
 
-	# Create the projectile as a simple moving node.
+	# Create the projectile visual.
 	var bullet: Node3D = Node3D.new()
 	bullet.name = "Bullet"
-	bullet.global_position = spawn_pos
-
-	# Visual: small bright elongated box.
 	var mesh_inst: MeshInstance3D = MeshInstance3D.new()
 	var box: BoxMesh = BoxMesh.new()
 	box.size = Vector3(0.1, 0.1, 0.4)
@@ -632,48 +631,17 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	mesh_inst.material_override = mat
 	bullet.add_child(mesh_inst)
 
-	# Attach a script-like behavior via a simple child node with a script.
-	# Instead of a full Projectile class, use metadata + the scene tree.
-	bullet.set_meta("direction", fire_dir)
-	bullet.set_meta("speed", speed)
-	bullet.set_meta("damage", damage)
-	bullet.set_meta("max_range", max_range)
-	bullet.set_meta("traveled", 0.0)
-	bullet.set_meta("source_vehicle", self)
-
-	# Add to the scene root so it persists independently of the vehicle.
+	# Add to scene and position.
 	get_tree().current_scene.add_child(bullet)
 	bullet.global_position = spawn_pos
 	bullet.look_at(spawn_pos + fire_dir)
 
-	# Use set_process to move the bullet. We'll attach a callable via a timer.
-	# Simpler approach: use a dedicated _process on a helper script.
-	var script_text: String = """
-extends Node3D
-
-var direction: Vector3
-var speed: float
-var damage: int
-var max_range: float
-var traveled: float = 0.0
-
-func _ready():
-	direction = get_meta("direction", Vector3.FORWARD)
-	speed = get_meta("speed", 80.0)
-	damage = get_meta("damage", 10)
-	max_range = get_meta("max_range", 100.0)
-
-func _physics_process(delta):
-	var move = direction * speed * delta
-	global_position += move
-	traveled += speed * delta
-	if traveled > max_range:
-		queue_free()
-"""
-	var script: GDScript = GDScript.new()
-	script.source_code = script_text
-	script.reload()
-	bullet.set_script(script)
+	# Animate the bullet using a Tween — flies to end position then despawns.
+	var travel_time: float = max_range / speed
+	var end_pos: Vector3 = spawn_pos + fire_dir * max_range
+	var tween: Tween = bullet.create_tween()
+	tween.tween_property(bullet, "global_position", end_pos, travel_time)
+	tween.tween_callback(bullet.queue_free)
 
 
 # ---------------------------------------------------------------------------

@@ -302,9 +302,15 @@ func setup_match(match_domain: String, vehicle_data_list: Array) -> void:
 		var spawn_index: int = i % spawn_points.size()
 		vehicle.global_position = spawn_points[spawn_index]
 
-		# Face spawn points toward the center of the arena.
-		var look_target: Vector3 = Vector3.ZERO
-		vehicle.look_at(look_target, Vector3.UP)
+		# Rotate 180 degrees so the builder's visual "forward" (+Z in grid)
+		# aligns with the vehicle's movement direction (-Z in Godot).
+		# Then face toward the arena center.
+		var dir_to_center: Vector3 = (Vector3.ZERO - vehicle.global_position)
+		dir_to_center.y = 0.0
+		if dir_to_center.length() > 0.1:
+			vehicle.look_at(vehicle.global_position + dir_to_center, Vector3.UP)
+			# Flip 180 so tracks face the right way.
+			vehicle.rotate_y(PI)
 
 		# --- Set up AI if needed ---
 		var is_ai: bool = data.get("is_ai", false)
