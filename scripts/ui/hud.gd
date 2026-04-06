@@ -133,6 +133,16 @@ func _on_quit_to_menu_pressed() -> void:
 	GameManager.change_scene("res://scenes/main_menu.tscn")
 
 
+var _healthbars_on: bool = true
+
+func _on_healthbar_toggle(btn: Button) -> void:
+	_healthbars_on = not _healthbars_on
+	btn.text = "Healthbars: ON" if _healthbars_on else "Healthbars: OFF"
+	# Toggle all healthbar nodes in the scene.
+	for node in get_tree().get_nodes_in_group("floating_healthbar"):
+		node.visible = _healthbars_on
+
+
 # ─── Health ──────────────────────────────────────────────────────────────────
 
 ## Sum current / max HP across all parts and update the bar + label.
@@ -531,10 +541,7 @@ func _create_pause_menu() -> void:
 	# Healthbar toggle
 	var hb_toggle: Button = _create_pause_button("Healthbars: ON")
 	hb_toggle.name = "HealthbarToggle"
-	hb_toggle.pressed.connect(func() -> void:
-		FloatingHealthbar.healthbars_visible = not FloatingHealthbar.healthbars_visible
-		hb_toggle.text = "Healthbars: ON" if FloatingHealthbar.healthbars_visible else "Healthbars: OFF"
-	)
+	hb_toggle.pressed.connect(_on_healthbar_toggle.bind(hb_toggle))
 	vbox.add_child(hb_toggle)
 
 	add_child(pause_panel)

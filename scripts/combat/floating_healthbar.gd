@@ -18,11 +18,10 @@ var bar_width: float = 3.0     ## Width in world units.
 var bar_height: float = 0.3
 var y_offset: float = 5.0      ## How high above the vehicle.
 
-## Global toggle — set by the pause menu.
-static var healthbars_visible: bool = true
 
 
 func _ready() -> void:
+	add_to_group("floating_healthbar")
 	# Background bar (dark semi-transparent).
 	bar_bg = MeshInstance3D.new()
 	var bg_mesh: BoxMesh = BoxMesh.new()
@@ -79,9 +78,6 @@ func _process(_delta: float) -> void:
 	if target == null:
 		queue_free()
 		return
-
-	# Toggle visibility.
-	visible = FloatingHealthbar.healthbars_visible
 
 	if not visible:
 		return
