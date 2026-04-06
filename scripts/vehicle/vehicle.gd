@@ -447,33 +447,8 @@ var active_weapon_index: int = -1  # -1 = all weapons fire.
 var aim_direction: Vector3 = Vector3.FORWARD
 
 
-## Attach a third-person follow camera (WoT style).
-## Mouse freely controls the camera. The vehicle hull rotates to follow
-## the camera direction. Forward/backward moves in the hull's facing direction.
-func attach_follow_camera() -> void:
-	_camera_pivot = Node3D.new()
-	_camera_pivot.name = "CameraPivot"
-	_camera_pivot.top_level = true  # Don't inherit vehicle rotation.
-	add_child(_camera_pivot)
-
-	_camera = Camera3D.new()
-	_camera.name = "FollowCamera"
-	_camera.position = Vector3(0, 0, _camera_distance)
-	_camera_pivot.add_child(_camera)
-	_camera.current = true
-	_camera_pivot.rotation_degrees.x = _camera_pitch
-
-	# Initialize camera yaw to match vehicle's current facing direction.
-	# +180 because we use +Z as forward (opposite of Godot's -Z convention).
-	_camera_yaw = rad_to_deg(global_rotation.y) + 180.0
-
-	# Capture mouse for FPS-style look.
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	# Ensure this node processes input.
-	set_process_input(true)
-	print("[Vehicle] Follow camera attached. In tree: %s, processing: %s" % [
-		is_inside_tree(), is_processing_input()
-	])
+## Camera yaw/pitch are set by CombatCamera each frame via _process.
+## The Vehicle reads these to determine movement direction.
 
 
 ## Tracks which keys are currently held down.
@@ -501,14 +476,7 @@ func _input(event: InputEvent) -> void:
 	if not is_player_controlled:
 		return
 
-	# Mouse movement: free-look camera.
-	if event is InputEventMouseMotion:
-		var motion: InputEventMouseMotion = event as InputEventMouseMotion
-		_camera_yaw -= motion.relative.x * 0.15
-		_camera_pitch -= motion.relative.y * 0.15
-		_camera_pitch = clampf(_camera_pitch, -60.0, 20.0)
-
-	# Scroll wheel: cycle active weapon. Ignore middle button.
+	# Scroll wheel: cycle active weapon.
 	if event is InputEventMouseButton:
 		var mb: InputEventMouseButton = event as InputEventMouseButton
 		if mb.pressed:
@@ -516,7 +484,6 @@ func _input(event: InputEvent) -> void:
 				_cycle_weapon(1)
 			elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				_cycle_weapon(-1)
-			# Block middle mouse from propagating (prevents view breakage).
 			if mb.button_index == MOUSE_BUTTON_MIDDLE:
 				get_viewport().set_input_as_handled()
 
@@ -538,26 +505,8 @@ func _cycle_weapon(direction: int) -> void:
 		print("[Vehicle] Weapon %d: %s" % [active_weapon_index + 1, weapons[active_weapon_index].part_data.part_name])
 
 
-## Update camera position and compute aim direction each frame.
-func _process(_delta: float) -> void:
-	if _camera_pivot == null:
-		return
-
-	# Ensure mouse stays captured during gameplay.
-	if is_player_controlled and Input.get_mouse_mode() != Input.MOUSE_MODE_CAPTURED:
-		# Don't re-capture if paused (HUD sets VISIBLE when paused).
-		if not get_tree().paused:
-			Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-
-	# Follow the vehicle's position but control rotation with mouse.
-	_camera_pivot.global_position = global_position + Vector3(0, 3, 0)
-	_camera_pivot.rotation_degrees = Vector3(_camera_pitch, _camera_yaw, 0)
-	if _camera:
-		_camera.position.z = _camera_distance
-
-	# Compute the aim direction: where the camera center (crosshair) points.
-	aim_direction = -_camera_pivot.global_transform.basis.z
-	aim_direction = aim_direction.normalized()
+## No longer needed — CombatCamera handles camera positioning and sets
+## _camera_yaw, _camera_pitch, and aim_direction on this vehicle directly.
 
 
 # ---------------------------------------------------------------------------

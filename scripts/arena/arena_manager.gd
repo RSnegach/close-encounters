@@ -231,9 +231,12 @@ func _auto_initialize() -> void:
 		if player_v == null:
 			player_v = vehicles[0]
 
-		# Attach a follow camera to the player vehicle so we can see.
-		if player_v.has_method("attach_follow_camera"):
-			player_v.attach_follow_camera()
+		# Create a standalone combat camera (separate from the Vehicle script
+		# so it works even if Vehicle has parse issues).
+		var combat_cam: CombatCamera = CombatCamera.new()
+		combat_cam.name = "CombatCamera"
+		get_tree().current_scene.add_child(combat_cam)
+		combat_cam.setup(player_v)
 
 		# Find the HUD in the UI layer.
 		var hud_node: Node = get_parent().find_child("HUD", true, false)
