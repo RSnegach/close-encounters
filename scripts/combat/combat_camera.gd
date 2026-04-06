@@ -1,21 +1,26 @@
 ## CombatCamera — Standalone third-person camera with mouse look.
 ##
-## Uses CAPTURED mouse mode. If that doesn't work on your setup,
-## the camera also works in VISIBLE mode (when paused).
+## Uses position-delta polling instead of InputEventMouseMotion.
+## Works with VISIBLE mouse mode (no CAPTURED needed).
+## The cursor IS the crosshair — it stays centered on screen.
 class_name CombatCamera
 extends Node3D
 
 
-var target: Node3D = null       ## The vehicle to follow.
-var pivot: Node3D = null        ## Rotation pivot (yaw + pitch).
-var cam: Camera3D = null        ## The actual camera.
-var yaw: float = 0.0           ## Horizontal angle (degrees).
-var pitch: float = -15.0       ## Vertical angle (degrees).
-var distance: float = 14.0     ## Distance behind the target.
-var sensitivity: float = 0.2   ## Mouse sensitivity.
+var target: Node3D = null
+var pivot: Node3D = null
+var cam: Camera3D = null
+var yaw: float = 0.0
+var pitch: float = -15.0
+var distance: float = 14.0
+var sensitivity: float = 0.3
 
-## The direction the camera center points — used for aiming.
 var aim_direction: Vector3 = Vector3.FORWARD
+
+## Screen center for mouse warping.
+var _screen_center: Vector2 = Vector2.ZERO
+## Whether to apply mouse look (disabled when paused).
+var _mouse_look_active: bool = false
 
 
 func _ready() -> void:
@@ -30,44 +35,55 @@ func _ready() -> void:
 	cam.current = true
 	pivot.rotation_degrees.x = pitch
 
-	# Process even when paused so ESC menu camera still works.
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	# Ensure we receive input.
-	set_process_input(true)
+	_screen_center = Vector2(640, 360)  # Will be updated on first frame.
 
 
-## Bind to a target vehicle and hide the cursor.
 func setup(target_node: Node3D) -> void:
 	target = target_node
 	yaw = rad_to_deg(target.global_rotation.y) + 180.0
-	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+	_mouse_look_active = true
+	# Use HIDDEN so cursor is invisible but position is trackable.
+	Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+	# Get actual screen center.
+	_screen_center = get_viewport().get_visible_rect().size * 0.5
+	# Warp mouse to center to start clean.
+	get_viewport().warp_mouse(_screen_center)
 	print("[CombatCamera] Attached to %s." % target.name)
-
-
-func _input(event: InputEvent) -> void:
-	if target == null:
-		return
-
-	if event is InputEventMouseMotion:
-		var motion: InputEventMouseMotion = event as InputEventMouseMotion
-		yaw -= motion.relative.x * sensitivity
-		pitch -= motion.relative.y * sensitivity
-		pitch = clampf(pitch, -60.0, 20.0)
 
 
 func _process(_delta: float) -> void:
 	if target == null or pivot == null:
 		return
 
+	# --- Mouse look via position polling (not _input events) ---
+	if _mouse_look_active and not get_tree().paused:
+		var mouse_pos: Vector2 = get_viewport().get_mouse_position()
+		var delta_mouse: Vector2 = mouse_pos - _screen_center
+
+		# Only apply if mouse actually moved (ignore tiny jitter).
+		if delta_mouse.length() > 0.5:
+			yaw -= delta_mouse.x * sensitivity
+			pitch -= delta_mouse.y * sensitivity
+			pitch = clampf(pitch, -60.0, 20.0)
+
+		# Warp back to center AFTER reading the delta.
+		# This is safe because we poll position, not events.
+		get_viewport().warp_mouse(_screen_center)
+
+		# Keep cursor hidden during gameplay.
+		if Input.get_mouse_mode() != Input.MOUSE_MODE_HIDDEN:
+			Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+
 	# Follow the target.
 	global_position = target.global_position + Vector3(0, 3, 0)
 	pivot.rotation_degrees = Vector3(pitch, yaw, 0)
 	cam.position.z = distance
 
-	# Compute aim direction for weapons.
+	# Compute aim direction.
 	aim_direction = -pivot.global_transform.basis.z
 
-	# Push yaw/pitch/aim to the target vehicle so movement follows camera.
+	# Push to the vehicle for movement and weapon aiming.
 	if target.get("_camera_yaw") != null:
 		target._camera_yaw = yaw
 	if target.get("_camera_pitch") != null:
