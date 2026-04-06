@@ -110,11 +110,10 @@ func _toggle_pause() -> void:
 	is_paused = not is_paused
 	get_tree().paused = is_paused
 	pause_panel.visible = is_paused
-	# Show mouse cursor when paused, confine when resuming.
 	if is_paused:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
+		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 
 func _on_resume_pressed() -> void:
