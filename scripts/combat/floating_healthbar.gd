@@ -16,7 +16,7 @@ var max_hp: float = 100.0
 var current_hp: float = 100.0
 var bar_width: float = 3.0     ## Width in world units.
 var bar_height: float = 0.3
-var y_offset: float = 5.0      ## How high above the vehicle.
+var y_offset: float = 4.0      ## How high above the vehicle center.
 
 
 

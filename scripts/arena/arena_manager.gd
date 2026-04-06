@@ -385,14 +385,32 @@ func _end_match(winner: Node) -> void:
 	if winner != null:
 		winner_id = winner.peer_id
 
-	# --- Freeze all remaining vehicles ---
+	# Freeze all remaining vehicles.
 	for vehicle: Node in vehicles:
 		vehicle.freeze = true
 
 	match_ended.emit(winner_id)
-	GameManager.end_match(winner_id)
-
 	print("[ArenaManager] Match ended. Winner: peer %d." % winner_id)
+
+	# Show victory/defeat on the HUD.
+	var hud_node: Node = get_parent().find_child("HUD", true, false)
+	if hud_node and hud_node.has_method("show_game_over"):
+		var player_won: bool = (winner_id == 1)  # Player is always peer 1.
+		hud_node.show_game_over(player_won)
+
+	# Release mouse cursor so player can click buttons.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+	# Transition to results screen after 4 seconds.
+	var timer: SceneTreeTimer = get_tree().create_timer(4.0)
+	timer.timeout.connect(func() -> void:
+		var match_data: Dictionary = {
+			"match_time": match_timer,
+			"winner_id": winner_id,
+		}
+		GameManager.match_settings["match_results"] = match_data
+		GameManager.change_scene("res://scenes/results.tscn")
+	)
 
 
 # ---------------------------------------------------------------------------

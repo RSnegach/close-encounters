@@ -399,9 +399,11 @@ func setup_from_data(vehicle_data: Dictionary, target_domain: String) -> void:
 			var col: CollisionShape3D = part_node.collision_shape
 			part_node.remove_child(col)
 			add_child(col)
-			# Position the collision shape at the part's location.
-			col.position = part_node.position
-			# Keep a reference on the PartNode so damage code can still find it.
+			# Position the collision shape centered on the part's mesh.
+			# part_node.position is the grid origin; offset by half the part
+			# size so the collision box overlays the visual mesh exactly.
+			var half_size: Vector3 = Vector3(part_data.size) * CELL_SIZE * 0.5
+			col.position = part_node.position + half_size - Vector3(0.5, 0.5, 0.5) * CELL_SIZE
 			part_node.collision_shape = col
 
 		# Restore HP if provided (e.g. from a mid-match save).
@@ -853,13 +855,59 @@ func _trigger_explosion(source_part: PartNode) -> void:
 			part_node.take_damage(dmg)
 
 
-## Kill the vehicle. Freezes physics and emits vehicle_destroyed.
+## Kill the vehicle. Creates explosion effect, freezes physics, emits signal.
 func die() -> void:
+	if not is_alive:
+		return  # Already dead.
 	is_alive = false
-	# Freeze the RigidBody3D so it stops simulating.
 	freeze = true
 	vehicle_destroyed.emit()
-	print("[Vehicle] Vehicle destroyed.")
+	print("[Vehicle] Vehicle destroyed!")
+
+	# Spawn explosion visual at vehicle position.
+	_spawn_death_explosion()
+
+
+## Create a big fiery explosion when the vehicle is destroyed.
+func _spawn_death_explosion() -> void:
+	var expl: Node3D = Node3D.new()
+	expl.name = "DeathExplosion"
+	expl.global_position = global_position
+
+	# Large bright sphere that expands and fades.
+	var mesh: MeshInstance3D = MeshInstance3D.new()
+	var sphere: SphereMesh = SphereMesh.new()
+	sphere.radius = 0.5
+	sphere.height = 1.0
+	mesh.mesh = sphere
+	var mat: StandardMaterial3D = StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.5, 0.1, 0.9)
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.6, 0.0)
+	mat.emission_energy_multiplier = 5.0
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh.material_override = mat
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	expl.add_child(mesh)
+
+	get_tree().current_scene.add_child(expl)
+	expl.global_position = global_position + Vector3(0, 1.5, 0)
+
+	# Animate: expand and fade.
+	var tween: Tween = expl.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(mesh, "scale", Vector3(8, 8, 8), 1.0)
+	tween.tween_property(mat, "albedo_color:a", 0.0, 1.0)
+	tween.set_parallel(false)
+	tween.tween_callback(expl.queue_free)
+
+	# Also darken the vehicle mesh to look burnt.
+	for part_node in _get_unique_parts():
+		if part_node.mesh_instance != null:
+			var part_mat: StandardMaterial3D = part_node.mesh_instance.material_override as StandardMaterial3D
+			if part_mat:
+				part_mat.albedo_color = Color(0.15, 0.1, 0.1)
 
 
 # ---------------------------------------------------------------------------
