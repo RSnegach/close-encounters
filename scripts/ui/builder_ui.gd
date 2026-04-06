@@ -136,6 +136,10 @@ func _ready() -> void:
 	clear_btn = _make_button("Clear", COLOR_SECONDARY.darkened(0.2))
 	right_panel.add_child(clear_btn)
 
+	var preset_btn: Button = _make_button("Load Test Vehicle", COLOR_GREEN)
+	preset_btn.pressed.connect(_on_load_preset)
+	right_panel.add_child(preset_btn)
+
 	right_panel.add_child(_separator())
 
 	ready_btn = _make_button("Ready  >>  Combat", COLOR_ACCENT)
@@ -329,6 +333,25 @@ func _on_ready_pressed() -> void:
 ## Go back to the lobby without saving.
 func _on_back_pressed() -> void:
 	GameManager.change_scene("res://scenes/lobby.tscn")
+
+
+## Load the preset "Test" vehicle for the current domain.
+func _on_load_preset() -> void:
+	if not builder:
+		return
+	var domain_lower: String = current_domain.to_lower()
+	var preset_path: String = "res://data/presets/test_%s.json" % domain_lower
+	var file: FileAccess = FileAccess.open(preset_path, FileAccess.READ)
+	if file == null:
+		print("[BuilderUI] No preset found at %s" % preset_path)
+		return
+	var text: String = file.get_as_text()
+	file.close()
+	var data = JSON.parse_string(text)
+	if data is Dictionary:
+		builder.load_vehicle_data(data)
+		_update_stats()
+		print("[BuilderUI] Loaded preset: %s" % preset_path)
 
 
 # ─── Stats refresh ───────────────────────────────────────────────────────────

@@ -95,6 +95,14 @@ func _ready() -> void:
 	# Notify GameManager
 	GameManager.change_state(GameManager.GameState.RESULTS)
 
+	# Show mouse cursor so player can click buttons.
+	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+
+	# Auto-populate from match results stored by ArenaManager.
+	var results: Dictionary = GameManager.match_settings.get("match_results", {})
+	var winner_id: int = int(results.get("winner_id", -1))
+	setup(winner_id, results)
+
 
 ## Populate the results screen with outcome and statistics.
 ##

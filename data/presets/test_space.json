@@ -1,0 +1,19 @@
+{
+  "name": "Test",
+  "domain": "Space",
+  "parts": [
+    {"id": "cockpit", "grid_position": [3, 3, 3]},
+    {"id": "rocket_body", "grid_position": [3, 2, 3]},
+    {"id": "rocket_body", "grid_position": [3, 1, 3]},
+    {"id": "rocket_motor", "grid_position": [3, 0, 3]},
+    {"id": "booster_fuel", "grid_position": [2, 1, 3]},
+    {"id": "booster_fuel", "grid_position": [4, 1, 3]},
+    {"id": "fuel_tank", "grid_position": [3, 1, 2]},
+    {"id": "fuel_tank", "grid_position": [3, 1, 4]},
+    {"id": "rcs_thruster", "grid_position": [3, 3, 2]},
+    {"id": "rcs_thruster", "grid_position": [3, 3, 4]},
+    {"id": "machine_gun", "grid_position": [3, 4, 3]},
+    {"id": "light_armor", "grid_position": [2, 2, 3]},
+    {"id": "light_armor", "grid_position": [4, 2, 3]}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "Test",
+  "domain": "Submarine",
+  "parts": [
+    {"id": "conning_tower", "grid_position": [3, 2, 3]},
+    {"id": "pressurized_hull", "grid_position": [2, 1, 2]},
+    {"id": "pressurized_hull", "grid_position": [3, 1, 2]},
+    {"id": "pressurized_hull", "grid_position": [4, 1, 2]},
+    {"id": "pressurized_hull", "grid_position": [2, 1, 3]},
+    {"id": "pressurized_hull", "grid_position": [3, 1, 3]},
+    {"id": "pressurized_hull", "grid_position": [4, 1, 3]},
+    {"id": "pressurized_hull", "grid_position": [2, 1, 4]},
+    {"id": "pressurized_hull", "grid_position": [3, 1, 4]},
+    {"id": "pressurized_hull", "grid_position": [4, 1, 4]},
+    {"id": "sub_propeller", "grid_position": [3, 1, 1]},
+    {"id": "ballast_tank", "grid_position": [3, 0, 3]},
+    {"id": "torpedo_tube", "grid_position": [3, 1, 5]},
+    {"id": "sonar", "grid_position": [3, 2, 2]}
+  ]
+}

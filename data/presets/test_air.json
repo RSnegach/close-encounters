@@ -1,0 +1,16 @@
+{
+  "name": "Test",
+  "domain": "Air",
+  "parts": [
+    {"id": "cockpit", "grid_position": [3, 2, 3]},
+    {"id": "aerodynamic_frame", "grid_position": [3, 2, 2]},
+    {"id": "aerodynamic_frame", "grid_position": [3, 2, 4]},
+    {"id": "aerodynamic_frame", "grid_position": [2, 2, 3]},
+    {"id": "aerodynamic_frame", "grid_position": [4, 2, 3]},
+    {"id": "jet_engine", "grid_position": [3, 2, 1]},
+    {"id": "light_armor", "grid_position": [3, 2, 5]},
+    {"id": "machine_gun", "grid_position": [2, 2, 2]},
+    {"id": "machine_gun", "grid_position": [4, 2, 2]},
+    {"id": "fuel_tank", "grid_position": [3, 1, 3]}
+  ]
+}
