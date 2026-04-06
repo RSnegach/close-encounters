@@ -523,6 +523,20 @@ func _create_pause_menu() -> void:
 	quit_btn.pressed.connect(_on_quit_to_menu_pressed)
 	vbox.add_child(quit_btn)
 
+	# Spacer before toggle
+	var sp2: Control = Control.new()
+	sp2.custom_minimum_size = Vector2(0, 8)
+	vbox.add_child(sp2)
+
+	# Healthbar toggle
+	var hb_toggle: Button = _create_pause_button("Healthbars: ON")
+	hb_toggle.name = "HealthbarToggle"
+	hb_toggle.pressed.connect(func() -> void:
+		FloatingHealthbar.healthbars_visible = not FloatingHealthbar.healthbars_visible
+		hb_toggle.text = "Healthbars: ON" if FloatingHealthbar.healthbars_visible else "Healthbars: OFF"
+	)
+	vbox.add_child(hb_toggle)
+
 	add_child(pause_panel)
 
 

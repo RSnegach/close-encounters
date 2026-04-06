@@ -238,6 +238,13 @@ func _auto_initialize() -> void:
 		get_tree().current_scene.add_child(combat_cam)
 		combat_cam.setup(player_v)
 
+		# Create floating healthbars above all vehicles.
+		for v in vehicles:
+			var hb: FloatingHealthbar = FloatingHealthbar.new()
+			hb.name = "HealthBar_" + v.name
+			get_tree().current_scene.add_child(hb)
+			hb.setup(v)
+
 		# Find the HUD in the UI layer.
 		var hud_node: Node = get_parent().find_child("HUD", true, false)
 		if hud_node and hud_node.has_method("setup"):
