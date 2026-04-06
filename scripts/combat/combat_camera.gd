@@ -19,7 +19,7 @@ var cam: Camera3D = null
 var yaw: float = 0.0
 var pitch: float = -10.0
 var distance: float = 16.0
-var sensitivity: float = 0.08
+var sensitivity: float = 0.012
 
 var aim_direction: Vector3 = Vector3.FORWARD
 

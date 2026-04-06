@@ -182,7 +182,7 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 				var target_yaw: float = atan2(cam_fwd.x, cam_fwd.z)
 				var yaw_diff: float = wrapf(target_yaw - current_yaw, -PI, PI)
 				var ang: Vector3 = state.angular_velocity
-				ang.y = yaw_diff * 3.0
+				ang.y = yaw_diff * 1.5
 				ang.x *= 0.8
 				ang.z *= 0.8
 				state.angular_velocity = ang
