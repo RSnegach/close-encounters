@@ -729,7 +729,8 @@ func _spawn_projectile(weapon: PartNode) -> void:
 	# Add to scene and position.
 	get_tree().current_scene.add_child(bullet)
 	bullet.global_position = spawn_pos
-	bullet.look_at(spawn_pos + fire_dir)
+	if fire_dir.length() > 0.001:
+		bullet.look_at(spawn_pos + fire_dir)
 
 	# Connect the area's body_entered signal for hit detection.
 	# Store references in metadata so the callback can access them.

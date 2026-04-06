@@ -84,8 +84,9 @@ func _process(delta: float) -> void:
 	# ── Speed ──
 	speed_label.text = "SPD: %.0f m/s" % vehicle.get_speed()
 
-	# ── Ammo ──
+	# ── Ammo + active weapon ──
 	_update_ammo()
+	_update_weapon_indicator()
 
 	# ── Domain-specific info ──
 	# Physics controllers' get_hud_data() expects the vehicle as an argument.
@@ -109,11 +110,11 @@ func _toggle_pause() -> void:
 	is_paused = not is_paused
 	get_tree().paused = is_paused
 	pause_panel.visible = is_paused
-	# Show mouse cursor when paused, re-capture when resuming.
+	# Show mouse cursor when paused, confine when resuming.
 	if is_paused:
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
-		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
+		Input.set_mouse_mode(Input.MOUSE_MODE_CONFINED)
 
 
 func _on_resume_pressed() -> void:
@@ -191,6 +192,23 @@ func _update_ammo() -> void:
 			elif w.get("part_data") != null and w.part_data.stats.has("ammo"):
 				total_ammo += int(w.part_data.stats["ammo"])
 	ammo_label.text = "AMMO: %d" % total_ammo
+
+
+## Show which weapon is currently active below the ammo count.
+func _update_weapon_indicator() -> void:
+	if not vehicle.get("weapons") or not vehicle.get("active_weapon_index") == null:
+		return
+	var idx: int = vehicle.active_weapon_index if vehicle.get("active_weapon_index") != null else -1
+	var weapon_text: String = ""
+	if idx == -1:
+		weapon_text = "WPN: ALL"
+	elif idx >= 0 and idx < vehicle.weapons.size():
+		var w = vehicle.weapons[idx]
+		if w.get("part_data") != null:
+			weapon_text = "WPN: %s" % w.part_data.part_name
+		else:
+			weapon_text = "WPN: #%d" % (idx + 1)
+	ammo_label.text += "  |  " + weapon_text
 
 
 # ─── Domain info ─────────────────────────────────────────────────────────────
