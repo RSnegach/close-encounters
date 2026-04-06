@@ -16,7 +16,7 @@ var pitch: float = -10.0
 var distance: float = 16.0
 
 ## Degrees per second at full screen-edge offset.
-var turn_speed: float = 120.0
+var turn_speed: float = 90.9
 
 var aim_direction: Vector3 = Vector3.FORWARD
 var _screen_center: Vector2 = Vector2.ZERO
