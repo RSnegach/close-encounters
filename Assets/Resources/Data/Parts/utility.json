@@ -1,0 +1,125 @@
+[
+  {
+    "id": "fuel_tank",
+    "name": "Fuel Tank",
+    "category": "utility",
+    "subcategory": "storage",
+    "cost": 80,
+    "mass_kg": 5,
+    "hp": 50,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "fuel": 100,
+      "explodes_on_destroy": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "color": "#665544"
+    }
+  },
+  {
+    "id": "armored_fuel_tank",
+    "name": "Armored Fuel Tank",
+    "category": "utility",
+    "subcategory": "storage",
+    "cost": 200,
+    "mass_kg": 12,
+    "hp": 125,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.25,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "fuel": 100,
+      "armored_fuel": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "color": "#CC1108"
+    }
+  },
+  {
+    "id": "ammo_rack",
+    "name": "Ammo Rack",
+    "category": "utility",
+    "subcategory": "storage",
+    "cost": 60,
+    "mass_kg": 8,
+    "hp": 38,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "ammo_bonus": 50,
+      "explodes_on_destroy": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.3,
+        0.4
+      ],
+      "color": "#6B5949"
+    }
+  }
+]

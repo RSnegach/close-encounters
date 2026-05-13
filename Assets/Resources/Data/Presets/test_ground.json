@@ -1,0 +1,28 @@
+{
+  "name": "Iron Clanker",
+  "domain": "ground",
+  "forwardAngle": 0,
+  "parts": [
+    {"id": "tank_tracks",    "gridPosition": [1, 0, 1]},
+    {"id": "tank_tracks",    "gridPosition": [1, 0, 3]},
+    {"id": "tank_tracks",    "gridPosition": [1, 0, 5]},
+    {"id": "tank_tracks",    "gridPosition": [4, 0, 1]},
+    {"id": "tank_tracks",    "gridPosition": [4, 0, 3]},
+    {"id": "tank_tracks",    "gridPosition": [4, 0, 5]},
+    {"id": "medium_frame",   "gridPosition": [3, 0, 1]},
+    {"id": "medium_frame",   "gridPosition": [3, 0, 2]},
+    {"id": "medium_frame",   "gridPosition": [3, 0, 3]},
+    {"id": "medium_frame",   "gridPosition": [3, 0, 4]},
+    {"id": "medium_frame",   "gridPosition": [3, 0, 5]},
+    {"id": "cockpit",        "gridPosition": [3, 1, 4]},
+    {"id": "heavy_cannon",   "gridPosition": [3, 1, 5]},
+    {"id": "machine_gun",    "gridPosition": [2, 1, 5]},
+    {"id": "machine_gun",    "gridPosition": [4, 1, 5]},
+    {"id": "fuel_tank",      "gridPosition": [3, 1, 2]},
+    {"id": "fuel_tank",      "gridPosition": [3, 1, 1]},
+    {"id": "light_armor",    "gridPosition": [2, 1, 3]},
+    {"id": "light_armor",    "gridPosition": [4, 1, 3]},
+    {"id": "light_armor",    "gridPosition": [2, 1, 4]},
+    {"id": "light_armor",    "gridPosition": [4, 1, 4]}
+  ]
+}

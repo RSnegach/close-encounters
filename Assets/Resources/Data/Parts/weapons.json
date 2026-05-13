@@ -1,0 +1,609 @@
+[
+  {
+    "id": "machine_gun",
+    "name": "Machine Gun",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 100,
+    "mass_kg": 8,
+    "hp": 50,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 10,
+      "fire_rate": 8,
+      "range": 80,
+      "ammo": 200,
+      "projectile_type": "hitscan"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.2,
+        0.2,
+        0.5
+      ],
+      "color": "#555555"
+    }
+  },
+  {
+    "id": "autocannon",
+    "name": "Autocannon",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 200,
+    "mass_kg": 15,
+    "hp": 70,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.4,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 25,
+      "fire_rate": 4,
+      "range": 100,
+      "ammo": 100,
+      "projectile_type": "ballistic"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.3,
+        0.7
+      ],
+      "color": "#5A5A5A"
+    }
+  },
+  {
+    "id": "heavy_cannon",
+    "name": "Heavy Cannon",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 350,
+    "mass_kg": 40,
+    "hp": 100,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.6,
+    "domains": [
+      "ground",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 60,
+      "fire_rate": 1,
+      "range": 120,
+      "ammo": 40,
+      "projectile_type": "ballistic"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.3,
+        0.9
+      ],
+      "color": "#5F5050"
+    }
+  },
+  {
+    "id": "missile_launcher",
+    "name": "Missile Launcher",
+    "category": "weapon",
+    "subcategory": "guided_weapon",
+    "cost": 300,
+    "mass_kg": 20,
+    "hp": 60,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.5,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 80,
+      "fire_rate": 0.5,
+      "range": 200,
+      "ammo": 8,
+      "projectile_type": "guided"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.3,
+        0.6
+      ],
+      "color": "#604848"
+    }
+  },
+  {
+    "id": "rocket_pod",
+    "name": "Rocket Pod",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 200,
+    "mass_kg": 18,
+    "hp": 50,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.45,
+    "domains": [
+      "ground",
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 40,
+      "fire_rate": 0.8,
+      "range": 100,
+      "ammo": 24,
+      "projectile_type": "ballistic"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.3,
+        0.5
+      ],
+      "color": "#5C5050"
+    }
+  },
+  {
+    "id": "laser",
+    "name": "Laser Cannon",
+    "category": "weapon",
+    "subcategory": "energy_weapon",
+    "cost": 400,
+    "mass_kg": 12,
+    "hp": 40,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.35,
+    "domains": [
+      "ground",
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 8,
+      "fire_rate": 12,
+      "range": 150,
+      "ammo": 300,
+      "projectile_type": "laser"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.2,
+        0.2,
+        0.6
+      ],
+      "color": "#3388AA"
+    }
+  },
+  {
+    "id": "railgun",
+    "name": "Railgun",
+    "category": "weapon",
+    "subcategory": "energy_weapon",
+    "cost": 500,
+    "mass_kg": 35,
+    "hp": 80,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.5,
+    "domains": [
+      "ground"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 100,
+      "fire_rate": 0.3,
+      "range": 250,
+      "ammo": 12,
+      "projectile_type": "railgun"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.3,
+        1
+      ],
+      "color": "#4455AA"
+    }
+  },
+  {
+    "id": "mine_layer",
+    "name": "Mine Layer",
+    "category": "weapon",
+    "subcategory": "deployable",
+    "cost": 250,
+    "mass_kg": 15,
+    "hp": 40,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "ground",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 200,
+      "fire_rate": 0.4,
+      "range": 5,
+      "ammo": 10,
+      "projectile_type": "mine"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.2,
+        0.3
+      ],
+      "color": "#445544"
+    }
+  },
+  {
+    "id": "broadside_cannon",
+    "name": "Broadside Cannon",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 180,
+    "mass_kg": 25,
+    "hp": 70,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "left",
+      "right",
+      "top"
+    ],
+    "stats": {
+      "damage": 45,
+      "fire_rate": 1.5,
+      "range": 90,
+      "ammo": 60,
+      "projectile_type": "ballistic",
+      "fixed": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.3,
+        0.6
+      ],
+      "color": "#4A4A4A"
+    }
+  },
+  {
+    "id": "torpedo_launcher",
+    "name": "Torpedo Launcher",
+    "category": "weapon",
+    "subcategory": "guided_weapon",
+    "cost": 350,
+    "mass_kg": 30,
+    "hp": 60,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.4,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "damage": 90,
+      "fire_rate": 0.3,
+      "range": 150,
+      "ammo": 6,
+      "projectile_type": "guided"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.3,
+        0.8
+      ],
+      "color": "#3A5A3A"
+    }
+  },
+  {
+    "id": "deck_gun",
+    "name": "Deck Gun",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 250,
+    "mass_kg": 20,
+    "hp": 80,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.35,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top"
+    ],
+    "stats": {
+      "damage": 50,
+      "fire_rate": 2,
+      "range": 110,
+      "ammo": 80,
+      "projectile_type": "ballistic"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.3,
+        0.7
+      ],
+      "color": "#505050"
+    }
+  },
+  {
+    "id": "swivel_cannon",
+    "name": "Swivel Cannon",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 80,
+    "mass_kg": 6,
+    "hp": 30,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "left",
+      "right",
+      "front",
+      "back"
+    ],
+    "stats": {
+      "damage": 15,
+      "fire_rate": 5,
+      "range": 60,
+      "ammo": 150,
+      "projectile_type": "hitscan"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.2,
+        0.2,
+        0.4
+      ],
+      "color": "#5A4A3A"
+    }
+  },
+  {
+    "id": "hull_gun",
+    "name": "Hull Gun",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 150,
+    "mass_kg": 18,
+    "hp": 80,
+    "size": [1, 1, 1],
+    "drag": 0.3,
+    "domains": ["ground"],
+    "mount_points": ["left", "right", "front", "back"],
+    "stats": {
+      "damage": 30,
+      "fire_rate": 2.0,
+      "range": 80,
+      "ammo": 80,
+      "projectile_type": "ballistic",
+      "fixed": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [0.3, 0.2, 0.5],
+      "color": "#3A3A3A"
+    }
+  },
+  {
+    "id": "wing_cannon",
+    "name": "Wing Cannon",
+    "category": "weapon",
+    "subcategory": "ballistic_weapon",
+    "cost": 160,
+    "mass_kg": 10,
+    "hp": 50,
+    "size": [1, 1, 1],
+    "drag": 0.25,
+    "domains": ["air"],
+    "mount_points": ["left", "right"],
+    "stats": {
+      "damage": 20,
+      "fire_rate": 4.0,
+      "range": 70,
+      "ammo": 120,
+      "projectile_type": "ballistic",
+      "fixed": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [0.2, 0.15, 0.45],
+      "color": "#3A3A3A"
+    }
+  },
+  {
+    "id": "side_missile",
+    "name": "Side Missile Pod",
+    "category": "weapon",
+    "subcategory": "guided_weapon",
+    "cost": 280,
+    "mass_kg": 16,
+    "hp": 55,
+    "size": [1, 1, 1],
+    "drag": 0.35,
+    "domains": ["ground", "air", "water"],
+    "mount_points": ["left", "right"],
+    "stats": {
+      "damage": 60,
+      "fire_rate": 0.6,
+      "range": 150,
+      "ammo": 6,
+      "projectile_type": "guided",
+      "fixed": true
+    },
+    "mesh": {
+      "type": "box",
+      "size": [0.35, 0.25, 0.5],
+      "color": "#4A3A3A"
+    }
+  },
+  {
+    "id": "milk_gun",
+    "name": "Cum Gun",
+    "category": "weapon",
+    "subcategory": "bioweapon",
+    "cost": 450,
+    "mass_kg": 25,
+    "hp": 90,
+    "size": [1, 1, 1],
+    "drag": 0.4,
+    "domains": ["ground", "air", "water"],
+    "mount_points": ["top", "bottom", "front", "back", "left", "right"],
+    "stats": {
+      "damage": 10,
+      "fire_rate": 10,
+      "range": 200,
+      "ammo": 250,
+      "projectile_type": "BEAM OF CUM"
+    },
+    "mesh": {
+      "type": "box",
+      "size": [0.4, 0.3, 0.7],
+      "color": "#EEEEEE"
+    }
+  }
+]

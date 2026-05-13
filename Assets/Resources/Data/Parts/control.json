@@ -1,0 +1,113 @@
+[
+  {
+    "id": "cockpit",
+    "name": "Cockpit",
+    "category": "control",
+    "subcategory": "control",
+    "cost": 100,
+    "mass_kg": 10,
+    "hp": 120,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "ground",
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "crew": 1
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.4,
+        0.5
+      ],
+      "color": "#446688"
+    }
+  },
+  {
+    "id": "armored_cockpit",
+    "name": "Armored Cockpit",
+    "category": "control",
+    "subcategory": "control",
+    "cost": 250,
+    "mass_kg": 25,
+    "hp": 240,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.35,
+    "domains": [
+      "ground",
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "crew": 1
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "color": "#4A6C8E"
+    }
+  },
+  {
+    "id": "bridge",
+    "name": "Bridge",
+    "category": "control",
+    "subcategory": "control",
+    "cost": 200,
+    "mass_kg": 20,
+    "hp": 150,
+    "size": [
+      2,
+      1,
+      1
+    ],
+    "drag": 0.4,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top"
+    ],
+    "stats": {
+      "crew": 3
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.8,
+        0.4,
+        0.5
+      ],
+      "color": "#4E7094"
+    }
+  }
+]

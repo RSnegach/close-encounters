@@ -1,0 +1,120 @@
+[
+  {
+    "id": "light_armor",
+    "name": "Light Armor Plate",
+    "category": "defense",
+    "subcategory": "armor",
+    "cost": 60,
+    "mass_kg": 10,
+    "hp": 160,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "armor_value": 10
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.3,
+        0.5
+      ],
+      "color": "#446644"
+    }
+  },
+  {
+    "id": "heavy_armor",
+    "name": "Heavy Armor Plate",
+    "category": "defense",
+    "subcategory": "armor",
+    "cost": 150,
+    "mass_kg": 30,
+    "hp": 320,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.25,
+    "domains": [
+      "ground",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "armor_value": 25
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.6,
+        0.4,
+        0.6
+      ],
+      "color": "#4A6E4A"
+    }
+  },
+  {
+    "id": "reactive_armor",
+    "name": "Reactive Armor",
+    "category": "defense",
+    "subcategory": "armor",
+    "cost": 250,
+    "mass_kg": 20,
+    "hp": 240,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "ground"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "armor_value": 40,
+      "charges": 5
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.3,
+        0.5
+      ],
+      "color": "#4E724E"
+    }
+  }
+]

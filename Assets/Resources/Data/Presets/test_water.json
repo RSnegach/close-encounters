@@ -1,0 +1,32 @@
+{
+  "name": "Storm Raider",
+  "domain": "water",
+  "forwardAngle": 0,
+  "parts": [
+    {"id": "hull_plate",       "gridPosition": [5, 0, 5]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 5]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 6]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 6]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 7]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 7]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 8]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 8]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 9]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 9]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 10]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 10]},
+    {"id": "hull_plate",       "gridPosition": [5, 0, 11]},
+    {"id": "hull_plate",       "gridPosition": [6, 0, 11]},
+    {"id": "bridge",           "gridPosition": [5, 1, 8]},
+    {"id": "marine_propeller", "gridPosition": [5, 1, 5]},
+    {"id": "marine_propeller", "gridPosition": [6, 1, 5]},
+    {"id": "rudder",           "gridPosition": [6, 1, 6]},
+    {"id": "deck_gun",         "gridPosition": [5, 1, 10]},
+    {"id": "broadside_cannon", "gridPosition": [6, 1, 10]},
+    {"id": "swivel_cannon",    "gridPosition": [5, 1, 11]},
+    {"id": "fuel_tank",        "gridPosition": [6, 1, 8]},
+    {"id": "fuel_tank",        "gridPosition": [5, 1, 7]},
+    {"id": "light_armor",      "gridPosition": [6, 1, 9]},
+    {"id": "light_armor",      "gridPosition": [5, 1, 9]}
+  ]
+}

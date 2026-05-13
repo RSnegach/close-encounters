@@ -1,0 +1,27 @@
+{
+  "name": "Sky Dart",
+  "domain": "air",
+  "forwardAngle": 0,
+  "parts": [
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 3]},
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 4]},
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 5]},
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 6]},
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 7]},
+    {"id": "aerodynamic_frame", "gridPosition": [5, 2, 8]},
+    {"id": "aerodynamic_frame", "gridPosition": [3, 2, 5]},
+    {"id": "aerodynamic_frame", "gridPosition": [4, 2, 5]},
+    {"id": "aerodynamic_frame", "gridPosition": [6, 2, 5]},
+    {"id": "aerodynamic_frame", "gridPosition": [7, 2, 5]},
+    {"id": "cockpit",           "gridPosition": [5, 2, 9]},
+    {"id": "jet_engine",        "gridPosition": [5, 2, 1]},
+    {"id": "machine_gun",       "gridPosition": [4, 2, 8]},
+    {"id": "machine_gun",       "gridPosition": [6, 2, 8]},
+    {"id": "missile_launcher",  "gridPosition": [3, 2, 6]},
+    {"id": "missile_launcher",  "gridPosition": [7, 2, 6]},
+    {"id": "fuel_tank",         "gridPosition": [4, 2, 6]},
+    {"id": "fuel_tank",         "gridPosition": [6, 2, 6]},
+    {"id": "light_armor",       "gridPosition": [5, 3, 7]},
+    {"id": "light_armor",       "gridPosition": [5, 1, 5]}
+  ]
+}

@@ -1,0 +1,641 @@
+[
+  {
+    "id": "light_frame",
+    "name": "Light Frame",
+    "category": "structural",
+    "subcategory": "frame",
+    "cost": 50,
+    "mass_kg": 5,
+    "hp": 90,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.1,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "color": "#999999"
+    }
+  },
+  {
+    "id": "medium_frame",
+    "name": "Medium Frame",
+    "category": "structural",
+    "subcategory": "frame",
+    "cost": 100,
+    "mass_kg": 15,
+    "hp": 180,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "color": "#909090"
+    }
+  },
+  {
+    "id": "heavy_frame",
+    "name": "Heavy Frame",
+    "category": "structural",
+    "subcategory": "frame",
+    "cost": 200,
+    "mass_kg": 40,
+    "hp": 360,
+    "size": [
+      2,
+      1,
+      2
+    ],
+    "drag": 0.25,
+    "domains": [
+      "ground",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        1,
+        0.5,
+        1
+      ],
+      "color": "#888888"
+    }
+  },
+  {
+    "id": "hull_plate",
+    "name": "Hull Plate",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 80,
+    "mass_kg": 20,
+    "hp": 240,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "ground",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.6,
+        0.3,
+        0.6
+      ],
+      "color": "#9A9A9A"
+    }
+  },
+  {
+    "id": "aerodynamic_frame",
+    "name": "Aerodynamic Frame",
+    "category": "structural",
+    "subcategory": "frame",
+    "cost": 150,
+    "mass_kg": 8,
+    "hp": 120,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.1,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.3,
+        0.7
+      ],
+      "color": "#A0A0A0"
+    }
+  },
+  {
+    "id": "truss",
+    "name": "Truss",
+    "category": "structural",
+    "subcategory": "frame",
+    "cost": 40,
+    "mass_kg": 3,
+    "hp": 60,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.1,
+    "domains": [
+      "ground",
+      "air",
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "color": "#AAAAAA"
+    }
+  },
+  {
+    "id": "fairing",
+    "name": "Fairing",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 120,
+    "mass_kg": 6,
+    "hp": 75,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.1,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.3,
+        0.6
+      ],
+      "color": "#A5A5A5"
+    }
+  },
+  {
+    "id": "keel",
+    "name": "Keel",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 180,
+    "mass_kg": 30,
+    "hp": 270,
+    "size": [
+      1,
+      2,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.8,
+        0.6
+      ],
+      "color": "#929292"
+    }
+  },
+  {
+    "id": "ship_hull",
+    "name": "Ship Hull",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 120,
+    "mass_kg": 25,
+    "hp": 150,
+    "size": [
+      2,
+      1,
+      3
+    ],
+    "drag": 0.2,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.8,
+        0.8,
+        2.8
+      ],
+      "color": "#664422"
+    }
+  },
+  {
+    "id": "heavy_hull",
+    "name": "Heavy Ship Hull",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 200,
+    "mass_kg": 50,
+    "hp": 270,
+    "size": [
+      2,
+      1,
+      3
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.8,
+        0.9,
+        2.8
+      ],
+      "color": "#555555"
+    }
+  },
+  {
+    "id": "mast",
+    "name": "Tall Mast",
+    "category": "structural",
+    "subcategory": "mast",
+    "cost": 80,
+    "mass_kg": 8,
+    "hp": 45,
+    "size": [
+      1,
+      3,
+      1
+    ],
+    "drag": 0.4,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.2,
+        2.8,
+        0.2
+      ],
+      "color": "#8B6914"
+    }
+  },
+  {
+    "id": "sail",
+    "name": "Canvas Sail",
+    "category": "structural",
+    "subcategory": "sail",
+    "cost": 60,
+    "mass_kg": 3,
+    "hp": 30,
+    "size": [
+      1,
+      2,
+      1
+    ],
+    "drag": 0.1,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "thrust": 80
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.1,
+        1.8,
+        0.9
+      ],
+      "color": "#F5F0E0"
+    }
+  },
+  {
+    "id": "crows_nest",
+    "name": "Crow's Nest",
+    "category": "structural",
+    "subcategory": "mast",
+    "cost": 50,
+    "mass_kg": 5,
+    "hp": 30,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.6,
+        0.3,
+        0.6
+      ],
+      "color": "#7A5C2E"
+    }
+  },
+  {
+    "id": "bow_ram",
+    "name": "Reinforced Bow Ram",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 150,
+    "mass_kg": 30,
+    "hp": 210,
+    "size": [
+      1,
+      1,
+      2
+    ],
+    "drag": 0.15,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "front",
+      "back",
+      "top"
+    ],
+    "stats": {
+      "armor_value": 15
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.8,
+        0.6,
+        1.8
+      ],
+      "color": "#444444"
+    }
+  },
+  {
+    "id": "deck_plating",
+    "name": "Deck Plating",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 40,
+    "mass_kg": 8,
+    "hp": 90,
+    "size": [
+      2,
+      1,
+      2
+    ],
+    "drag": 0.1,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.8,
+        0.2,
+        1.8
+      ],
+      "color": "#8B7355"
+    }
+  },
+  {
+    "id": "radar_mast",
+    "name": "Radar Mast",
+    "category": "structural",
+    "subcategory": "mast",
+    "cost": 100,
+    "mass_kg": 6,
+    "hp": 36,
+    "size": [
+      1,
+      2,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        1.8,
+        0.3
+      ],
+      "color": "#888888"
+    }
+  },
+  {
+    "id": "smokestack",
+    "name": "Smokestack",
+    "category": "structural",
+    "subcategory": "mast",
+    "cost": 70,
+    "mass_kg": 10,
+    "hp": 60,
+    "size": [
+      1,
+      2,
+      1
+    ],
+    "drag": 0.25,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        1.8,
+        0.5
+      ],
+      "color": "#333333"
+    }
+  },
+  {
+    "id": "superstructure",
+    "name": "Superstructure Block",
+    "category": "structural",
+    "subcategory": "hull",
+    "cost": 160,
+    "mass_kg": 35,
+    "hp": 180,
+    "size": [
+      2,
+      2,
+      2
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {},
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.8,
+        1.8,
+        1.8
+      ],
+      "color": "#666666"
+    }
+  }
+]

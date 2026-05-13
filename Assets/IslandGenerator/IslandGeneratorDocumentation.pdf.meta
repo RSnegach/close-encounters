@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4c763e26212d2dd4794ad1f66800478e
+timeCreated: 1460555030
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 58951
+  packageName: Procedural Island Basis Generator
+  packageVersion: 1.0
+  assetPath: Assets/IslandGenerator/IslandGeneratorDocumentation.pdf
+  uploadId: 113105

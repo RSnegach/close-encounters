@@ -1,0 +1,462 @@
+[
+  {
+    "id": "small_wheel",
+    "name": "Small Wheel",
+    "category": "propulsion",
+    "subcategory": "wheel",
+    "cost": 60,
+    "mass_kg": 4,
+    "hp": 75,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "ground"
+    ],
+    "mount_points": [
+      "bottom"
+    ],
+    "stats": {
+      "thrust": 800,
+      "efficiency": 0.9
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        0.3,
+        0.3
+      ],
+      "color": "#445566"
+    }
+  },
+  {
+    "id": "large_wheel",
+    "name": "Large Wheel",
+    "category": "propulsion",
+    "subcategory": "wheel",
+    "cost": 100,
+    "mass_kg": 8,
+    "hp": 100,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.25,
+    "domains": [
+      "ground"
+    ],
+    "mount_points": [
+      "bottom"
+    ],
+    "stats": {
+      "thrust": 1200,
+      "efficiency": 0.85
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "color": "#4A5B6C"
+    }
+  },
+  {
+    "id": "tank_tracks",
+    "name": "Tank Tracks",
+    "category": "propulsion",
+    "subcategory": "track",
+    "cost": 180,
+    "mass_kg": 20,
+    "hp": 150,
+    "size": [
+      2,
+      1,
+      1
+    ],
+    "drag": 0.35,
+    "domains": [
+      "ground"
+    ],
+    "mount_points": [
+      "bottom"
+    ],
+    "stats": {
+      "thrust": 1500,
+      "efficiency": 0.7
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.8,
+        0.3,
+        0.5
+      ],
+      "color": "#4E5E6E"
+    }
+  },
+  {
+    "id": "propeller_air",
+    "name": "Air Propeller",
+    "category": "propulsion",
+    "subcategory": "propeller",
+    "cost": 150,
+    "mass_kg": 6,
+    "hp": 63,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "front",
+      "back"
+    ],
+    "stats": {
+      "thrust": 2000,
+      "efficiency": 0.8
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.5,
+        0.3
+      ],
+      "color": "#506070"
+    }
+  },
+  {
+    "id": "jet_engine",
+    "name": "Jet Engine",
+    "category": "propulsion",
+    "subcategory": "jet",
+    "cost": 400,
+    "mass_kg": 30,
+    "hp": 125,
+    "size": [
+      1,
+      1,
+      2
+    ],
+    "drag": 0.4,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "back"
+    ],
+    "stats": {
+      "thrust": 8000,
+      "efficiency": 0.6
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.5,
+        1
+      ],
+      "color": "#546474"
+    }
+  },
+  {
+    "id": "afterburner",
+    "name": "Afterburner",
+    "category": "propulsion",
+    "subcategory": "jet",
+    "cost": 300,
+    "mass_kg": 15,
+    "hp": 75,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.35,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "back"
+    ],
+    "stats": {
+      "thrust": 4000,
+      "efficiency": 0.3
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.5
+      ],
+      "color": "#586878"
+    }
+  },
+  {
+    "id": "marine_propeller",
+    "name": "Marine Propeller",
+    "category": "propulsion",
+    "subcategory": "propeller",
+    "cost": 120,
+    "mass_kg": 10,
+    "hp": 88,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.25,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "back"
+    ],
+    "stats": {
+      "thrust": 1500,
+      "efficiency": 0.85
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.4,
+        0.4,
+        0.3
+      ],
+      "color": "#4C5C6C"
+    }
+  },
+  {
+    "id": "rcs_thruster",
+    "name": "RCS Thruster",
+    "category": "propulsion",
+    "subcategory": "thruster",
+    "cost": 100,
+    "mass_kg": 2,
+    "hp": 38,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.2,
+    "domains": [
+      "air"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "thrust": 500,
+      "efficiency": 0.9
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.2,
+        0.2,
+        0.2
+      ],
+      "color": "#526272"
+    }
+  },
+  {
+    "id": "rudder",
+    "name": "Rudder",
+    "category": "propulsion",
+    "subcategory": "steering",
+    "cost": 80,
+    "mass_kg": 5,
+    "hp": 63,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "back"
+    ],
+    "stats": {
+      "thrust": 0,
+      "efficiency": 0,
+      "turn_rate": 2
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.1,
+        0.5,
+        0.3
+      ],
+      "color": "#465666"
+    }
+  },
+  {
+    "id": "steam_engine",
+    "name": "Steam Engine",
+    "category": "propulsion",
+    "subcategory": "engine",
+    "cost": 200,
+    "mass_kg": 40,
+    "hp": 113,
+    "size": [
+      2,
+      1,
+      2
+    ],
+    "drag": 0.2,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "thrust": 600
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.5,
+        0.8,
+        1.5
+      ],
+      "color": "#444444"
+    }
+  },
+  {
+    "id": "paddle_wheel",
+    "name": "Paddle Wheel",
+    "category": "propulsion",
+    "subcategory": "propeller",
+    "cost": 100,
+    "mass_kg": 15,
+    "hp": 50,
+    "size": [
+      1,
+      2,
+      1
+    ],
+    "drag": 0.3,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "left",
+      "right",
+      "back"
+    ],
+    "stats": {
+      "thrust": 250
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.3,
+        1.5,
+        0.8
+      ],
+      "color": "#6B4226"
+    }
+  },
+  {
+    "id": "turbine",
+    "name": "Gas Turbine",
+    "category": "propulsion",
+    "subcategory": "engine",
+    "cost": 350,
+    "mass_kg": 25,
+    "hp": 75,
+    "size": [
+      1,
+      1,
+      1
+    ],
+    "drag": 0.15,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "back",
+      "bottom",
+      "top"
+    ],
+    "stats": {
+      "thrust": 900
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        0.5,
+        0.5,
+        0.6
+      ],
+      "color": "#555555"
+    }
+  },
+  {
+    "id": "nuclear_reactor",
+    "name": "Nuclear Reactor",
+    "category": "propulsion",
+    "subcategory": "engine",
+    "cost": 800,
+    "mass_kg": 80,
+    "hp": 150,
+    "size": [
+      2,
+      1,
+      2
+    ],
+    "drag": 0.1,
+    "domains": [
+      "water"
+    ],
+    "mount_points": [
+      "top",
+      "bottom",
+      "front",
+      "back",
+      "left",
+      "right"
+    ],
+    "stats": {
+      "thrust": 1500,
+      "fuel": 500
+    },
+    "mesh": {
+      "type": "box",
+      "size": [
+        1.5,
+        0.8,
+        1.5
+      ],
+      "color": "#2A4A2A"
+    }
+  }
+]
