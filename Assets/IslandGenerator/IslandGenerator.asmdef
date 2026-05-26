@@ -1,12 +1,7 @@
 {
-    "name": "Close_Encounters.Runtime",
-    "rootNamespace": "CloseEncounters",
-    "references": [
-        "Unity.TextMeshPro",
-        "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Universal.Runtime",
-        "IslandGenerator"
-    ],
+    "name": "IslandGenerator",
+    "rootNamespace": "",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

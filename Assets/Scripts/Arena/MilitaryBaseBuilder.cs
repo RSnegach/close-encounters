@@ -275,7 +275,7 @@ namespace CloseEncounters.Arena
             go.transform.localScale = scale;
             var r = go.GetComponent<MeshRenderer>();
             if (r != null && mat != null) r.sharedMaterial = mat;
-            if (!keepCollider) Object.DestroyImmediate(go.GetComponent<Collider>());
+            if (!keepCollider) UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
             return go;
         }
     }

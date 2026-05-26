@@ -1107,11 +1107,13 @@ namespace CloseEncounters.Arena
         {
             // Towers straddle the origin. Tower A sits at x=-30, Tower B at x=+30
             // so the player spawns near the center surrounded by the crash site.
-            // Scale 6.5× vs. the old 3.5× — much taller landmark.
-            CityPrefabHelper.PlaceBuilding(transform, "Building_I_1_prefab",
+            // Footprint stays at 6.5× scale; height stretched 3× (= 19.5×) for skyscraper silhouette.
+            var towerA = CityPrefabHelper.PlaceBuilding(transform, "Building_I_1_prefab",
                 new Vector3(-30f, 1f, 0f), 0f, 6.5f);
-            CityPrefabHelper.PlaceBuilding(transform, "Building_I_2_Prefab",
+            var towerB = CityPrefabHelper.PlaceBuilding(transform, "Building_I_2_Prefab",
                 new Vector3( 30f, 1f, 0f), 18f, 6.5f);
+            if (towerA != null) towerA.transform.localScale = new Vector3(6.5f, 19.5f, 6.5f);
+            if (towerB != null) towerB.transform.localScale = new Vector3(6.5f, 19.5f, 6.5f);
 
             // ── Fighters clearly protruding from the towers ────────────
             // Tower A fighter: enters the east face, body diagonal, nose buried
@@ -2022,22 +2024,24 @@ namespace CloseEncounters.Arena
                 return w;
             });
 
+            // ── Spawn + bounds ─────────────────────────────────────
+            // why: spawns kept in a clear mid-ring (~150) outside caldera/lava (r<~115)
+            // and well clear of outer mountain wall (r~250+) so vehicles aren't wedged.
+            // Registered before props so prop scatter can avoid spawn pads.
+            AddSpawnPoints(
+                new Vector3(-150f, 3f,  150f),  new Vector3(150f, 3f,  150f),
+                new Vector3(-150f, 3f, -150f),  new Vector3(150f, 3f, -150f),
+                new Vector3(-160f, 3f,    0f),  new Vector3(160f, 3f,    0f),
+                new Vector3(   0f, 3f,  160f),  new Vector3(  0f, 3f, -160f)
+            );
+            AddInvisibleWalls(375f, 50f);
+
             // ── District builders ──────────────────────────────────
             BuildCalderaAndLava();
             BuildVolcanicMountains();
             BuildMagmaFormations();
             BuildVolcanicProps();
             BuildFireAndAtmosphere();
-
-            // ── Spawn + bounds ─────────────────────────────────────
-            // why: spawns pushed to outer ring (~230) away from caldera & new magma fields
-            AddSpawnPoints(
-                new Vector3(-220f, 3f,  180f),  new Vector3(220f, 3f,  180f),
-                new Vector3(-220f, 3f, -180f),  new Vector3(220f, 3f, -180f),
-                new Vector3(-260f, 3f,    0f),  new Vector3(260f, 3f,    0f),
-                new Vector3(   0f, 3f,  260f),  new Vector3(  0f, 3f, -260f)
-            );
-            AddInvisibleWalls(375f, 50f);
         }
 
         // ── CALDERA: lava pool + streams ───────────────────────────
@@ -2247,6 +2251,8 @@ namespace CloseEncounters.Arena
                 new Vector3(-175f, 2f, -15f), 150f, 3.5f);
 
             // ── Outer ring magma fields (new expansion zone) ────────
+            // why: anchor at r=270 + ±22 = 248..292; spawns at r~150 are well inside,
+            // but skip clusters that overlap a spawn pad just in case
             string[] magmaRocks = { "MagmaRock_01", "MagmaRock_02", "MagmaRock_03" };
             for (int c = 0; c < 6; c++)
             {
@@ -2257,9 +2263,18 @@ namespace CloseEncounters.Arena
                 {
                     float ox = Random.Range(-22f, 22f);
                     float oz = Random.Range(-22f, 22f);
+                    Vector3 rockPos = new Vector3(anchor.x + ox, 2f, anchor.z + oz);
+                    bool nearSpawn = false;
+                    for (int s = 0; s < SpawnPoints.Count; s++)
+                    {
+                        var sp = SpawnPoints[s].position;
+                        float dx = rockPos.x - sp.x, dz = rockPos.z - sp.z;
+                        if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
+                    }
+                    if (nearSpawn) continue;
                     VolcanicPrefabHelper.PlaceMagmaRock(transform,
                         magmaRocks[Random.Range(0, magmaRocks.Length)],
-                        new Vector3(anchor.x + ox, 2f, anchor.z + oz),
+                        rockPos,
                         Random.Range(0f, 360f), Random.Range(2.2f, 4.0f));
                 }
             }
@@ -2280,32 +2295,56 @@ namespace CloseEncounters.Arena
 
             // ── Outer obsidian shard field ──────────────────────────
             Color obsidian = new Color(0.08f, 0.06f, 0.10f);
-            for (int i = 0; i < 14; i++)
+            int placed = 0;
+            int attempts = 0;
+            while (placed < 14 && attempts < 60)
             {
+                attempts++;
                 float t = Random.Range(0f, Mathf.PI * 2f);
                 float r = Random.Range(200f, 310f);
                 float x = Mathf.Cos(t) * r + Random.Range(-10f, 10f);
                 float z = Mathf.Sin(t) * r + Random.Range(-10f, 10f);
+                bool nearSpawn = false;
+                for (int s = 0; s < SpawnPoints.Count; s++)
+                {
+                    var sp = SpawnPoints[s].position;
+                    float dx = x - sp.x, dz = z - sp.z;
+                    if (dx * dx + dz * dz < 225f) { nearSpawn = true; break; }
+                }
+                if (nearSpawn) continue;
                 float h = Random.Range(6f, 14f);
                 AddBlockUnchecked(new Vector3(x, h, z),
                     new Vector3(Random.Range(1.5f, 3.5f), h * 2f, Random.Range(1.5f, 3.5f)),
-                    obsidian, $"OuterShard_{i}");
+                    obsidian, $"OuterShard_{placed}");
+                placed++;
             }
         }
 
         // ── VOLCANIC PROPS: trees, grass, obsidian, wood crosses ───
         private void BuildVolcanicProps()
         {
-            // Helper: generate a position on the arena floor, avoiding central caldera
-            // why: range ±320 covers the expanded 750 arena (half-extent 375 minus buffer)
+            // why: range ±320 covers the expanded 750 arena (half-extent 375 minus buffer);
+            // also keep clear of caldera and a 12m radius around each spawn so vehicles
+            // aren't trapped against props on respawn
             Vector3 ArenaPos()
             {
                 float x, z;
-                do
+                int guard = 0;
+                while (true)
                 {
                     x = Random.Range(-320f, 320f);
                     z = Random.Range(-320f, 320f);
-                } while (Mathf.Sqrt(x * x + z * z) < 50f);
+                    if (Mathf.Sqrt(x * x + z * z) < 50f) { guard++; if (guard > 50) break; continue; }
+                    bool nearSpawn = false;
+                    for (int s = 0; s < SpawnPoints.Count; s++)
+                    {
+                        var sp = SpawnPoints[s].position;
+                        float dx = x - sp.x, dz = z - sp.z;
+                        if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
+                    }
+                    if (nearSpawn) { guard++; if (guard > 50) break; continue; }
+                    break;
+                }
                 return new Vector3(x, 2f, z);
             }
 
@@ -2343,18 +2382,30 @@ namespace CloseEncounters.Arena
 
             // ── MagmaWoodCross (14-18): eerie markers near edges & caves ─
             int crossCount = Random.Range(14, 19);
-            for (int i = 0; i < crossCount; i++)
+            int crossAttempts = 0;
+            int crossPlaced = 0;
+            while (crossPlaced < crossCount && crossAttempts < crossCount * 4)
             {
+                crossAttempts++;
                 // Bias toward outer ring (60-290) for lava-edge / cave feel
                 float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
                 float radius = Random.Range(60f, 290f);
                 float x = Mathf.Cos(angle) * radius;
                 float z = Mathf.Sin(angle) * radius;
+                bool nearSpawn = false;
+                for (int s = 0; s < SpawnPoints.Count; s++)
+                {
+                    var sp = SpawnPoints[s].position;
+                    float dx = x - sp.x, dz = z - sp.z;
+                    if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
+                }
+                if (nearSpawn) continue;
                 Vector3 pos = new Vector3(x, 2f, z);
 
                 float rot = Random.Range(0f, 360f);
                 float scl = Random.Range(1.5f, 2.0f);
                 VolcanicPrefabHelper.PlaceMagmaProp(transform, "MagmaWoodCross", pos, rot, scl);
+                crossPlaced++;
             }
         }
 

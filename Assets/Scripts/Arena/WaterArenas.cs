@@ -1293,7 +1293,6 @@ namespace CloseEncounters.Arena
             BuildWarships();
             BuildSeaMines();
             BuildDecorAndProps();
-            BuildShipwrecks();
 
             // Tight central spawn so players start in the channel and see both shores
             AddSpawnRing(Vector3.zero, 200f, 8, 1f);
@@ -1750,109 +1749,6 @@ namespace CloseEncounters.Arena
                 AddCylinder(new Vector3(420f + i * 3f, 0f, 120f), 0.8f, 5f, HullDark, $"IR_PilingExtra_{i}");
                 AddCylinder(new Vector3(-420f - i * 3f, 0f, -120f), 0.8f, 5f, HullDark, $"OM_PilingExtra_{i}");
             }
-        }
-
-        // =================================================================
-        // Shipwrecks (Colonial ship prefab, same tilt/sink pattern as corsair)
-        // =================================================================
-        private static bool s_hormuzPrefabWarned = false;
-        private static int s_hormuzWreckIndex = 0;
-        private static readonly float[] s_hormuzTiltsZ = { -40f, 15f, 50f };
-        private static readonly float[] s_hormuzSinkFactors = { 0.45f, 0.55f, 0.38f };
-
-        private void BuildShipwrecks()
-        {
-            // 3 wrecks scattered along shorelines
-            CreateShipwreck(new Vector3(-480f, -3f, 140f), HullDark);
-            CreateShipwreck(new Vector3(460f, -3f, -150f), HullDark);
-            CreateShipwreck(new Vector3(200f, -3f, 120f),  HullDark);
-        }
-
-        private void CreateShipwreck(Vector3 pos, Color hullColor)
-        {
-            int idx = s_hormuzWreckIndex++ % s_hormuzTiltsZ.Length;
-            float tiltZ = s_hormuzTiltsZ[idx];
-            float sink = s_hormuzSinkFactors[idx];
-
-            var shipPrefab = Resources.Load<GameObject>("Models/ColonialShip");
-            if (shipPrefab == null)
-            {
-                if (!s_hormuzPrefabWarned)
-                {
-                    Debug.LogWarning("[StraitOfHormuz] Failed to load Models/ColonialShip — falling back to procedural wreck.");
-                    s_hormuzPrefabWarned = true;
-                }
-                CreateProceduralWreck(pos, hullColor, tiltZ);
-                return;
-            }
-
-            var ship = Object.Instantiate(shipPrefab, transform);
-            ship.name = $"Shipwreck_Hormuz_{idx}";
-            const float scale = 3f;
-            ship.transform.localScale = Vector3.one * scale;
-
-            float shipHeightApprox = 4f * scale;
-            var wreckPos = pos;
-            wreckPos.y = -shipHeightApprox * sink;
-            ship.transform.position = wreckPos;
-            ship.transform.rotation = Quaternion.Euler(10f, 30f, tiltZ);
-            ship.isStatic = true;
-
-            CityPrefabHelper.FixURPMaterials(ship.transform);
-
-            foreach (var rb in ship.GetComponentsInChildren<Rigidbody>())
-                Object.Destroy(rb);
-
-            var meshFilters = ship.GetComponentsInChildren<MeshFilter>();
-            for (int mf = 0; mf < meshFilters.Length; mf++)
-            {
-                if (meshFilters[mf].sharedMesh == null) continue;
-                if (meshFilters[mf].GetComponent<Collider>() != null) continue;
-                var mc = meshFilters[mf].gameObject.AddComponent<MeshCollider>();
-                mc.sharedMesh = meshFilters[mf].sharedMesh;
-                mc.convex = false;
-            }
-
-            const float darken = 0.65f;
-            foreach (var rend in ship.GetComponentsInChildren<Renderer>())
-            {
-                var mats = rend.materials;
-                for (int m = 0; m < mats.Length; m++)
-                {
-                    if (mats[m] == null) continue;
-                    if (mats[m].HasProperty("_BaseColor"))
-                        mats[m].SetColor("_BaseColor", mats[m].GetColor("_BaseColor") * darken);
-                    else if (mats[m].HasProperty("_Color"))
-                        mats[m].color = mats[m].color * darken;
-                }
-                rend.materials = mats;
-            }
-
-            foreach (var t in ship.GetComponentsInChildren<Transform>())
-                t.gameObject.isStatic = true;
-        }
-
-        private void CreateProceduralWreck(Vector3 pos, Color hullColor, float tiltZ)
-        {
-            var ship = new GameObject("ShipwreckProc");
-            ship.transform.SetParent(transform, false);
-            ship.transform.position = pos;
-            ship.transform.rotation = Quaternion.Euler(10f, 30f, tiltZ);
-            ship.isStatic = true;
-
-            var hull = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            hull.name = "Hull";
-            hull.transform.SetParent(ship.transform, false);
-            hull.transform.localScale = new Vector3(6f, 4f, 22f);
-            SetMaterial(hull, MakeMaterial(hullColor));
-
-            var deck = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            deck.name = "Deck";
-            deck.transform.SetParent(ship.transform, false);
-            deck.transform.localPosition = new Vector3(0f, 2.2f, 0f);
-            deck.transform.localScale = new Vector3(5.5f, 0.3f, 20f);
-            SetMaterial(deck, MakeMaterial(hullColor * 0.7f));
-            Object.DestroyImmediate(deck.GetComponent<Collider>());
         }
 
         // =================================================================

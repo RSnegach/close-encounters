@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
-#if UNITY_RENDERING_URP || UNITY_URP
 using UnityEngine.Rendering.Universal;
-#endif
 
 namespace CloseEncounters.Arena
 {

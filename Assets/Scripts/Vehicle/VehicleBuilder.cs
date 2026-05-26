@@ -1136,11 +1136,15 @@ namespace CloseEncounters.Vehicle
                 return false;
             }
 
-            // Must have propulsion in the base layer
-            if (!HasPropulsionInBaseLayer())
+            // Air vehicles can mount propulsion anywhere (engines on wings/tail);
+            // ground/water still require it in the base layer for traction/buoyancy.
+            if (!string.Equals(_domain, "air", StringComparison.OrdinalIgnoreCase))
             {
-                error = "Vehicle requires at least one propulsion part in the base layer (layer 0).";
-                return false;
+                if (!HasPropulsionInBaseLayer())
+                {
+                    error = "Vehicle requires at least one propulsion part in the base layer (layer 0).";
+                    return false;
+                }
             }
 
             // Must be connected

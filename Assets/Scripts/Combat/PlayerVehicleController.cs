@@ -136,16 +136,6 @@ namespace CloseEncounters.Combat
             _engineAudio.Play();
         }
 
-        private void LateUpdate()
-        {
-            if (_engineAudio != null)
-            {
-                float spd = Speed;
-                _engineAudio.pitch = Mathf.Lerp(0.7f, 1.6f, Mathf.Clamp01(spd / 60f));
-                _engineAudio.volume = Mathf.Lerp(0.25f, 0.65f, Mathf.Clamp01(spd / 40f));
-            }
-        }
-
         private void SetupCamera()
         {
             Camera existing = Camera.main;
@@ -183,6 +173,12 @@ namespace CloseEncounters.Combat
 
         private void LateUpdate()
         {
+            if (_engineAudio != null)
+            {
+                float spd = Speed;
+                _engineAudio.pitch = Mathf.Lerp(0.7f, 1.6f, Mathf.Clamp01(spd / 60f));
+                _engineAudio.volume = Mathf.Lerp(0.25f, 0.65f, Mathf.Clamp01(spd / 40f));
+            }
             if (Time.timeScale <= 0f) return;
             HandleMouseLook();
             UpdateCamera();
