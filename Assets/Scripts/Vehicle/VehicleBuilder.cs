@@ -347,6 +347,7 @@ namespace CloseEncounters.Vehicle
                     PlacedPart placed = _grid[_hoverCell];
                     _selectedPart = placed.partData;
                     RemovePartInternal(placed);
+                    _redoStack.Clear();
                     OnPartSelected?.Invoke(_selectedPart);
                 }
             }
@@ -1079,11 +1080,16 @@ namespace CloseEncounters.Vehicle
             // Get all occupied cells
             var allCells = new HashSet<Vector3Int>(_grid.Keys);
 
-            // Start from the first occupied cell
-            var enumerator = allCells.GetEnumerator();
-            enumerator.MoveNext();
-            Vector3Int startCell = enumerator.Current;
-            enumerator.Dispose();
+            // Start from the origin of the first part we find in the grid
+            Vector3Int startCell = default;
+            bool haveStart = false;
+            foreach (var kv in _grid)
+            {
+                startCell = kv.Value.origin;
+                haveStart = true;
+                break;
+            }
+            if (!haveStart) return true;
 
             queue.Enqueue(startCell);
             visited.Add(startCell);
@@ -1320,19 +1326,38 @@ namespace CloseEncounters.Vehicle
             _gridSize = GetGridSize(_domain);
             _forwardAngle = data.forwardAngle;
 
+            bool controlModulePlaced = false;
             for (int i = 0; i < data.parts.Count; i++)
             {
                 PartEntry entry = data.parts[i];
                 PartData partData = PartRegistry.Instance?.GetPart(entry.id);
                 if (partData == null) continue;
 
+                if (entry.gridPosition == null || entry.gridPosition.Length < 3)
+                {
+                    Debug.LogWarning($"[VehicleBuilder] Skipping '{entry.id}': gridPosition missing or has fewer than 3 axes.");
+                    continue;
+                }
+
+                if (partData.IsControlModule())
+                {
+                    if (controlModulePlaced)
+                    {
+                        Debug.LogWarning($"[VehicleBuilder] Skipping additional control module '{entry.id}': vehicle already has one.");
+                        continue;
+                    }
+                }
+
                 Vector3Int origin = new Vector3Int(
-                    entry.gridPosition.Length > 0 ? entry.gridPosition[0] : 0,
-                    entry.gridPosition.Length > 1 ? entry.gridPosition[1] : 0,
-                    entry.gridPosition.Length > 2 ? entry.gridPosition[2] : 0
+                    entry.gridPosition[0],
+                    entry.gridPosition[1],
+                    entry.gridPosition[2]
                 );
 
-                TryPlacePart(partData, origin);
+                if (TryPlacePart(partData, origin) && partData.IsControlModule())
+                {
+                    controlModulePlaced = true;
+                }
             }
         }
 

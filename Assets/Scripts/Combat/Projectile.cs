@@ -643,7 +643,7 @@ namespace CloseEncounters.Combat
             if (_hasDetonated) return;
             _hasDetonated = true;
 
-            DamageSystem.DealAreaDamage(transform.position, triggerRadius, damage);
+            DamageSystem.DealAreaDamage(transform.position, triggerRadius, damage, ownerPlayerId);
             DamageSystem.SpawnExplosionFX(transform.position, 2f);
 
             // VFX: ParticlePack explosion for mine detonation

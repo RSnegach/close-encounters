@@ -411,18 +411,19 @@ namespace CloseEncounters.Combat
 
         /// <summary>
         /// Apply area-of-effect damage to all vehicles within a radius.
+        /// Pass ownerPlayerId to exclude the shooter from their own splash; -1 = environmental, hits everyone.
         /// </summary>
-        public static void DealAreaDamage(Vector3 center, float radius, int maxDamage)
+        public static void DealAreaDamage(Vector3 center, float radius, int maxDamage, int ownerPlayerId = -1)
         {
             if (ArenaManager.Instance == null) return;
 
-            // ParticlePack VFX: dust explosion for area damage
             VFXManager.DustExplosion(center, radius * 0.3f);
 
             var vehicles = ArenaManager.Instance.GetVehicles();
             for (int i = 0; i < vehicles.Count; i++)
             {
                 if (vehicles[i] == null || !vehicles[i].IsAlive) continue;
+                if (ownerPlayerId >= 0 && vehicles[i].PlayerId == ownerPlayerId) continue;
 
                 float dist = Vector3.Distance(vehicles[i].transform.position, center);
                 if (dist < radius)

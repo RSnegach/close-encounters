@@ -224,6 +224,8 @@ namespace CloseEncounters.AI
         [Header("Vehicle Interface")]
         [Tooltip("Tag applied to all potential enemy vehicles.")]
         public string enemyTag = "Vehicle";
+        [Tooltip("Projectile muzzle speed used for lead prediction. Spawn logic should set this per loadout.")]
+        public float aiProjectileSpeed = 60f;
 
         // ----- public readable state -----
         public AIInput CurrentInput  { get; private set; }
@@ -339,15 +341,18 @@ namespace CloseEncounters.AI
 
             float dt = Time.deltaTime;
 
-            // Reaction delay accumulator
+            // Reaction delay only gates target acquisition + decision logic.
+            // Input application + smoothing must run every frame so the vehicle keeps moving.
             _reactionAccum += dt;
-            if (_reactionAccum < _preset.reactionTime) return;
-            _reactionAccum = 0f;
+            if (_reactionAccum >= _preset.reactionTime)
+            {
+                _reactionAccum = 0f;
+                UpdateTargetSelection();
+                UpdateStateMachine(dt);
+            }
 
-            UpdateTargetSelection();
             UpdateStuckDetection(dt);
             UpdateWeaponCycling(dt);
-            UpdateStateMachine(dt);
             ProduceSmoothedInput(dt);
         }
 
@@ -555,9 +560,17 @@ namespace CloseEncounters.AI
 
             Transform best = _candidates[0].transform;
 
-            // Respect switch cooldown unless target is dead/gone
+            // Respect switch cooldown unless target is dead/gone or no longer a candidate
             if (_targetSwitchTimer > 0f && _lastTarget != null && _lastTarget && _lastTarget.gameObject.activeInHierarchy)
-                best = _lastTarget;
+            {
+                bool stillCandidate = false;
+                for (int i = 0; i < _candidates.Count; i++)
+                {
+                    if (_candidates[i].transform == _lastTarget) { stillCandidate = true; break; }
+                }
+                if (stillCandidate)
+                    best = _lastTarget;
+            }
 
             if (best != _lastTarget)
             {
@@ -825,7 +838,7 @@ namespace CloseEncounters.AI
                 input.forward = 0.1f;
 
             input.fire        = ShouldFire(dist);
-            input.boost       = false;
+            input.boost       = (dist > idealDist + 5f) && _boostFuel > 0f;
             input.weaponIndex = _currentWeaponIndex;
             CurrentInput = input;
         }
@@ -1111,8 +1124,8 @@ namespace CloseEncounters.AI
             Vector3 targetVel = targetRb.linearVelocity;
             float dist = Vector3.Distance(transform.position, targetPos);
 
-            // Rough projectile speed estimate
-            float projectileSpeed = 60f;
+            // Rough projectile speed estimate (tunable per loadout)
+            float projectileSpeed = aiProjectileSpeed > 0.01f ? aiProjectileSpeed : 60f;
             float tof = dist / projectileSpeed;
 
             Vector3 predicted = targetPos + targetVel * tof * _preset.leadPredictionFactor;

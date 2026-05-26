@@ -36,6 +36,16 @@ namespace CloseEncounters.UI
         private Transform _domainInfoContent; // Bottom-right domain info column
         private bool _healthbarsOn = true;
 
+        // --- Spectator overlay ---
+        private GameObject _specOverlay;
+        private TMP_Text _specTitleLabel;
+        private TMP_Text _specTargetLabel;
+        private Image _specHpBg;
+        private Image _specHpFill;
+        private RectTransform _specHpFillRt;
+        private TMP_Text _specViewModeLabel;
+        private TMP_Text _specHintLabel;
+
         // --- Canvas ref (set by bootstrapper or self-created) ---
         private Canvas _canvas;
         private RectTransform _canvasRect;
@@ -118,6 +128,7 @@ namespace CloseEncounters.UI
             BuildGameOverLabel();
             BuildOOBBanner();
             BuildPauseMenu();
+            BuildSpectatorOverlay();
 
             CloseEncounters.Combat.DamageSystem.OnVehicleKilled += HandleVehicleKilled;
         }
@@ -689,12 +700,11 @@ namespace CloseEncounters.UI
         }
 
         /// <summary>
-        /// Switch HUD to spectator mode: hide player-specific elements,
-        /// show spectating text with the name of who we're watching.
+        /// Switch HUD to spectator mode: hide player-specific elements
+        /// and reveal the dedicated spectator overlay.
         /// </summary>
         public void EnterSpectatorMode(string spectatingName)
         {
-            // Hide player HUD elements
             if (_healthBar != null) _healthBar.gameObject.SetActive(false);
             if (_healthLabel != null) _healthLabel.gameObject.SetActive(false);
             if (_speedLabel != null) _speedLabel.gameObject.SetActive(false);
@@ -706,20 +716,135 @@ namespace CloseEncounters.UI
             if (_crosshairH != null) _crosshairH.gameObject.SetActive(false);
             if (_crosshairV != null) _crosshairV.gameObject.SetActive(false);
 
-            // Show spectating info using the game-over label
-            if (_gameOverLabel != null)
+            if (_specOverlay != null) _specOverlay.SetActive(true);
+            if (_specTargetLabel != null)
+                _specTargetLabel.text = string.IsNullOrEmpty(spectatingName) ? "" : spectatingName;
+        }
+
+        /// <summary>Backwards-compat: routes to new spectator target label.</summary>
+        public void SetSpectatingTarget(string name)
+        {
+            if (_specTargetLabel != null)
+                _specTargetLabel.text = name;
+        }
+
+        /// <summary>Set the spectator target's name, AI/player tag, and HP.</summary>
+        public void SetSpectatorTargetData(string name, bool isAI, int hp, int maxHp)
+        {
+            if (_specOverlay == null) return;
+
+            if (string.IsNullOrEmpty(name))
             {
-                _gameOverLabel.text = $"Spectating - click to spectate {spectatingName}";
-                _gameOverLabel.fontSize = 24f;
-                _gameOverLabel.gameObject.SetActive(true);
+                if (_specTargetLabel != null) _specTargetLabel.text = "";
+                if (_specHpFillRt != null) _specHpFillRt.anchorMax = new Vector2(0f, 1f);
+                return;
+            }
+
+            if (_specTargetLabel != null)
+                _specTargetLabel.text = $"{name}  {(isAI ? "(AI)" : "(Player)")}";
+
+            if (_specHpFillRt != null)
+            {
+                float frac = maxHp > 0 ? Mathf.Clamp01((float)hp / maxHp) : 0f;
+                _specHpFillRt.anchorMax = new Vector2(frac, 1f);
+                _specHpFillRt.offsetMax = Vector2.zero;
+                _specHpFillRt.offsetMin = Vector2.zero;
             }
         }
 
-        /// <summary>Update the spectating name shown on screen.</summary>
-        public void SetSpectatingTarget(string name)
+        /// <summary>Set the top-left view-mode indicator: "CHASE" / "FPS" / "FREECAM".</summary>
+        public void SetSpectatorViewMode(string mode)
         {
-            if (_gameOverLabel != null && _gameOverLabel.gameObject.activeSelf)
-                _gameOverLabel.text = $"Spectating - click to spectate {name}";
+            if (_specViewModeLabel != null)
+                _specViewModeLabel.text = $"VIEW: {mode}";
+        }
+
+        // --- Spectator overlay builder ---
+
+        private void BuildSpectatorOverlay()
+        {
+            _specOverlay = CreateUIObject("SpectatorOverlay", _canvas.transform);
+            StretchFull(_specOverlay);
+            // why: container is layout-only; no background image so the world stays visible
+            var cg = _specOverlay.AddComponent<CanvasGroup>();
+            cg.blocksRaycasts = false;
+            cg.interactable = false;
+
+            // Top center: SPECTATING title (32pt bold, accent red)
+            var titleGo = CreateUIObject("SpecTitle", _specOverlay.transform);
+            Anchor(titleGo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -90f), new Vector2(600f, 44f), new Vector2(0.5f, 0.5f));
+            _specTitleLabel = titleGo.AddComponent<TextMeshProUGUI>();
+            _specTitleLabel.text = "S P E C T A T I N G";
+            _specTitleLabel.fontSize = 32f;
+            _specTitleLabel.color = new Color(0.91f, 0.27f, 0.38f, 1f);
+            _specTitleLabel.alignment = TextAlignmentOptions.Center;
+            _specTitleLabel.fontStyle = FontStyles.Bold;
+            _specTitleLabel.characterSpacing = 8f;
+            _specTitleLabel.raycastTarget = false;
+
+            // Target name (22pt, white) below title
+            var nameGo = CreateUIObject("SpecTarget", _specOverlay.transform);
+            Anchor(nameGo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -134f), new Vector2(600f, 30f), new Vector2(0.5f, 0.5f));
+            _specTargetLabel = nameGo.AddComponent<TextMeshProUGUI>();
+            _specTargetLabel.text = "";
+            _specTargetLabel.fontSize = 22f;
+            _specTargetLabel.color = Color.white;
+            _specTargetLabel.alignment = TextAlignmentOptions.Center;
+            _specTargetLabel.raycastTarget = false;
+
+            // HP bar (320x16) below name
+            var hpGo = CreateUIObject("SpecHpBar", _specOverlay.transform);
+            Anchor(hpGo, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -168f), new Vector2(320f, 16f), new Vector2(0.5f, 0.5f));
+            _specHpBg = hpGo.AddComponent<Image>();
+            _specHpBg.color = new Color(0.13f, 0.13f, 0.15f, 0.9f);
+            _specHpBg.raycastTarget = false;
+
+            var hpFillGo = CreateUIObject("Fill", hpGo.transform);
+            _specHpFillRt = hpFillGo.GetComponent<RectTransform>();
+            _specHpFillRt.anchorMin = new Vector2(0f, 0f);
+            _specHpFillRt.anchorMax = new Vector2(1f, 1f);
+            _specHpFillRt.offsetMin = Vector2.zero;
+            _specHpFillRt.offsetMax = Vector2.zero;
+            _specHpFillRt.pivot = new Vector2(0f, 0.5f);
+            _specHpFill = hpFillGo.AddComponent<Image>();
+            _specHpFill.color = new Color(0.91f, 0.27f, 0.38f, 1f);
+            _specHpFill.raycastTarget = false;
+
+            // Top-left view-mode indicator (16pt accent red)
+            var vmGo = CreateUIObject("SpecViewMode", _specOverlay.transform);
+            Anchor(vmGo, new Vector2(0f, 1f), new Vector2(0f, 1f),
+                new Vector2(16f, -16f), new Vector2(220f, 22f), new Vector2(0f, 1f));
+            _specViewModeLabel = vmGo.AddComponent<TextMeshProUGUI>();
+            _specViewModeLabel.text = "VIEW: CHASE";
+            _specViewModeLabel.fontSize = 16f;
+            _specViewModeLabel.color = new Color(0.91f, 0.27f, 0.38f, 1f);
+            _specViewModeLabel.alignment = TextAlignmentOptions.TopLeft;
+            _specViewModeLabel.fontStyle = FontStyles.Bold;
+            _specViewModeLabel.raycastTarget = false;
+
+            // Bottom-right key hint panel
+            var hintGo = CreateUIObject("SpecHints", _specOverlay.transform);
+            Anchor(hintGo, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                new Vector2(-16f, 96f), new Vector2(280f, 84f), new Vector2(1f, 0f));
+            var hintBg = hintGo.AddComponent<Image>();
+            hintBg.color = new Color(0f, 0f, 0f, 0.55f);
+            hintBg.raycastTarget = false;
+
+            var hintText = CreateUIObject("HintsText", hintGo.transform);
+            var hintRt = StretchFull(hintText);
+            hintRt.offsetMin = new Vector2(10f, 6f);
+            hintRt.offsetMax = new Vector2(-10f, -6f);
+            _specHintLabel = hintText.AddComponent<TextMeshProUGUI>();
+            _specHintLabel.text = "Q / E - Switch Target\nV - Change View (Chase / FPS / FreeCam)\nLMB - Next Target";
+            _specHintLabel.fontSize = 14f;
+            _specHintLabel.color = new Color(1f, 1f, 1f, 0.85f);
+            _specHintLabel.alignment = TextAlignmentOptions.MidlineLeft;
+            _specHintLabel.raycastTarget = false;
+
+            _specOverlay.SetActive(false);
         }
 
         // === Update ======================================================

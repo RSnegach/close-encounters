@@ -603,6 +603,7 @@ namespace CloseEncounters.Arena
             MatchTimer = MatchDuration;
             MatchRunning = true;
             WinnerPlayerId = -1;
+            _matchEndTriggered = false;
             Debug.Log("[ArenaManager] Match started!");
         }
 
