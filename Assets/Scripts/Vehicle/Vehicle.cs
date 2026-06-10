@@ -665,7 +665,7 @@ namespace CloseEncounters.Vehicle
 
             // Throttle-driven thrust; boost stacks on top
             float forceMultiplier = isBoosting ? boostMultiplier : 1f;
-            Vector3 thrustForce = transform.forward * thrust * AirThrustForce * airThrottle * forceMultiplier * dt;
+            Vector3 thrustForce = transform.forward * thrust * AirThrustForce * airThrottle * forceMultiplier;
             _rb.AddForce(thrustForce, ForceMode.Force);
 
             // why: lift curve — below stall drops off fast (quadratic), above stall ramps to full support at cruiseSpeed

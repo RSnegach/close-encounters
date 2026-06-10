@@ -128,10 +128,23 @@ namespace CloseEncounters.Arena
         // Arena Spawning
         // =====================================================================
 
+        // Air mode reuses the ground arenas (expanded for flight); pick one at random
+        // each match so air battles cycle through every environment.
+        private static readonly string[] AirArenaPool =
+            { "desert_flat", "town", "arctic", "volcanic", "highlands" };
+
         private void SpawnArena()
         {
             string key = (_settings.arena ?? "desert_flat").ToLowerInvariant();
             bool isWater = _settings.domain == "water" || _settings.domain == "sea";
+
+            // Air mode: ignore the placeholder "air_arena" key and roll a random
+            // ground arena so each match cycles through the environments.
+            if (_settings.domain == "air")
+            {
+                key = AirArenaPool[UnityEngine.Random.Range(0, AirArenaPool.Length)];
+                Debug.Log($"[ArenaManager] Air mode selected random arena: {key}");
+            }
 
             // Try scene-based arena first (additively loaded)
             string sceneName = "Arena_" + key;
@@ -236,6 +249,9 @@ namespace CloseEncounters.Arena
                 case "florida":          return obj.AddComponent<GroundVolcanic>();
                 case "highlands":
                 case "kyrgyzstan":       return obj.AddComponent<GroundHighlands>();
+                // Air mode: open terrain with no tornado hazard, expanded by AirArenaExpander.
+                case "air_arena":
+                case "air":              return obj.AddComponent<GroundHighlands>();
                 default:                 return obj.AddComponent<GroundDesert>();
             }
         }
@@ -275,10 +291,31 @@ namespace CloseEncounters.Arena
             bool isWater = _settings.domain == "water" || _settings.domain == "sea";
             Vector3 spawnPos;
 
+            bool isAir = _settings.domain == "air";
+
             if (isWater)
             {
                 // Water vehicles spawn at water surface level (y=1)
                 spawnPos = new Vector3(spawnPoint.position.x, 1f, spawnPoint.position.z);
+            }
+            else if (isAir)
+            {
+                // Air vehicles spawn at altitude with room to fly.
+                // Sample terrain, then raycast as a backup (scene arenas use mesh
+                // colliders with no active Terrain), so altitude is always above ground.
+                float groundY = 0f;
+                var activeTerrain = Terrain.activeTerrain;
+                if (activeTerrain != null)
+                {
+                    groundY = activeTerrain.SampleHeight(spawnPoint.position) + activeTerrain.transform.position.y;
+                }
+                else
+                {
+                    Vector3 rayOrigin = new Vector3(spawnPoint.position.x, 1000f, spawnPoint.position.z);
+                    if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, 2000f, ~0, QueryTriggerInteraction.Ignore))
+                        groundY = hit.point.y;
+                }
+                spawnPos = new Vector3(spawnPoint.position.x, groundY + 120f, spawnPoint.position.z);
             }
             else
             {
@@ -299,8 +336,15 @@ namespace CloseEncounters.Arena
                 spawnPos = new Vector3(spawnPoint.position.x, groundY + 2f, spawnPoint.position.z);
             }
             vehObj.transform.position = spawnPos;
-            // Don't rotate root — we remap part positions so the builder's
-            // "front" direction aligns with local +Z (transform.forward).
+            // Ground/water: don't rotate root — parts are remapped so the builder's
+            // "front" aligns with local +Z. Air: face the arena center horizontally so
+            // the plane flies inward at spawn instead of straight toward a boundary wall.
+            if (isAir)
+            {
+                Vector3 toCenter = new Vector3(-spawnPos.x, 0f, -spawnPos.z);
+                if (toCenter.sqrMagnitude > 0.01f)
+                    vehObj.transform.rotation = Quaternion.LookRotation(toCenter.normalized, Vector3.up);
+            }
 
             var runtime = vehObj.AddComponent<VehicleRuntime>();
             runtime.Initialize(data, playerId, isAI);
@@ -349,6 +393,9 @@ namespace CloseEncounters.Arena
                     if (entry.armorFace != null && entry.armorFace.Length >= 3)
                         node.armorFace = new Vector3Int(entry.armorFace[0], entry.armorFace[1], entry.armorFace[2]);
 
+                    // Restore directional-shape yaw (wedges, panels)
+                    node.rotationSteps = entry.rotationSteps;
+
                     node.Setup(partData, gp);
                     runtime.PartNodes.Add(node);
                 }
@@ -387,10 +434,19 @@ namespace CloseEncounters.Arena
                 aiCtrl.SetDifficulty(difficulty);
                 aiCtrl.SetDomain(_settings.domain);
 
-                float halfSize = isWater ? WaterArenaHalfSize : GroundArenaHalfSize;
-                // Ground/water AIs get tight Y boundary, air gets full height
-                float yHalf = _settings.domain == "air" ? 100f : 20f;
-                aiCtrl.arenaHalfSize = new Vector3(halfSize, yHalf, halfSize);
+                if (_settings.domain == "air")
+                {
+                    // Air bots must use the EXPANDED bounds AirArenaExpander builds
+                    // (>=1500 horizontal, ~800 ceiling), not the ground 300/100 box —
+                    // otherwise boundary avoidance fights an imaginary wall and they
+                    // circle the map centre instead of using the whole arena.
+                    aiCtrl.arenaHalfSize = new Vector3(1500f, 760f, 1500f);
+                }
+                else
+                {
+                    float halfSize = isWater ? WaterArenaHalfSize : GroundArenaHalfSize;
+                    aiCtrl.arenaHalfSize = new Vector3(halfSize, 20f, halfSize);
+                }
 
                 // Initialize propulsion and fuel degradation tracking for AI
                 int aiFuelCount = 0;
@@ -414,6 +470,10 @@ namespace CloseEncounters.Arena
                 var aiGroundPhys = vehObj.GetComponent<CloseEncounters.VehiclePhysics.GroundPhysics>();
                 if (aiGroundPhys != null)
                     aiGroundPhys.InitPropulsionTracking(aiPropulsionCount);
+
+                // Give the bot a trigger finger so it actually fights (all domains).
+                var aiCombat = vehObj.AddComponent<CloseEncounters.Combat.AICombat>();
+                aiCombat.Initialize(runtime, aiCtrl, playerId);
             }
             else
             {
@@ -468,6 +528,27 @@ namespace CloseEncounters.Arena
             }
 
             _vehicles.Add(runtime);
+
+            // Air vehicles: no gravity, constant forward velocity (PlayerVehicleController manages speed)
+            if (isAir)
+            {
+                rb.useGravity = false;
+                rb.linearDamping = 0f;
+                rb.angularDamping = 0f;
+                rb.constraints = RigidbodyConstraints.FreezeRotation;
+                rb.linearVelocity = vehObj.transform.forward * 40f;
+
+                // Out-of-bounds: planes can fly past the play area, get a warning +
+                // countdown, and are destroyed if they don't return. Bounds come from
+                // the AirArenaExpander trigger walls. (VehicleRuntime has no Vehicle
+                // component, so wire the controller here directly.)
+                var oob = vehObj.AddComponent<CloseEncounters.Combat.OutOfBoundsController>();
+                var runtimeRef = runtime;
+                oob.onOutOfBoundsExpired += () =>
+                {
+                    if (runtimeRef != null && runtimeRef.IsAlive) runtimeRef.Die();
+                };
+            }
 
             // Floating healthbar for every vehicle
             CreateFloatingHealthbar(runtime, vehObj.transform, playerId);
@@ -603,7 +684,6 @@ namespace CloseEncounters.Arena
             MatchTimer = MatchDuration;
             MatchRunning = true;
             WinnerPlayerId = -1;
-            _matchEndTriggered = false;
             Debug.Log("[ArenaManager] Match started!");
         }
 
@@ -773,6 +853,11 @@ namespace CloseEncounters.Arena
 
         private void EnforceArenaBounds()
         {
+            // Air mode does NOT hard-clamp: planes are free to fly out of the play
+            // area, and OutOfBoundsController handles the warning + countdown + kill.
+            // Clamping here would act as an invisible wall.
+            if (_settings.domain == "air") return;
+
             bool isWater = _settings.domain == "water" || _settings.domain == "sea";
             float halfSize = isWater ? WaterArenaHalfSize : GroundArenaHalfSize;
 
@@ -1180,6 +1265,9 @@ namespace CloseEncounters.Arena
         public float DistanceTraveled;
         public float TopSpeed;
         private Vector3 _prevPosition;
+        // why: air planes must not insta-die to a stray spawn-frame contact
+        private float _spawnTime;
+        private const float SpawnGracePeriod = 1.5f;
 
         public int TotalHP
         {
@@ -1222,6 +1310,83 @@ namespace CloseEncounters.Arena
             Data = data;
             PlayerId = playerId;
             IsAI = isAI;
+            _spawnTime = Time.time;
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!IsAlive) return;
+            var gm = CloseEncounters.Core.GameManager.Instance;
+            if (gm == null || gm.Settings == null || gm.Settings.domain != "air") return;
+            // Grace window: ignore collisions right after spawn so a stray
+            // spawn-frame contact can't instantly kill the plane.
+            if (Time.time - _spawnTime < SpawnGracePeriod) return;
+
+            // Check if we hit another vehicle
+            var otherRuntime = collision.collider.GetComponentInParent<VehicleRuntime>();
+            if (otherRuntime != null && otherRuntime.IsAlive)
+            {
+                // Vehicle-to-vehicle: both bounce apart + heavy damage.
+                Vector3 bounceDir = (transform.position - otherRuntime.transform.position).normalized;
+                bounceDir.y = Mathf.Max(bounceDir.y, 0.4f);
+                bounceDir.Normalize();
+
+                BounceVehicle(this, bounceDir);
+                BounceVehicle(otherRuntime, -bounceDir);
+
+                DamagePartsAtContact(collision, this, 40);
+                DamagePartsAtContact(collision, otherRuntime, 40);
+            }
+            else
+            {
+                // Distinguish a flat-ground crash from a wall/obstacle hit using
+                // the contact normal. A near-vertical normal (points up) means we
+                // pancaked onto the ground = crash = death. A sideways normal means
+                // we clipped a mountain wall, cliff, rock, or building = bounce off.
+                ContactPoint cp = collision.GetContact(0);
+                bool isGroundCrash = collision.collider is TerrainCollider
+                                     && cp.normal.y > 0.7f;
+
+                if (isGroundCrash)
+                {
+                    Die();
+                }
+                else
+                {
+                    // Bounce away from the surface along its normal, biased upward.
+                    Vector3 bounceDir = cp.normal;
+                    bounceDir.y = Mathf.Max(bounceDir.y, 0.4f);
+                    bounceDir.Normalize();
+
+                    BounceVehicle(this, bounceDir);
+                    DamagePartsAtContact(collision, this, 40);
+                }
+            }
+        }
+
+        // Shared bounce: shove the vehicle along bounceDir and pause the player
+        // controller's velocity override so the impulse actually plays out.
+        private static void BounceVehicle(VehicleRuntime vr, Vector3 bounceDir)
+        {
+            const float bounceForce = 40f;
+            var rb = vr.GetComponent<Rigidbody>();
+            if (rb != null) rb.linearVelocity = bounceDir * bounceForce;
+            var pc = vr.GetComponent<PlayerVehicleController>();
+            if (pc != null) pc.ApplyBounce(0.6f);
+        }
+
+        private static void DamagePartsAtContact(Collision collision, VehicleRuntime vr, int damage)
+        {
+            Vector3 contactPoint = collision.GetContact(0).point;
+            float closestDist = float.MaxValue;
+            PartNode closest = null;
+            for (int i = 0; i < vr.PartNodes.Count; i++)
+            {
+                if (vr.PartNodes[i].isDestroyed) continue;
+                float d = Vector3.Distance(vr.PartNodes[i].transform.position, contactPoint);
+                if (d < closestDist) { closestDist = d; closest = vr.PartNodes[i]; }
+            }
+            if (closest != null) closest.TakeDamage(damage);
         }
 
         private void Update()

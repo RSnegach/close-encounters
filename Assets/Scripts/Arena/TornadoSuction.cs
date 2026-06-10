@@ -45,31 +45,51 @@ namespace CloseEncounters.Arena
                 var rb = col.attachedRigidbody;
                 if (rb == null || rb.isKinematic) continue;
 
+                // Air vehicles: apply turbulence through their controller
+                var airCtrl = rb.GetComponent<CloseEncounters.Combat.PlayerVehicleController>();
+                if (airCtrl != null && airCtrl.IsAirMode)
+                {
+                    Vector3 tornadoForce = ComputeTornadoForce(rb);
+                    airCtrl.ApplyTurbulence(tornadoForce, scanInterval + 0.1f);
+                    continue;
+                }
+
+                // AI air vehicles: directly override velocity
+                var aiCtrl = rb.GetComponent<CloseEncounters.AI.AIController>();
+                if (aiCtrl != null)
+                {
+                    Vector3 tornadoForce = ComputeTornadoForce(rb);
+                    rb.linearVelocity += tornadoForce * Time.fixedDeltaTime * 3f;
+                    rb.MoveRotation(rb.rotation * Quaternion.Euler(
+                        Random.Range(-5f, 5f), Random.Range(-5f, 5f), Random.Range(-5f, 5f)));
+                    continue;
+                }
+
                 ApplyTornadoForce(rb);
             }
         }
 
-        private void ApplyTornadoForce(Rigidbody rb)
+        private Vector3 ComputeTornadoForce(Rigidbody rb)
         {
             Vector3 tornadoAxis = transform.position;
             Vector3 toAxis = new Vector3(tornadoAxis.x - rb.position.x, 0f, tornadoAxis.z - rb.position.z);
             float distFromAxis = toAxis.magnitude;
-            if (distFromAxis < 0.01f) return;
+            if (distFromAxis < 0.01f) return Vector3.zero;
 
             float distFrac = Mathf.Clamp01(distFromAxis / radius);
             float heightFrac = Mathf.Clamp01((rb.position.y - transform.position.y) / Mathf.Max(height, 0.01f));
 
-            // Inward pull scales up near the edge (max at rim), down near the core.
             Vector3 inward = (toAxis / distFromAxis) * strength * (1f - Mathf.Abs(distFrac - 0.8f));
-
-            // Tangential swirl (perpendicular to inward, horizontal).
             Vector3 tangent = Vector3.Cross(Vector3.up, toAxis / distFromAxis);
             Vector3 swirl = tangent * strength * swirlSpeed * (1f - heightFrac * 0.5f);
-
-            // Lift gets weaker with altitude so objects eventually fling out the top.
             Vector3 lift = Vector3.up * strength * liftFraction * (1f - heightFrac);
 
-            rb.AddForce(inward + swirl + lift, ForceMode.Acceleration);
+            return inward + swirl + lift;
+        }
+
+        private void ApplyTornadoForce(Rigidbody rb)
+        {
+            rb.AddForce(ComputeTornadoForce(rb), ForceMode.Acceleration);
         }
     }
 }

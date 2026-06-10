@@ -2,57 +2,61 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using TMPro;
 using CloseEncounters.Core;
 
 namespace CloseEncounters.UI
 {
     /// <summary>
-    /// Post-match results overlay matching Godot's results_screen.gd exactly:
-    /// dark 75% backdrop, styled card with red accent border + shadow,
-    /// outcome heading, winner name, scrollable 2-column stats grid,
-    /// and three navigation buttons. Fades + scales in while paused.
+    /// Post-match results overlay. Shows ONE player's full stat card at a time,
+    /// filling the card with large, readable stats. Left/right arrows page between
+    /// players. Styled for a polished, professional scoreboard feel: outcome banner,
+    /// winner ribbon, a 2-column grid of big stat tiles, and a hero accuracy meter.
+    /// Fades + scales in while the game is paused.
     /// </summary>
     public class ResultsUI : MonoBehaviour
     {
         public enum Outcome { Victory, Defeated, Draw }
 
-        // --- Theme (matching Godot) ---
-        private static readonly Color COLOR_BG     = new Color(0.05f, 0.05f, 0.1f, 0.75f);
-        private static readonly Color COLOR_PANEL  = new Color(0.071f, 0.071f, 0.165f, 0.92f); // #12122a
-        private static readonly Color COLOR_PANEL_BOTTOM = new Color(0.04f, 0.04f, 0.10f, 0.95f);
-        private static readonly Color COLOR_ACCENT = new Color(0.91f, 0.27f, 0.38f, 1f);    // #e94560
-        private static readonly Color COLOR_SECONDARY = new Color(0.06f, 0.2f, 0.38f, 1f);  // #0f3460
-        private static readonly Color COLOR_TEXT   = new Color(0.93f, 0.93f, 0.93f, 1f);    // #eeeeee
-        private static readonly Color COLOR_GREEN  = new Color(0.31f, 0.8f, 0.64f, 1f);     // #4ecca3
-        private static readonly Color COLOR_YELLOW = new Color(0.94f, 0.75f, 0.25f, 1f);    // #f0c040
-        private static readonly Color COLOR_RED    = COLOR_ACCENT;
-        private static readonly Color COLOR_DIM    = new Color(0.53f, 0.53f, 0.53f, 1f);    // #888888
-        private static readonly Color COLOR_BLUEGRAY = new Color(0.45f, 0.55f, 0.7f, 1f);
-        private static readonly Color COLOR_BAR_BG  = new Color(0.15f, 0.15f, 0.20f, 0.6f);
+        // --- Theme ---
+        private static readonly Color COLOR_BG        = new Color(0.03f, 0.04f, 0.08f, 0.78f);
+        private static readonly Color COLOR_PANEL     = new Color(0.082f, 0.090f, 0.165f, 0.98f); // deep navy
+        private static readonly Color COLOR_PANEL2    = new Color(0.118f, 0.133f, 0.227f, 1f);    // tile fill
+        private static readonly Color COLOR_ACCENT    = new Color(0.91f, 0.27f, 0.38f, 1f);       // #e94560
+        private static readonly Color COLOR_SECONDARY = new Color(0.06f, 0.2f, 0.38f, 1f);        // #0f3460
+        private static readonly Color COLOR_TEXT      = new Color(0.96f, 0.96f, 0.98f, 1f);
+        private static readonly Color COLOR_GREEN     = new Color(0.31f, 0.8f, 0.64f, 1f);        // #4ecca3
+        private static readonly Color COLOR_YELLOW    = new Color(0.94f, 0.75f, 0.25f, 1f);       // #f0c040
+        private static readonly Color COLOR_RED       = COLOR_ACCENT;
+        private static readonly Color COLOR_DIM       = new Color(0.60f, 0.63f, 0.74f, 1f);
+        private static readonly Color COLOR_HEADERBAR = new Color(0.055f, 0.06f, 0.12f, 1f);
 
         // --- Refs ---
         private Canvas _canvas;
         private CanvasGroup _rootGroup;
         private RectTransform _cardRect;
         private TMP_Text _headingText;
-        private TMP_Text _headingShadow;
-        private RectTransform _headingUnderline;
         private TMP_Text _winnerText;
-        private TMP_Text _summaryText;
-        private Transform _tableContent;
-        private RectTransform _trophyRect;
-        private GameObject _trophyGo;
 
-        // --- Animation (matching Godot: 0.4s, scale 0.9→1.0) ---
+        // Per-player content (rebuilt when paging)
+        private Transform _playerContent;        // container the current player's card body lives in
+        private CanvasGroup _playerGroup;         // for cross-fade between players
+        private TMP_Text _playerNameText;
+        private TMP_Text _playerTagText;          // "Player 1 of 3" + AI/You tag
+        private Button _prevButton;
+        private Button _nextButton;
+
+        private List<StatRow> _rows = new List<StatRow>();
+        private int _currentIndex;
+        private float _matchTimeSeconds;
+        private string _winnerName;               // so ShowPlayer can highlight the winner
+
+        // --- Animation ---
         private const float FadeDuration = 0.4f;
-        private const float ScaleFrom = 0.9f;
-        private const float RowStagger = 0.05f;
-        private const float BarFillDuration = 0.6f;
+        private const float ScaleFrom = 0.92f;
 
-        private readonly List<Coroutine> _pendingAnims = new List<Coroutine>();
-        private int _rowRevealIndex;
+        // Fixed card size — large, cinematic.
+        private static readonly Vector2 CardSize = new Vector2(1120f, 860f);
 
         // =================================================================
         // Init
@@ -67,157 +71,58 @@ namespace CloseEncounters.UI
 
             BuildOverlay();
             BuildCard();
-            BuildCardContent();
-            BuildButtons();
 
-            // Don't call SetResults here — ArenaManager calls it with real data
             StartCoroutine(AnimateIn());
         }
 
         // =================================================================
-        // Public API
+        // Public API (signature unchanged — ArenaManager calls this)
         // =================================================================
 
         public void SetResults(Outcome outcome, string winnerName, List<StatRow> rows,
             float matchTimeSeconds = 0f)
         {
-            // Cancel any in-flight row animations from a prior SetResults
-            foreach (var c in _pendingAnims) if (c != null) StopCoroutine(c);
-            _pendingAnims.Clear();
-            _rowRevealIndex = 0;
+            _rows = rows ?? new List<StatRow>();
+            _matchTimeSeconds = matchTimeSeconds;
+            _winnerName = winnerName;
 
-            // Heading
-            Color outcomeColor;
+            // Outcome banner
             switch (outcome)
             {
                 case Outcome.Victory:
-                    _headingText.text = "VICTORY!";
-                    outcomeColor = COLOR_GREEN;
+                    _headingText.text = "VICTORY";
+                    _headingText.color = COLOR_GREEN;
                     break;
                 case Outcome.Defeated:
                     _headingText.text = "DEFEATED";
-                    outcomeColor = COLOR_RED;
+                    _headingText.color = COLOR_RED;
                     break;
                 default:
                     _headingText.text = "DRAW";
-                    outcomeColor = COLOR_YELLOW;
+                    _headingText.color = COLOR_YELLOW;
                     break;
             }
-            _headingText.color = outcomeColor;
-            if (_headingShadow != null) _headingShadow.text = _headingText.text;
 
-            // Underline color + slide-in
-            if (_headingUnderline != null)
+            _winnerText.text = string.IsNullOrEmpty(winnerName)
+                ? "No clear winner"
+                : $"{winnerName} takes the match";
+
+            // Start on the winner's card if we can find them by name, else first.
+            _currentIndex = 0;
+            if (!string.IsNullOrEmpty(winnerName))
             {
-                var ulImg = _headingUnderline.GetComponent<Image>();
-                if (ulImg != null) ulImg.color = outcomeColor;
-                _pendingAnims.Add(StartCoroutine(AnimateUnderline(_headingUnderline)));
-            }
-
-            // Trophy: only for victory
-            if (_trophyGo != null)
-            {
-                bool showTrophy = outcome == Outcome.Victory;
-                _trophyGo.SetActive(showTrophy);
-                if (showTrophy)
-                    _pendingAnims.Add(StartCoroutine(PulseTrophy(_trophyRect)));
-            }
-
-            _winnerText.text = string.IsNullOrEmpty(winnerName) ? "No winner"
-                : $"{winnerName} wins";
-
-            // Summary line (arena · vehicles · time)
-            if (_summaryText != null)
-            {
-                int mins = (int)matchTimeSeconds / 60;
-                int secs = (int)matchTimeSeconds % 60;
-                string arenaName = TryGetArenaName();
-                string vehicleStr = $"{rows.Count} Vehicle{(rows.Count == 1 ? "" : "s")}";
-                string timeStr = $"{mins:D2}:{secs:D2}";
-                if (!string.IsNullOrEmpty(arenaName))
-                    _summaryText.text = $"{arenaName}  ·  {vehicleStr}  ·  {timeStr}";
-                else
-                    _summaryText.text = $"{vehicleStr}  ·  {timeStr}";
-            }
-
-            // Clear stats immediately (not deferred) so new content doesn't conflict
-            for (int i = _tableContent.childCount - 1; i >= 0; i--)
-                DestroyImmediate(_tableContent.GetChild(i).gameObject);
-
-            // Match time (always first, matching Godot)
-            if (matchTimeSeconds > 0f)
-            {
-                int mins = (int)matchTimeSeconds / 60;
-                int secs = (int)matchTimeSeconds % 60;
-                AddStatRow("Match Time", $"{mins}:{secs:D2}");
-            }
-
-            AddSpacer(4f);
-
-            // Per-player stats
-            for (int p = 0; p < rows.Count; p++)
-            {
-                var row = rows[p];
-
-                if (rows.Count > 1)
+                for (int i = 0; i < _rows.Count; i++)
                 {
-                    if (p > 0) AddSpacer(8f);
-                    AddStatRow(row.playerName, "", bold: true);
-                    AddSeparator();
+                    if (_rows[i].playerName == winnerName) { _currentIndex = i; break; }
                 }
-
-                // Key stats — value-bar style
-                AddStatBar("Damage Dealt", row.damageDealt, 5000f, BarTier.DamageParts,
-                    row.damageDealt.ToString());
-
-                AddStatRow("Damage Received", row.damageReceived.ToString());
-                AddStatRow("Shots Fired", row.shotsFired.ToString());
-                AddStatRow("Shots Hit", row.shotsHit.ToString());
-
-                float accuracy = row.shotsFired > 0
-                    ? (float)row.shotsHit / row.shotsFired * 100f : 0f;
-                AddStatBar("Accuracy", accuracy, 100f, BarTier.Accuracy,
-                    $"{accuracy:F1}%");
-
-                AddStatBar("Parts Destroyed", row.partsDestroyedOnEnemy, 30f, BarTier.DamageParts,
-                    row.partsDestroyedOnEnemy.ToString());
-
-                AddStatRow("Parts Lost", row.partsLost.ToString());
-                AddStatRow("Distance Traveled", $"{row.distanceTraveled:F0} m");
-
-                AddStatBar("Top Speed", row.topSpeed, 80f, BarTier.TopSpeed,
-                    $"{row.topSpeed:F1} m/s");
-
-                AddStatRow("Survived",
-                    row.survived ? "Yes" : "No",
-                    valueColor: row.survived ? COLOR_GREEN : COLOR_RED);
             }
-        }
 
-        private string TryGetArenaName()
-        {
-            var arenaType = System.Type.GetType("CloseEncounters.Core.ArenaManager, Assembly-CSharp")
-                ?? System.Type.GetType("ArenaManager, Assembly-CSharp");
-            if (arenaType == null) return null;
-            var instProp = arenaType.GetProperty("Instance",
-                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-            if (instProp == null) return null;
-            var inst = instProp.GetValue(null);
-            if (inst == null) return null;
-
-            string[] candidates = { "ArenaName", "CurrentArenaName", "DisplayName", "arenaName" };
-            foreach (var name in candidates)
-            {
-                var p = arenaType.GetProperty(name);
-                if (p != null) { var v = p.GetValue(inst) as string; if (!string.IsNullOrEmpty(v)) return v; }
-                var f = arenaType.GetField(name);
-                if (f != null) { var v = f.GetValue(inst) as string; if (!string.IsNullOrEmpty(v)) return v; }
-            }
-            return null;
+            UpdateArrows();
+            ShowPlayer(_currentIndex, instant: true);
         }
 
         // =================================================================
-        // Layout — Dark backdrop + vignette
+        // Layout — Dark backdrop
         // =================================================================
 
         private void BuildOverlay()
@@ -229,288 +134,266 @@ namespace CloseEncounters.UI
             img.raycastTarget = true;
             _rootGroup = overlay.AddComponent<CanvasGroup>();
             _rootGroup.alpha = 0f;
-
-            // Vignette: radial-darkening texture stretched over the screen
-            var vignetteGo = CreateUIObject("Vignette", _rootGroup.transform);
-            StretchFull(vignetteGo);
-            var vImg = vignetteGo.AddComponent<Image>();
-            vImg.sprite = CreateVignetteSprite(256);
-            vImg.color = new Color(0f, 0f, 0f, 0.55f);
-            vImg.raycastTarget = false;
-            vImg.type = Image.Type.Simple;
-        }
-
-        private static Sprite CreateVignetteSprite(int size)
-        {
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            float cx = (size - 1) * 0.5f;
-            float cy = (size - 1) * 0.5f;
-            float maxR = Mathf.Sqrt(cx * cx + cy * cy);
-            var pixels = new Color[size * size];
-            for (int y = 0; y < size; y++)
-            {
-                for (int x = 0; x < size; x++)
-                {
-                    float dx = x - cx, dy = y - cy;
-                    float r = Mathf.Sqrt(dx * dx + dy * dy) / maxR;
-                    float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(r * 1.1f - 0.1f));
-                    pixels[y * size + x] = new Color(0f, 0f, 0f, a);
-                }
-            }
-            tex.SetPixels(pixels);
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
         }
 
         // =================================================================
-        // Layout — Styled card (matching Godot PanelContainer)
+        // Layout — the card shell (banner, winner ribbon, paged body, nav, buttons)
         // =================================================================
 
         private void BuildCard()
         {
             var card = CreateUIObject("Card", _rootGroup.transform);
             _cardRect = Anchor(card, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-                Vector2.zero, new Vector2(720f, 660f), new Vector2(0.5f, 0.5f));
+                Vector2.zero, CardSize, new Vector2(0.5f, 0.5f));
+            card.AddComponent<Image>().color = COLOR_PANEL;
 
-            // Bottom solid color (back-most layer)
-            card.AddComponent<Image>().color = COLOR_PANEL_BOTTOM;
-
-            // Gradient overlay (top-left → bottom-right) on top of the bottom color
-            var gradGo = CreateUIObject("CardGradient", card.transform);
-            StretchFull(gradGo);
-            var gradImg = gradGo.AddComponent<Image>();
-            gradImg.sprite = CreateGradientSprite();
-            gradImg.color = Color.white;
-            gradImg.raycastTarget = false;
-
-            // Soft outer glow outline
-            var glow = card.AddComponent<Outline>();
-            glow.effectColor = new Color(COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 0.3f);
-            glow.effectDistance = new Vector2(6f, -6f);
-
-            // Crisp inner outline
             var outline = card.AddComponent<Outline>();
             outline.effectColor = COLOR_ACCENT;
-            outline.effectDistance = new Vector2(3f, -3f);
-
-            // Optional 1px highlight stroke (skipped — adds risk for marginal gain)
-
-            var layout = card.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(28, 28, 16, 16);
-            layout.spacing = 0f;
-            layout.childForceExpandWidth = true;
-            layout.childForceExpandHeight = false;
-            layout.childControlWidth = true;
-            layout.childControlHeight = true;
-            layout.childScaleWidth = false;
-            layout.childScaleHeight = false;
-
+            outline.effectDistance = new Vector2(2f, -2f);
             _cardRect.localScale = Vector3.one * ScaleFrom;
-        }
 
-        private static Sprite CreateGradientSprite()
-        {
-            // 2x2 bilinearly-filtered gradient: TL→BR
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            // top-left light, bottom-right dark
-            Color tl = new Color(0.10f, 0.10f, 0.20f, 0.92f);
-            Color br = new Color(0.04f, 0.04f, 0.10f, 0.95f);
-            Color tr = Color.Lerp(tl, br, 0.5f);
-            Color bl = Color.Lerp(tl, br, 0.5f);
-            // Texture coords: (0,0) is bottom-left
-            tex.SetPixel(0, 1, tl);
-            tex.SetPixel(1, 1, tr);
-            tex.SetPixel(0, 0, bl);
-            tex.SetPixel(1, 0, br);
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f));
-        }
+            // ── Outcome banner (accent bar across the top) ──
+            var banner = CreateUIObject("Banner", card.transform);
+            Anchor(banner, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -64f), new Vector2(0f, 128f), new Vector2(0.5f, 1f));
+            banner.AddComponent<Image>().color = COLOR_HEADERBAR;
 
-        // =================================================================
-        // Card content: heading, winner, stats heading, stats scroll, buttons
-        // =================================================================
-
-        private void BuildCardContent()
-        {
-            var card = _cardRect;
-
-            // Trophy (above heading) — hidden by default; shown only on Victory
-            _trophyGo = CreateUIObject("Trophy", card);
-            _trophyGo.AddComponent<LayoutElement>().preferredHeight = 64f;
-            _trophyRect = _trophyGo.GetComponent<RectTransform>();
-            BuildTrophy(_trophyGo.transform);
-            _trophyGo.SetActive(false);
-
-            // Heading container (so we can stack shadow + text + underline)
-            var headingHolder = CreateUIObject("HeadingHolder", card);
-            headingHolder.AddComponent<LayoutElement>().preferredHeight = 84f;
-            var hhRt = headingHolder.GetComponent<RectTransform>();
-
-            // Shadow (behind, offset 3,-3)
-            var shadowGo = CreateUIObject("HeadingShadow", headingHolder.transform);
-            var shadowRt = shadowGo.GetComponent<RectTransform>();
-            shadowRt.anchorMin = Vector2.zero;
-            shadowRt.anchorMax = Vector2.one;
-            shadowRt.offsetMin = new Vector2(3f, -3f);
-            shadowRt.offsetMax = new Vector2(3f, -3f);
-            _headingShadow = shadowGo.AddComponent<TextMeshProUGUI>();
-            _headingShadow.text = "RESULTS";
-            _headingShadow.fontSize = 64f;
-            _headingShadow.color = new Color(0f, 0f, 0f, 0.6f);
-            _headingShadow.alignment = TextAlignmentOptions.Center;
-            _headingShadow.fontStyle = FontStyles.Bold;
-            _headingShadow.characterSpacing = 6f;
-
-            // Foreground heading
-            var headingGo = CreateUIObject("Heading", headingHolder.transform);
-            StretchFull(headingGo);
-            _headingText = headingGo.AddComponent<TextMeshProUGUI>();
-            _headingText.text = "RESULTS";
-            _headingText.fontSize = 64f;
-            _headingText.color = COLOR_TEXT;
-            _headingText.alignment = TextAlignmentOptions.Center;
-            _headingText.fontStyle = FontStyles.Bold;
+            // Heading fills the banner but leaves a gutter at the bottom for
+            // the winner subtitle.
+            _headingText = AddText(banner.transform, "VICTORY", 72f, COLOR_GREEN,
+                TextAlignmentOptions.Center, FontStyles.Bold);
+            StretchFull(_headingText.gameObject);
+            _headingText.rectTransform.offsetMin = new Vector2(0f, 36f);
             _headingText.characterSpacing = 6f;
 
-            // Underline bar (80% width, centered, animated in)
-            var underlineGo = CreateUIObject("HeadingUnderline", card);
-            underlineGo.AddComponent<LayoutElement>().preferredHeight = 4f;
-            _headingUnderline = underlineGo.GetComponent<RectTransform>();
-            _headingUnderline.pivot = new Vector2(0.5f, 0.5f);
-            var ulImg = underlineGo.AddComponent<Image>();
-            ulImg.color = COLOR_ACCENT;
-            // Constrained inside layout to ~80% via a child that gets resized via animation.
-            // Simpler: inset the image's rect via a child with fixed anchors.
-            var ulInner = CreateUIObject("UnderlineFill", underlineGo.transform);
-            ulInner.GetComponent<RectTransform>().anchorMin = new Vector2(0.1f, 0f);
-            ulInner.GetComponent<RectTransform>().anchorMax = new Vector2(0.9f, 1f);
-            ulInner.GetComponent<RectTransform>().offsetMin = Vector2.zero;
-            ulInner.GetComponent<RectTransform>().offsetMax = Vector2.zero;
-            // Hide the outer image (we'll animate the inner one)
-            ulImg.color = new Color(0, 0, 0, 0);
-            var ulFill = ulInner.AddComponent<Image>();
-            ulFill.color = COLOR_ACCENT;
-            // Re-point _headingUnderline to the inner fill so AnimateUnderline drives it
-            _headingUnderline = ulInner.GetComponent<RectTransform>();
+            // Winner subtitle sits in the bottom strip of the banner.
+            _winnerText = AddText(banner.transform, "", 24f, COLOR_DIM,
+                TextAlignmentOptions.Center, FontStyles.Normal);
+            StretchFull(_winnerText.gameObject);
+            _winnerText.rectTransform.offsetMax = new Vector2(0f, -76f);
 
-            AddLayoutSpacer(card, 4f);
+            // Accent underline beneath the banner
+            var underline = CreateUIObject("Underline", card.transform);
+            Anchor(underline, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -128f), new Vector2(0f, 3f), new Vector2(0.5f, 1f));
+            underline.AddComponent<Image>().color = COLOR_ACCENT;
 
-            // Winner name
-            var winnerGo = CreateUIObject("WinnerName", card);
-            winnerGo.AddComponent<LayoutElement>().preferredHeight = 26f;
-            _winnerText = winnerGo.AddComponent<TextMeshProUGUI>();
-            _winnerText.text = "";
-            _winnerText.fontSize = 18f;
-            _winnerText.color = COLOR_DIM;
-            _winnerText.alignment = TextAlignmentOptions.Center;
+            // ── Player name + pager tag row ──
+            var nameRow = CreateUIObject("NameRow", card.transform);
+            Anchor(nameRow, new Vector2(0f, 1f), new Vector2(1f, 1f),
+                new Vector2(0f, -182f), new Vector2(0f, 90f), new Vector2(0.5f, 1f));
 
-            // Match summary (arena · vehicles · time)
-            var summaryGo = CreateUIObject("MatchSummary", card);
-            summaryGo.AddComponent<LayoutElement>().preferredHeight = 20f;
-            _summaryText = summaryGo.AddComponent<TextMeshProUGUI>();
-            _summaryText.text = "";
-            _summaryText.fontSize = 14f;
-            _summaryText.color = COLOR_DIM;
-            _summaryText.fontStyle = FontStyles.Italic;
-            _summaryText.alignment = TextAlignmentOptions.Center;
+            _playerNameText = AddText(nameRow.transform, "", 52f, COLOR_TEXT,
+                TextAlignmentOptions.Center, FontStyles.Bold);
+            StretchFull(_playerNameText.gameObject);
+            _playerNameText.rectTransform.offsetMin = new Vector2(0f, 30f);
 
-            AddLayoutSpacer(card, 8f);
+            _playerTagText = AddText(nameRow.transform, "", 18f, COLOR_ACCENT,
+                TextAlignmentOptions.Center, FontStyles.Bold);
+            StretchFull(_playerTagText.gameObject);
+            _playerTagText.rectTransform.offsetMax = new Vector2(0f, -58f);
 
-            // "Combat Statistics" heading (accent red)
-            var shGo = CreateUIObject("StatsHeading", card);
-            shGo.AddComponent<LayoutElement>().preferredHeight = 22f;
-            var shTmp = shGo.AddComponent<TextMeshProUGUI>();
-            shTmp.text = "Combat Statistics";
-            shTmp.fontSize = 18f;
-            shTmp.color = COLOR_ACCENT;
-            shTmp.alignment = TextAlignmentOptions.Center;
+            // ── Paged player body (stat tiles get rebuilt here) ──
+            var bodyGo = CreateUIObject("PlayerBody", card.transform);
+            // Leave room: top banner+name (~278px) and bottom nav/buttons (~110px)
+            Anchor(bodyGo, new Vector2(0f, 0f), new Vector2(1f, 1f),
+                new Vector2(0f, 0f), Vector2.zero, new Vector2(0.5f, 0.5f));
+            var bodyRt = bodyGo.GetComponent<RectTransform>();
+            bodyRt.offsetMin = new Vector2(56f, 110f);   // bottom inset for buttons
+            bodyRt.offsetMax = new Vector2(-56f, -278f); // top inset under name row
+            _playerGroup = bodyGo.AddComponent<CanvasGroup>();
+            _playerContent = bodyGo.transform;
 
-            // Stats container
-            var statsGo = CreateUIObject("StatsContent", card);
-            var vlg = statsGo.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 2f;
-            vlg.padding = new RectOffset(0, 0, 2, 2);
-            vlg.childForceExpandWidth = true;
-            vlg.childForceExpandHeight = false;
-            vlg.childControlWidth = true;
-            vlg.childControlHeight = true;
+            // ── Left/right pager arrows (along card sides, vertically centered) ──
+            _prevButton = CreateArrowButton(card.transform, "◀", true, OnPrev);
+            _nextButton = CreateArrowButton(card.transform, "▶", false, OnNext);
 
-            _tableContent = statsGo.transform;
+            // ── Action buttons (bottom row) ──
+            BuildButtons(card.transform);
         }
 
-        private void BuildTrophy(Transform parent)
-        {
-            // Try a unicode trophy text first; many TMP fonts won't have it,
-            // but we always also build the fallback yellow circle behind it.
-            var fallback = CreateUIObject("TrophyFallback", parent);
-            var fbRt = fallback.GetComponent<RectTransform>();
-            fbRt.anchorMin = new Vector2(0.5f, 0.5f);
-            fbRt.anchorMax = new Vector2(0.5f, 0.5f);
-            fbRt.pivot = new Vector2(0.5f, 0.5f);
-            fbRt.sizeDelta = new Vector2(60f, 60f);
-            var fbImg = fallback.AddComponent<Image>();
-            fbImg.sprite = CreateCircleSprite(64);
-            fbImg.color = COLOR_YELLOW;
+        // =================================================================
+        // Per-player card body — large stat tiles + hero accuracy meter
+        // =================================================================
 
-            var oneGo = CreateUIObject("TrophyOne", fallback.transform);
-            StretchFull(oneGo);
-            var oneTmp = oneGo.AddComponent<TextMeshProUGUI>();
-            oneTmp.text = "1";
-            oneTmp.fontSize = 36f;
-            oneTmp.color = new Color(0.10f, 0.10f, 0.18f, 1f);
-            oneTmp.alignment = TextAlignmentOptions.Center;
-            oneTmp.fontStyle = FontStyles.Bold;
-        }
-
-        private static Sprite CreateCircleSprite(int size)
+        private void ShowPlayer(int index, bool instant = false)
         {
-            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            float cx = (size - 1) * 0.5f;
-            float cy = (size - 1) * 0.5f;
-            float r = size * 0.5f - 1f;
-            var px = new Color[size * size];
-            for (int y = 0; y < size; y++)
+            if (_rows.Count == 0) return;
+            _currentIndex = Mathf.Clamp(index, 0, _rows.Count - 1);
+            var row = _rows[_currentIndex];
+
+            // Name + pager tag. The match winner's name is highlighted green.
+            _playerNameText.text = string.IsNullOrEmpty(row.playerName)
+                ? $"Pilot {_currentIndex + 1}" : row.playerName;
+            bool isWinner = !string.IsNullOrEmpty(_winnerName)
+                && row.playerName == _winnerName;
+            _playerNameText.color = isWinner ? COLOR_GREEN : COLOR_TEXT;
+
+            string winnerTag = isWinner ? "<color=#4ecca3>WINNER</color>    •    " : "";
+            string survivedTag = row.survived
+                ? "<color=#4ecca3>SURVIVED</color>"
+                : "<color=#e94560>DESTROYED</color>";
+            _playerTagText.text = _rows.Count > 1
+                ? $"{winnerTag}PILOT {_currentIndex + 1} OF {_rows.Count}    •    {survivedTag}"
+                : $"{winnerTag}{survivedTag}";
+
+            // Rebuild tiles
+            for (int i = _playerContent.childCount - 1; i >= 0; i--)
+                DestroyImmediate(_playerContent.GetChild(i).gameObject);
+
+            BuildStatGrid(row);
+
+            UpdateArrows();
+
+            if (instant)
             {
-                for (int x = 0; x < size; x++)
-                {
-                    float dx = x - cx, dy = y - cy;
-                    float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    float a = Mathf.Clamp01(r - d);
-                    px[y * size + x] = new Color(1f, 1f, 1f, a);
-                }
+                if (_playerGroup != null) _playerGroup.alpha = 1f;
             }
-            tex.SetPixels(px);
-            tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
+            else
+            {
+                StartCoroutine(CrossFadeBody());
+            }
+        }
+
+        private void BuildStatGrid(StatRow row)
+        {
+            // A 2-column grid of large stat tiles fills the card body.
+            float accuracy = row.shotsFired > 0
+                ? (float)row.shotsHit / row.shotsFired * 100f : 0f;
+
+            var grid = CreateUIObject("Grid", _playerContent);
+            StretchFull(grid);
+            var glg = grid.AddComponent<GridLayoutGroup>();
+            // 2 cols x 4 rows in the ~1008x472 body: 488*2 + 24 = 1000 wide,
+            // 100*4 + 16*3 = 448 tall (leaves ~24px vertical breathing room).
+            glg.cellSize = new Vector2(488f, 100f);
+            glg.spacing = new Vector2(24f, 16f);
+            glg.startCorner = GridLayoutGroup.Corner.UpperLeft;
+            glg.startAxis = GridLayoutGroup.Axis.Horizontal;
+            glg.childAlignment = TextAnchor.MiddleCenter; // center the block vertically
+            glg.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            glg.constraintCount = 2;
+
+            // Headline combat stats as big tiles.
+            AddStatTile(grid.transform, "DAMAGE DEALT", row.damageDealt.ToString("N0"), COLOR_GREEN);
+            AddStatTile(grid.transform, "DAMAGE TAKEN", row.damageReceived.ToString("N0"), COLOR_RED);
+            AddStatTile(grid.transform, "PARTS DESTROYED", row.partsDestroyedOnEnemy.ToString("N0"), COLOR_TEXT);
+            AddStatTile(grid.transform, "PARTS LOST", row.partsLost.ToString("N0"), COLOR_TEXT);
+            AddStatTile(grid.transform, "SHOTS FIRED", row.shotsFired.ToString("N0"), COLOR_TEXT);
+            AddStatTile(grid.transform, "ACCURACY", $"{accuracy:F0}%", AccuracyColor(accuracy));
+            AddStatTile(grid.transform, "DISTANCE FLOWN", $"{row.distanceTraveled:N0} m", COLOR_TEXT);
+            AddStatTile(grid.transform, "TOP SPEED", $"{row.topSpeed:F0} m/s", COLOR_TEXT);
+        }
+
+        private static Color AccuracyColor(float pct)
+        {
+            if (pct >= 50f) return COLOR_GREEN;
+            if (pct >= 25f) return COLOR_YELLOW;
+            return COLOR_RED;
+        }
+
+        // A single stat tile: small dim caption on top, large value below.
+        private void AddStatTile(Transform parent, string caption, string value, Color valueColor)
+        {
+            var tile = CreateUIObject("Tile_" + caption, parent);
+            tile.AddComponent<Image>().color = COLOR_PANEL2;
+
+            // subtle left accent strip
+            var strip = CreateUIObject("Strip", tile.transform);
+            Anchor(strip, new Vector2(0f, 0f), new Vector2(0f, 1f),
+                Vector2.zero, new Vector2(5f, 0f), new Vector2(0f, 0.5f));
+            var stripRt = strip.GetComponent<RectTransform>();
+            stripRt.anchoredPosition = Vector2.zero;
+            stripRt.sizeDelta = new Vector2(5f, 0f);
+            strip.AddComponent<Image>().color = valueColor;
+
+            var caphGo = AddText(tile.transform, caption, 17f, COLOR_DIM,
+                TextAlignmentOptions.TopLeft, FontStyles.Bold);
+            var caphRt = caphGo.rectTransform;
+            caphRt.anchorMin = new Vector2(0f, 0f);
+            caphRt.anchorMax = new Vector2(1f, 1f);
+            caphRt.offsetMin = new Vector2(26f, 0f);
+            caphRt.offsetMax = new Vector2(-16f, -14f);
+            caphGo.characterSpacing = 4f;
+
+            var valGo = AddText(tile.transform, value, 46f, valueColor,
+                TextAlignmentOptions.BottomLeft, FontStyles.Bold);
+            var valRt = valGo.rectTransform;
+            valRt.anchorMin = new Vector2(0f, 0f);
+            valRt.anchorMax = new Vector2(1f, 1f);
+            valRt.offsetMin = new Vector2(26f, 10f);
+            valRt.offsetMax = new Vector2(-16f, -40f);
         }
 
         // =================================================================
-        // Buttons
+        // Pager arrows
         // =================================================================
 
-        private void BuildButtons()
+        private Button CreateArrowButton(Transform parent, string glyph, bool left,
+            UnityEngine.Events.UnityAction onClick)
         {
-            AddLayoutSpacer(_cardRect, 16f);
+            var go = CreateUIObject(left ? "PrevArrow" : "NextArrow", parent);
+            float x = left ? 30f : -30f;
+            Anchor(go, new Vector2(left ? 0f : 1f, 0.5f), new Vector2(left ? 0f : 1f, 0.5f),
+                new Vector2(x, -10f), new Vector2(54f, 54f), new Vector2(0.5f, 0.5f));
 
-            var btnRow = CreateUIObject("ButtonRow", _cardRect);
-            btnRow.AddComponent<LayoutElement>().preferredHeight = 64f;
+            var img = go.AddComponent<Image>();
+            img.color = COLOR_PANEL2;
+
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            var c = btn.colors;
+            c.highlightedColor = COLOR_ACCENT;
+            c.pressedColor = new Color(COLOR_ACCENT.r * 0.7f, COLOR_ACCENT.g * 0.7f, COLOR_ACCENT.b * 0.7f);
+            c.disabledColor = new Color(COLOR_PANEL2.r, COLOR_PANEL2.g, COLOR_PANEL2.b, 0.35f);
+            btn.colors = c;
+            btn.onClick.AddListener(onClick);
+
+            var lbl = AddText(go.transform, glyph, 28f, COLOR_TEXT,
+                TextAlignmentOptions.Center, FontStyles.Bold);
+            StretchFull(lbl.gameObject);
+
+            return btn;
+        }
+
+        private void UpdateArrows()
+        {
+            bool multi = _rows.Count > 1;
+            if (_prevButton != null)
+            {
+                _prevButton.gameObject.SetActive(multi);
+                _prevButton.interactable = _currentIndex > 0;
+            }
+            if (_nextButton != null)
+            {
+                _nextButton.gameObject.SetActive(multi);
+                _nextButton.interactable = _currentIndex < _rows.Count - 1;
+            }
+        }
+
+        private void OnPrev() { if (_currentIndex > 0) ShowPlayer(_currentIndex - 1); }
+        private void OnNext() { if (_currentIndex < _rows.Count - 1) ShowPlayer(_currentIndex + 1); }
+
+        // =================================================================
+        // Action buttons (Rematch, Lobby, Main Menu)
+        // =================================================================
+
+        private void BuildButtons(Transform card)
+        {
+            var btnRow = CreateUIObject("ButtonRow", card);
+            Anchor(btnRow, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 24f), new Vector2(560f, 52f), new Vector2(0.5f, 0f));
             var hlg = btnRow.AddComponent<HorizontalLayoutGroup>();
             hlg.spacing = 16f;
             hlg.childAlignment = TextAnchor.MiddleCenter;
-            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandWidth = true;
             hlg.childForceExpandHeight = true;
-            hlg.childControlWidth = false;
+            hlg.childControlWidth = true;
             hlg.childControlHeight = true;
 
-            CreateStyledButton(btnRow.transform, "Rematch", COLOR_ACCENT, OnRematch);
-            CreateStyledButton(btnRow.transform, "Lobby", COLOR_SECONDARY, OnLobby);
-            CreateStyledButton(btnRow.transform, "Main Menu",
+            CreateStyledButton(btnRow.transform, "REMATCH", COLOR_ACCENT, OnRematch);
+            CreateStyledButton(btnRow.transform, "LOBBY", COLOR_SECONDARY, OnLobby);
+            CreateStyledButton(btnRow.transform, "MAIN MENU",
                 new Color(COLOR_SECONDARY.r * 0.7f, COLOR_SECONDARY.g * 0.7f, COLOR_SECONDARY.b * 0.7f),
                 OnMainMenu);
         }
@@ -518,24 +401,20 @@ namespace CloseEncounters.UI
         private void OnRematch()
         {
             Time.timeScale = 1f;
-            if (GameManager.Instance != null)
-                GameManager.Instance.GoToBuilder();
-            else
-                UnityEngine.SceneManagement.SceneManager.LoadScene("Builder");
+            if (GameManager.Instance != null) GameManager.Instance.GoToBuilder();
+            else UnityEngine.SceneManagement.SceneManager.LoadScene("Builder");
         }
 
         private void OnLobby()
         {
             Time.timeScale = 1f;
-            if (GameManager.Instance != null)
-                GameManager.Instance.ReturnToLobby();
+            if (GameManager.Instance != null) GameManager.Instance.ReturnToLobby();
         }
 
         private void OnMainMenu()
         {
             Time.timeScale = 1f;
-            if (GameManager.Instance != null)
-                GameManager.Instance.ReturnToMainMenu();
+            if (GameManager.Instance != null) GameManager.Instance.ReturnToMainMenu();
         }
 
         // =================================================================
@@ -558,232 +437,32 @@ namespace CloseEncounters.UI
             _cardRect.localScale = Vector3.one;
         }
 
-        private IEnumerator AnimateUnderline(RectTransform fillRt)
+        private IEnumerator CrossFadeBody()
         {
-            // Slide in from left over 0.5s by animating localScale.x with pivot at left.
-            fillRt.pivot = new Vector2(0f, 0.5f);
-            float duration = 0.5f;
-            float elapsed = 0f;
-            fillRt.localScale = new Vector3(0f, 1f, 1f);
-            while (elapsed < duration)
+            if (_playerGroup == null) yield break;
+            float t = 0f;
+            const float dur = 0.18f;
+            while (t < dur)
             {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / duration);
-                float ease = 1f - Mathf.Pow(1f - t, 3f);
-                fillRt.localScale = new Vector3(ease, 1f, 1f);
+                t += Time.unscaledDeltaTime;
+                _playerGroup.alpha = Mathf.Clamp01(t / dur);
                 yield return null;
             }
-            fillRt.localScale = Vector3.one;
-        }
-
-        private IEnumerator PulseTrophy(RectTransform rt)
-        {
-            const float duration = 1.4f;
-            while (rt != null && rt.gameObject.activeInHierarchy)
-            {
-                float elapsed = 0f;
-                while (elapsed < duration)
-                {
-                    elapsed += Time.unscaledDeltaTime;
-                    float t = elapsed / duration;
-                    float s = 1f + 0.08f * Mathf.Sin(t * Mathf.PI * 2f);
-                    rt.localScale = new Vector3(s, s, 1f);
-                    yield return null;
-                }
-            }
-        }
-
-        private IEnumerator FadeInRow(CanvasGroup cg, float delay)
-        {
-            cg.alpha = 0f;
-            float elapsed = 0f;
-            while (elapsed < delay)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            elapsed = 0f;
-            const float fade = 0.18f;
-            while (elapsed < fade)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                cg.alpha = Mathf.Clamp01(elapsed / fade);
-                yield return null;
-            }
-            cg.alpha = 1f;
-        }
-
-        private IEnumerator AnimateBarFill(RectTransform fillRt, float targetWidthFraction, float delay)
-        {
-            float elapsed = 0f;
-            while (elapsed < delay)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                yield return null;
-            }
-            elapsed = 0f;
-            // Anchored: anchorMin.x=0, anchorMax.x is animated
-            while (elapsed < BarFillDuration)
-            {
-                elapsed += Time.unscaledDeltaTime;
-                float t = Mathf.Clamp01(elapsed / BarFillDuration);
-                float ease = 1f - Mathf.Pow(1f - t, 3f);
-                fillRt.anchorMax = new Vector2(targetWidthFraction * ease, 1f);
-                yield return null;
-            }
-            fillRt.anchorMax = new Vector2(targetWidthFraction, 1f);
+            _playerGroup.alpha = 1f;
         }
 
         private void Update()
         {
-            // Escape during Results does nothing
-        }
-
-        // =================================================================
-        // Stat row helpers
-        // =================================================================
-
-        private enum BarTier { DamageParts, Accuracy, TopSpeed }
-
-        public void AddStatRow(string label, string value, Color? valueColor = null, bool bold = false)
-        {
-            var rowGo = CreateUIObject("Stat", _tableContent);
-            rowGo.AddComponent<LayoutElement>().preferredHeight = 18f;
-            var cg = rowGo.AddComponent<CanvasGroup>();
-
-            bool isHeader = string.IsNullOrEmpty(value);
-
-            var labelGo = CreateUIObject("Label", rowGo.transform);
-            var labelRt = labelGo.GetComponent<RectTransform>();
-            labelRt.anchorMin = Vector2.zero;
-            labelRt.anchorMax = new Vector2(isHeader ? 1f : 0.55f, 1f);
-            labelRt.offsetMin = Vector2.zero;
-            labelRt.offsetMax = Vector2.zero;
-            var lTmp = labelGo.AddComponent<TextMeshProUGUI>();
-            lTmp.text = isHeader ? label : (label + ":");
-            lTmp.fontSize = 13f;
-            lTmp.color = isHeader ? COLOR_TEXT : COLOR_DIM;
-            lTmp.fontStyle = (isHeader || bold) ? FontStyles.Bold : FontStyles.Normal;
-            lTmp.alignment = isHeader ? TextAlignmentOptions.Center : TextAlignmentOptions.MidlineLeft;
-
-            if (!isHeader)
+            // Keyboard paging for convenience.
+            if (_rows.Count > 1)
             {
-                var valGo = CreateUIObject("Value", rowGo.transform);
-                var valRt = valGo.GetComponent<RectTransform>();
-                valRt.anchorMin = new Vector2(0.55f, 0f);
-                valRt.anchorMax = Vector2.one;
-                valRt.offsetMin = Vector2.zero;
-                valRt.offsetMax = Vector2.zero;
-                var vTmp = valGo.AddComponent<TextMeshProUGUI>();
-                vTmp.text = value;
-                vTmp.fontSize = 13f;
-                vTmp.color = valueColor ?? COLOR_TEXT;
-                vTmp.alignment = TextAlignmentOptions.MidlineRight;
-            }
-
-            float delay = _rowRevealIndex * RowStagger;
-            _rowRevealIndex++;
-            _pendingAnims.Add(StartCoroutine(FadeInRow(cg, delay)));
-        }
-
-        private void AddStatBar(string label, float value, float referenceMax, BarTier tier, string valueText)
-        {
-            float frac = Mathf.Clamp01(referenceMax <= 0f ? 0f : value / referenceMax);
-            Color barColor = ResolveBarColor(frac, tier);
-
-            var rowGo = CreateUIObject("StatBar", _tableContent);
-            rowGo.AddComponent<LayoutElement>().preferredHeight = 22f;
-            var cg = rowGo.AddComponent<CanvasGroup>();
-
-            // Label (left 35%)
-            var labelGo = CreateUIObject("Label", rowGo.transform);
-            var labelRt = labelGo.GetComponent<RectTransform>();
-            labelRt.anchorMin = new Vector2(0f, 0f);
-            labelRt.anchorMax = new Vector2(0.35f, 1f);
-            labelRt.offsetMin = Vector2.zero;
-            labelRt.offsetMax = new Vector2(-6f, 0f);
-            var lTmp = labelGo.AddComponent<TextMeshProUGUI>();
-            lTmp.text = label;
-            lTmp.fontSize = 13f;
-            lTmp.color = COLOR_DIM;
-            lTmp.alignment = TextAlignmentOptions.MidlineLeft;
-
-            // Bar holder (middle 40%)
-            var barHolder = CreateUIObject("BarHolder", rowGo.transform);
-            var bhRt = barHolder.GetComponent<RectTransform>();
-            bhRt.anchorMin = new Vector2(0.35f, 0.2f);
-            bhRt.anchorMax = new Vector2(0.75f, 0.8f);
-            bhRt.offsetMin = new Vector2(0f, 0f);
-            bhRt.offsetMax = new Vector2(-6f, 0f);
-
-            // Background bar
-            var bgGo = CreateUIObject("Bg", barHolder.transform);
-            StretchFull(bgGo);
-            bgGo.AddComponent<Image>().color = COLOR_BAR_BG;
-
-            // Fill (anchored to left, anchorMax.x animated 0 → frac)
-            var fillGo = CreateUIObject("Fill", barHolder.transform);
-            var fillRt = fillGo.GetComponent<RectTransform>();
-            fillRt.anchorMin = new Vector2(0f, 0f);
-            fillRt.anchorMax = new Vector2(0f, 1f);
-            fillRt.offsetMin = Vector2.zero;
-            fillRt.offsetMax = Vector2.zero;
-            fillGo.AddComponent<Image>().color = barColor;
-
-            // Value (right 25%)
-            var valGo = CreateUIObject("Value", rowGo.transform);
-            var valRt = valGo.GetComponent<RectTransform>();
-            valRt.anchorMin = new Vector2(0.75f, 0f);
-            valRt.anchorMax = Vector2.one;
-            valRt.offsetMin = Vector2.zero;
-            valRt.offsetMax = Vector2.zero;
-            var vTmp = valGo.AddComponent<TextMeshProUGUI>();
-            vTmp.text = valueText;
-            vTmp.fontSize = 13f;
-            vTmp.color = COLOR_TEXT;
-            vTmp.alignment = TextAlignmentOptions.MidlineRight;
-
-            float rowDelay = _rowRevealIndex * RowStagger;
-            _rowRevealIndex++;
-            _pendingAnims.Add(StartCoroutine(FadeInRow(cg, rowDelay)));
-            _pendingAnims.Add(StartCoroutine(AnimateBarFill(fillRt, frac, rowDelay + 0.05f)));
-        }
-
-        private static Color ResolveBarColor(float frac, BarTier tier)
-        {
-            switch (tier)
-            {
-                case BarTier.Accuracy:
-                    if (frac < 0.25f) return COLOR_RED;
-                    if (frac < 0.50f) return COLOR_YELLOW;
-                    return COLOR_GREEN;
-                case BarTier.TopSpeed:
-                    if (frac < 0.25f) return COLOR_BLUEGRAY;
-                    if (frac < 0.60f) return COLOR_YELLOW;
-                    return COLOR_GREEN;
-                default: // DamageParts
-                    if (frac < 0.25f) return COLOR_RED;
-                    if (frac < 0.60f) return COLOR_YELLOW;
-                    return COLOR_GREEN;
+                if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) OnPrev();
+                if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D)) OnNext();
             }
         }
 
-        private void AddSpacer(float height)
-        {
-            var go = CreateUIObject("Spacer", _tableContent);
-            go.AddComponent<LayoutElement>().preferredHeight = height;
-        }
-
-        private void AddSeparator()
-        {
-            var go = CreateUIObject("Sep", _tableContent);
-            go.AddComponent<LayoutElement>().preferredHeight = 2f;
-            var img = go.AddComponent<Image>();
-            img.color = new Color(COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 0.3f);
-        }
-
         // =================================================================
-        // Data class
+        // Data class (unchanged — ArenaManager populates this)
         // =================================================================
 
         [System.Serializable]
@@ -808,25 +487,7 @@ namespace CloseEncounters.UI
         private void CreateStyledButton(Transform parent, string label, Color bgColor,
             UnityEngine.Events.UnityAction onClick)
         {
-            // Outer wrapper provides the hover-lift target rect (we don't move the button itself,
-            // we move this wrapper's anchored Y).
-            var wrap = CreateUIObject("Btn_" + label + "_Wrap", parent);
-            wrap.AddComponent<LayoutElement>().preferredWidth = 160f;
-
-            // Drop shadow (behind everything)
-            var shadow = CreateUIObject("Shadow", wrap.transform);
-            var sRt = shadow.GetComponent<RectTransform>();
-            sRt.anchorMin = Vector2.zero;
-            sRt.anchorMax = Vector2.one;
-            sRt.offsetMin = new Vector2(0f, -4f);
-            sRt.offsetMax = new Vector2(2f, -2f);
-            var sImg = shadow.AddComponent<Image>();
-            sImg.color = new Color(0f, 0f, 0f, 0.4f);
-            sImg.raycastTarget = false;
-
-            var go = CreateUIObject("Btn_" + label, wrap.transform);
-            StretchFull(go);
-
+            var go = CreateUIObject("Btn_" + label, parent);
             var img = go.AddComponent<Image>();
             img.color = bgColor;
 
@@ -838,26 +499,24 @@ namespace CloseEncounters.UI
             btn.colors = c;
             btn.onClick.AddListener(onClick);
 
-            var txtGo = CreateUIObject("Label", go.transform);
-            StretchFull(txtGo);
-            var txt = txtGo.AddComponent<TextMeshProUGUI>();
-            txt.text = label;
-            txt.fontSize = 20f;
-            txt.color = COLOR_TEXT;
-            txt.alignment = TextAlignmentOptions.Center;
-            txt.fontStyle = FontStyles.Bold;
-
-            // Hover lift on the wrapper RectTransform
-            var hover = wrap.AddComponent<HoverLift>();
-            hover.target = wrap.GetComponent<RectTransform>();
-            hover.liftY = 3f;
-            // EventTrigger wired by the HoverLift in Awake-equivalent (here, OnEnable)
+            var txt = AddText(go.transform, label, 19f, COLOR_TEXT,
+                TextAlignmentOptions.Center, FontStyles.Bold);
+            StretchFull(txt.gameObject);
+            txt.characterSpacing = 2f;
         }
 
-        private static void AddLayoutSpacer(Transform parent, float height)
+        private static TMP_Text AddText(Transform parent, string text, float size, Color color,
+            TextAlignmentOptions align, FontStyles style)
         {
-            var go = CreateUIObject("Spacer", parent);
-            go.AddComponent<LayoutElement>().preferredHeight = height;
+            var go = CreateUIObject("Text", parent);
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.text = text;
+            tmp.fontSize = size;
+            tmp.color = color;
+            tmp.alignment = align;
+            tmp.fontStyle = style;
+            tmp.raycastTarget = false;
+            return tmp;
         }
 
         private static GameObject CreateUIObject(string name, Transform parent)
@@ -887,31 +546,6 @@ namespace CloseEncounters.UI
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             return rt;
-        }
-
-        // =================================================================
-        // Hover lift helper (button rect rises by liftY on pointer enter)
-        // =================================================================
-
-        private class HoverLift : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
-        {
-            public RectTransform target;
-            public float liftY = 3f;
-            private Vector2 _baseAnchored;
-            private bool _captured;
-
-            public void OnPointerEnter(PointerEventData _)
-            {
-                if (target == null) return;
-                if (!_captured) { _baseAnchored = target.anchoredPosition; _captured = true; }
-                target.anchoredPosition = _baseAnchored + new Vector2(0f, liftY);
-            }
-
-            public void OnPointerExit(PointerEventData _)
-            {
-                if (target == null || !_captured) return;
-                target.anchoredPosition = _baseAnchored;
-            }
         }
     }
 }

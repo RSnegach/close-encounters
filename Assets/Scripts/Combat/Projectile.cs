@@ -68,6 +68,17 @@ namespace CloseEncounters.Combat
         // =====================================================================
         private static readonly Dictionary<string, Stack<Projectile>> s_pool
             = new Dictionary<string, Stack<Projectile>>();
+
+        // =====================================================================
+        // Live registry — every in-flight MOVING projectile, so AI can perceive
+        // and dodge incoming fire. Added in Init, removed in OnDisable (which fires
+        // on every deactivation: lifetime expiry, detonation, and scene unload).
+        // =====================================================================
+        private static readonly List<Projectile> s_active = new List<Projectile>(64);
+        /// <summary>All currently in-flight (moving) projectiles. Read-only; do not mutate.</summary>
+        public static IReadOnlyList<Projectile> Active => s_active;
+        /// <summary>Current world-space velocity (direction * speed) of this projectile.</summary>
+        public Vector3 Velocity => _velocity;
         private static readonly Dictionary<string, GameObject> s_prefabCache
             = new Dictionary<string, GameObject>();
         private static Material s_particleUnlitMat;
@@ -128,6 +139,14 @@ namespace CloseEncounters.Combat
                 case FlightType.Mine:
                     SetupMine();
                     break;
+            }
+
+            // Register moving projectiles so AI can perceive and dodge incoming fire.
+            // (Lasers are hitscan/instant and mines are stationary — not worth dodging.)
+            if (flightType == FlightType.Straight || flightType == FlightType.Ballistic
+                || flightType == FlightType.Guided)
+            {
+                if (!s_active.Contains(this)) s_active.Add(this);
             }
         }
 
@@ -643,7 +662,7 @@ namespace CloseEncounters.Combat
             if (_hasDetonated) return;
             _hasDetonated = true;
 
-            DamageSystem.DealAreaDamage(transform.position, triggerRadius, damage, ownerPlayerId);
+            DamageSystem.DealAreaDamage(transform.position, triggerRadius, damage);
             DamageSystem.SpawnExplosionFX(transform.position, 2f);
 
             // VFX: ParticlePack explosion for mine detonation
@@ -721,6 +740,10 @@ namespace CloseEncounters.Combat
 
         private void OnDisable()
         {
+            // Leave the live registry the instant we deactivate (covers lifetime
+            // expiry, detonation, pool return, and scene unload).
+            s_active.Remove(this);
+
             // Stop trail emission without destroying the particle GO
             if (_trailParticles != null)
                 _trailParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);

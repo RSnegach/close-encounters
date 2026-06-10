@@ -25,9 +25,18 @@ namespace CloseEncounters.UI
         private Transform _catalogContent;
         private ScrollRect _catalogScroll;
 
-        // --- Tooltip ---
+        // --- Tooltip (catalog hover info) ---
         private GameObject _tooltipPanel;
         private TMP_Text _tooltipText;
+
+        // --- Guided hints (first-use coaching, dismissible) ---
+        private GameObject _hintPanel;
+        private TMP_Text _hintText;
+        private string _currentHintId;
+        private readonly HashSet<string> _shownHints = new HashSet<string>();
+        private readonly Queue<HintItem> _hintQueue = new Queue<HintItem>();
+        private const string HintPrefPrefix = "builder_hint_";
+        private struct HintItem { public string id; public string message; }
 
         // --- Stats panel (right) ---
         private TMP_Text _budgetLabel;
@@ -36,6 +45,8 @@ namespace CloseEncounters.UI
         private TMP_Text _statsText;
         private TMP_Text _layerLabel;
         private TMP_Text _forwardLabel;
+        private TMP_Text _armorLabel;
+        private TMP_Text _rotationLabel;
         private TMP_Text _validationLabel;
 
         // --- Buttons ---
@@ -85,6 +96,8 @@ namespace CloseEncounters.UI
             _builder.OnBudgetChanged += HandleBudgetChanged;
             _builder.OnLayerChanged += HandleLayerChanged;
             _builder.OnForwardChanged += HandleForwardChanged;
+            _builder.OnArmorOrientationChanged += HandleArmorOrientationChanged;
+            _builder.OnRotationChanged += HandleRotationChanged;
             _builder.OnPartPlaced += HandlePartPlaced;
             _builder.OnPartRemoved += HandlePartRemoved;
             _builder.OnValidationError += HandleValidationError;
@@ -96,12 +109,17 @@ namespace CloseEncounters.UI
             BuildSaveDialog();
             BuildLoadDialog();
             BuildTooltip();
+            BuildHintPanel();
 
             RefreshCatalog();
             RefreshBudget();
             RefreshLayerLabel();
             RefreshForwardLabel();
             RefreshStats();
+
+            ShowHint("welcome",
+                "Welcome to the workshop! Browse parts on the left, click one to select it, "
+                + "then click a cell in the grid to place it. Hold right-mouse to orbit the camera.");
 
             Debug.Log("[BuilderUI] Initialized.");
         }
@@ -113,6 +131,8 @@ namespace CloseEncounters.UI
                 _builder.OnBudgetChanged -= HandleBudgetChanged;
                 _builder.OnLayerChanged -= HandleLayerChanged;
                 _builder.OnForwardChanged -= HandleForwardChanged;
+                _builder.OnArmorOrientationChanged -= HandleArmorOrientationChanged;
+                _builder.OnRotationChanged -= HandleRotationChanged;
                 _builder.OnPartPlaced -= HandlePartPlaced;
                 _builder.OnPartRemoved -= HandlePartRemoved;
                 _builder.OnValidationError -= HandleValidationError;
@@ -158,16 +178,38 @@ namespace CloseEncounters.UI
         private void HandleLayerChanged(int layer)
         {
             RefreshLayerLabel();
+            ShowHint("layer",
+                "You changed the build layer (Q/E). Parts rest on whatever sits directly "
+                + "below them, so build upward layer by layer.");
         }
 
         private void HandleForwardChanged(float angle)
         {
             RefreshForwardLabel();
+            ShowHint("forward",
+                "The arrow marks your vehicle's FRONT. Point it the way the vehicle should "
+                + "face in battle — weapons and steering follow it.");
+        }
+
+        private void HandleArmorOrientationChanged(bool isVertical)
+        {
+            RefreshArmorLabel();
+        }
+
+        private void HandleRotationChanged(int rotationSteps)
+        {
+            RefreshRotationLabel();
+            ShowHint("rotate",
+                "Press R to rotate the selected piece by 90°. The ghost preview shows which "
+                + "way it will face before you place it.");
         }
 
         private void HandlePartPlaced(PartData part, Vector3Int origin)
         {
             RefreshStats();
+            ShowHint("remove",
+                "Part placed! Right-click any part to remove it. Hold right-mouse and drag to "
+                + "orbit the camera, and scroll to zoom.");
         }
 
         private void HandlePartRemoved(PartData part, Vector3Int origin)
@@ -178,6 +220,9 @@ namespace CloseEncounters.UI
         private void HandleValidationError(string message)
         {
             ShowValidationMessage(message, false);
+            ShowHint("connectivity",
+                "Placements must follow the rules shown at the bottom — every part has to "
+                + "connect to the rest of the vehicle, and you must stay within budget.");
         }
 
         // ==================================================================
@@ -325,6 +370,14 @@ namespace CloseEncounters.UI
 
             // Forward label
             _forwardLabel = CreateLabel(panel.transform, "ForwardLabel", "Front: +Z (F)", y, 13f);
+            y -= 18f;
+
+            // Armor orientation label
+            _armorLabel = CreateLabel(panel.transform, "ArmorLabel", "Armor: Vertical (V)", y, 13f);
+            y -= 18f;
+
+            // Part rotation label
+            _rotationLabel = CreateLabel(panel.transform, "RotationLabel", "Rotate: 0° (R)", y, 13f);
             y -= 22f;
 
             // Stats heading
@@ -526,6 +579,127 @@ namespace CloseEncounters.UI
             _tooltipText.raycastTarget = false;
 
             _tooltipPanel.SetActive(false);
+        }
+
+        // ==================================================================
+        // Guided hints — contextual coaching shown the first time the player
+        // uses each builder function, each with a "Don't show again" option
+        // persisted in PlayerPrefs.
+        // ==================================================================
+
+        private void BuildHintPanel()
+        {
+            _hintPanel = CreateUIObject("HintPanel", _canvas.transform);
+            Anchor(_hintPanel, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 110f), new Vector2(600f, 116f), new Vector2(0.5f, 0f));
+
+            var bg = _hintPanel.AddComponent<Image>();
+            bg.color = new Color(0.10f, 0.12f, 0.20f, 0.97f);
+
+            // Accent strip down the left edge
+            var accent = CreateUIObject("Accent", _hintPanel.transform);
+            var aRt = accent.GetComponent<RectTransform>();
+            aRt.anchorMin = new Vector2(0f, 0f);
+            aRt.anchorMax = new Vector2(0f, 1f);
+            aRt.pivot = new Vector2(0f, 0.5f);
+            aRt.sizeDelta = new Vector2(5f, 0f);
+            aRt.anchoredPosition = Vector2.zero;
+            accent.AddComponent<Image>().color = new Color(0.31f, 0.80f, 0.64f, 1f);
+
+            // Title
+            var titleGo = CreateUIObject("HintTitle", _hintPanel.transform);
+            var tRt = titleGo.GetComponent<RectTransform>();
+            tRt.anchorMin = new Vector2(0f, 1f);
+            tRt.anchorMax = new Vector2(1f, 1f);
+            tRt.pivot = new Vector2(0.5f, 1f);
+            tRt.offsetMin = new Vector2(16f, -26f);
+            tRt.offsetMax = new Vector2(-12f, -6f);
+            var titleTmp = titleGo.AddComponent<TextMeshProUGUI>();
+            titleTmp.text = "Builder Tip";
+            titleTmp.fontSize = 15f;
+            titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.color = new Color(0.31f, 0.80f, 0.64f, 1f);
+            titleTmp.alignment = TextAlignmentOptions.TopLeft;
+
+            // Message body
+            var msgGo = CreateUIObject("HintText", _hintPanel.transform);
+            var mRt = msgGo.GetComponent<RectTransform>();
+            mRt.anchorMin = new Vector2(0f, 0f);
+            mRt.anchorMax = new Vector2(1f, 1f);
+            mRt.offsetMin = new Vector2(16f, 42f);
+            mRt.offsetMax = new Vector2(-12f, -28f);
+            _hintText = msgGo.AddComponent<TextMeshProUGUI>();
+            _hintText.fontSize = 14f;
+            _hintText.color = new Color(0.88f, 0.88f, 0.92f, 1f);
+            _hintText.alignment = TextAlignmentOptions.TopLeft;
+            _hintText.textWrappingMode = TextWrappingModes.Normal;
+
+            // Buttons (bottom-right): "Got it" and "Don't show again"
+            CreateHintButton("GotItBtn", "Got it", new Vector2(-72f, 12f), 120f,
+                new Color(0.20f, 0.45f, 0.35f, 1f), () => DismissHint(false));
+            CreateHintButton("DontShowBtn", "Don't show again", new Vector2(-210f, 12f), 150f,
+                new Color(0.28f, 0.28f, 0.34f, 1f), () => DismissHint(true));
+
+            _hintPanel.SetActive(false);
+        }
+
+        private void CreateHintButton(string name, string label, Vector2 anchoredPos,
+            float width, Color color, UnityEngine.Events.UnityAction onClick)
+        {
+            var go = CreateUIObject(name, _hintPanel.transform);
+            Anchor(go, new Vector2(1f, 0f), new Vector2(1f, 0f),
+                anchoredPos, new Vector2(width, 30f), new Vector2(1f, 0f));
+            var img = go.AddComponent<Image>();
+            img.color = color;
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(onClick);
+
+            var txtGo = CreateUIObject("Label", go.transform);
+            StretchFull(txtGo);
+            var txt = txtGo.AddComponent<TextMeshProUGUI>();
+            txt.text = label;
+            txt.fontSize = 13f;
+            txt.color = Color.white;
+            txt.alignment = TextAlignmentOptions.Center;
+        }
+
+        /// <summary>Queue a one-time coaching hint. No-op if already shown this session
+        /// or permanently dismissed via "Don't show again".</summary>
+        private void ShowHint(string id, string message)
+        {
+            if (string.IsNullOrEmpty(id) || _hintPanel == null) return;
+            if (_shownHints.Contains(id)) return;
+            if (PlayerPrefs.GetInt(HintPrefPrefix + id, 0) == 1) return;
+
+            _shownHints.Add(id);
+            _hintQueue.Enqueue(new HintItem { id = id, message = message });
+            if (_currentHintId == null) ShowNextHint();
+        }
+
+        private void ShowNextHint()
+        {
+            if (_hintQueue.Count == 0)
+            {
+                _currentHintId = null;
+                if (_hintPanel != null) _hintPanel.SetActive(false);
+                return;
+            }
+            HintItem item = _hintQueue.Dequeue();
+            _currentHintId = item.id;
+            if (_hintText != null) _hintText.text = item.message;
+            if (_hintPanel != null) _hintPanel.SetActive(true);
+        }
+
+        private void DismissHint(bool permanent)
+        {
+            if (permanent && !string.IsNullOrEmpty(_currentHintId))
+            {
+                PlayerPrefs.SetInt(HintPrefPrefix + _currentHintId, 1);
+                PlayerPrefs.Save();
+            }
+            _currentHintId = null;
+            ShowNextHint();
         }
 
         private string _hoveredPartId;
@@ -1072,6 +1246,25 @@ namespace CloseEncounters.UI
             PartData part = PartRegistry.Instance?.GetPart(partId);
             _builder.SelectPart(part);
 
+            // Contextual coaching for the selected part.
+            ShowHint("place",
+                "Left-click a grid cell to place this part. Right-click removes a part. "
+                + "Click a placed part with nothing selected to pick it back up.");
+
+            if (part != null)
+            {
+                if (string.Equals(part.category, "defense", StringComparison.OrdinalIgnoreCase))
+                    ShowHint("armor",
+                        "Armor mounts flush against the block it protects. Press V to switch "
+                        + "between vertical (side) and horizontal (top/bottom) plating.");
+
+                string pid = part.id?.ToLowerInvariant() ?? "";
+                if (pid == "wedge" || pid == "corner_wedge" || pid == "wall_panel" || pid == "pillar")
+                    ShowHint("rotate",
+                        "This is a directional shape — press R to rotate it 90° before placing. "
+                        + "Great for ramps, sloped armor and walls.");
+            }
+
             // Refresh catalog to show selection highlight
             RefreshCatalog();
         }
@@ -1121,6 +1314,18 @@ namespace CloseEncounters.UI
         {
             if (_builder == null || _layerLabel == null) return;
             _layerLabel.text = $"Layer: {_builder.GetCurrentLayer()} (Q/E)";
+        }
+
+        private void RefreshArmorLabel()
+        {
+            if (_builder == null || _armorLabel == null) return;
+            _armorLabel.text = $"Armor: {(_builder.ArmorVertical ? "Vertical" : "Horizontal")} (V)";
+        }
+
+        private void RefreshRotationLabel()
+        {
+            if (_builder == null || _rotationLabel == null) return;
+            _rotationLabel.text = $"Rotate: {(_builder.CurrentRotation & 3) * 90}° (R)";
         }
 
         private void RefreshForwardLabel()

@@ -25,6 +25,13 @@ namespace CloseEncounters.Vehicle
         /// </summary>
         public Vector3Int armorFace = new Vector3Int(0, -1, 0);
 
+        /// <summary>
+        /// Player-chosen yaw for directional building shapes (wedges, panels, etc.):
+        /// 0..3 = 0/90/180/270 degrees about Y. Applied to the mesh in builder-frame,
+        /// like the broadside cannon's barrel rotation. 0 for everything else.
+        /// </summary>
+        public int rotationSteps = 0;
+
         // --- Components ---
         private MeshRenderer _meshRenderer;
         private Collider _collider;
@@ -191,10 +198,35 @@ namespace CloseEncounters.Vehicle
             {
                 CreateCockpitMesh(partColor);
             }
+            else if (id == "wedge")
+            {
+                CreateWedgeMesh(partColor);
+            }
+            else if (id == "corner_wedge")
+            {
+                CreateCornerWedgeMesh(partColor);
+            }
             else
             {
                 CreateDefaultCubeMesh(partColor);
             }
+
+            // Orient directional building shapes by the player's chosen yaw (armor has
+            // its own armorFace orientation, so it is left alone).
+            if (cat != "defense")
+                ApplyRotationSteps();
+        }
+
+        /// <summary>Yaw the part's mesh children by rotationSteps*90 about the cell
+        /// centre (builder-frame, like the broadside cannon). Footprint is unchanged
+        /// because rotatable shapes are 1x1x1.</summary>
+        private void ApplyRotationSteps()
+        {
+            if (rotationSteps == 0) return;
+            float yaw = (rotationSteps & 3) * 90f;
+            Vector3 pivot = transform.TransformPoint(GetMeshCenter());
+            for (int i = 0; i < transform.childCount; i++)
+                transform.GetChild(i).RotateAround(pivot, transform.up, yaw);
         }
 
         // --- Fuel tank: use Explosives Package prefabs ---
@@ -774,51 +806,56 @@ namespace CloseEncounters.Vehicle
 
         // --- Armor: thin slab oriented by armorFace, with cross-hatch ---
 
-        private void CreateArmorMesh(Color partColor)
+        /// <summary>
+        /// Slab geometry for an armor plate of the given footprint and face, in the
+        /// part's local space (relative to the PartNode origin). Shared so the builder
+        /// ghost preview and the real armor mesh are guaranteed identical.
+        /// </summary>
+        public static void GetArmorSlabGeometry(Vector3Int size, Vector3Int armorFace,
+            out Vector3 slabPos, out Vector3 slabScale)
         {
-            float thickness = 0.15f;
-            Vector3 center = GetMeshCenter();
-            Vector3 cellSize = new Vector3(
-                partData.size.x * CellSize,
-                partData.size.y * CellSize,
-                partData.size.z * CellSize);
+            const float thickness = 0.15f;
+            Vector3 center = new Vector3(
+                (size.x - 1) * CellSize * 0.5f,
+                (size.y - 1) * CellSize * 0.5f,
+                (size.z - 1) * CellSize * 0.5f);
+            Vector3 cellSize = new Vector3(size.x * CellSize, size.y * CellSize, size.z * CellSize);
 
-            Vector3 slabScale;
-            Vector3 slabPos = center;
-            Vector3 ridgeDir;  // direction ridges run across the slab
-            float ridgeSpan;   // length of the ridges
-            int ridgeAxis;     // 0=X, 1=Y, 2=Z — which axis ridges vary along
-
+            slabPos = center;
             if (armorFace.x != 0)
             {
                 // Vertical slab on X face (YZ plane) — flush toward neighbor
                 slabScale = new Vector3(thickness, cellSize.y, cellSize.z);
                 slabPos.x = center.x + (armorFace.x > 0 ? 0.5f - thickness * 0.5f : -0.5f + thickness * 0.5f) * cellSize.x;
-                ridgeDir = Vector3.up;
-                ridgeSpan = cellSize.z * 0.95f;
-                ridgeAxis = 1;
             }
             else if (armorFace.z != 0)
             {
                 // Vertical slab on Z face (XY plane) — flush toward neighbor
                 slabScale = new Vector3(cellSize.x, cellSize.y, thickness);
                 slabPos.z = center.z + (armorFace.z > 0 ? 0.5f - thickness * 0.5f : -0.5f + thickness * 0.5f) * cellSize.z;
-                ridgeDir = Vector3.up;
-                ridgeSpan = cellSize.x * 0.95f;
-                ridgeAxis = 1;
             }
             else
             {
-                // Horizontal slab on Y face (XZ plane)
+                // Horizontal slab on Y face (XZ plane) — flush toward top/bottom neighbor
                 slabScale = new Vector3(cellSize.x, thickness, cellSize.z);
-                if (armorFace.y > 0)
-                    slabPos.y = center.y + (cellSize.y * 0.5f - thickness * 0.5f);
-                else
-                    slabPos.y = center.y - (cellSize.y * 0.5f - thickness * 0.5f);
-                ridgeDir = Vector3.right;
-                ridgeSpan = cellSize.z * 0.95f;
-                ridgeAxis = 0;
+                slabPos.y = center.y + (armorFace.y > 0
+                    ? (cellSize.y * 0.5f - thickness * 0.5f)
+                    : -(cellSize.y * 0.5f - thickness * 0.5f));
             }
+        }
+
+        private void CreateArmorMesh(Color partColor)
+        {
+            float thickness = 0.15f;
+            Vector3 cellSize = new Vector3(
+                partData.size.x * CellSize,
+                partData.size.y * CellSize,
+                partData.size.z * CellSize);
+
+            GetArmorSlabGeometry(partData.size, armorFace, out Vector3 slabPos, out Vector3 slabScale);
+
+            // Ridge run direction depends on which face the slab sits on.
+            float ridgeSpan = (armorFace.z != 0) ? cellSize.x * 0.95f : cellSize.z * 0.95f;
 
             // Main slab
             GameObject slab = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -842,7 +879,6 @@ namespace CloseEncounters.Vehicle
             // Cross-hatch ridges
             Color lineColor = partColor * 0.55f;
             int lineCount = 4;
-            float extent = (ridgeAxis == 0) ? slabScale.x : slabScale.y;
 
             for (int i = 0; i < lineCount; i++)
             {
@@ -884,16 +920,35 @@ namespace CloseEncounters.Vehicle
 
         // --- Default: colored cube from meshData ---
 
+        /// <summary>
+        /// Rendered box dimensions for box-shaped structural parts, keyed by id.
+        /// Single source of truth shared by the mesh and the stacking logic
+        /// (SnapToBlockBelow) and the builder ghost, so they can never disagree.
+        /// Falls back to the full grid-cell size for anything not listed.
+        /// </summary>
+        public static Vector3 GetStructuralMeshSize(PartData pd)
+        {
+            if (pd == null) return Vector3.one * CellSize;
+            string id = pd.id?.ToLowerInvariant() ?? "";
+            switch (id)
+            {
+                // Existing thin parts (kept byte-identical to the old hardcodes).
+                case "medium_frame": return new Vector3(CellSize, 0.3f,  CellSize);
+                case "light_frame":  return new Vector3(CellSize, 0.2f,  CellSize);
+                case "tank_tracks":  return new Vector3(CellSize, 0.35f, CellSize);
+                // New artistic building shapes (all 1x1x1 grid footprint).
+                case "half_slab":    return new Vector3(CellSize, 0.5f,  CellSize);
+                case "floor_plate":  return new Vector3(CellSize, 0.12f, CellSize);
+                case "wall_panel":   return new Vector3(0.18f,    CellSize, CellSize); // thin in X
+                case "pillar":       return new Vector3(0.32f,    CellSize, 0.32f);
+            }
+            // Default: full cell (matches the old GetMeshSize fallback for box parts).
+            return new Vector3(pd.size.x * CellSize, pd.size.y * CellSize, pd.size.z * CellSize);
+        }
+
         private void CreateDefaultCubeMesh(Color partColor)
         {
-            Vector3 meshSize = GetMeshSize();
-            string id = partData.id?.ToLowerInvariant() ?? "";
-
-            // Medium frames are thin flat blocks (same height as tank tracks)
-            if (id == "medium_frame")
-                meshSize.y = 0.3f;
-            else if (id == "light_frame")
-                meshSize.y = 0.2f;
+            Vector3 meshSize = GetStructuralMeshSize(partData);
 
             GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
             cube.transform.SetParent(transform, false);
@@ -919,6 +974,93 @@ namespace CloseEncounters.Vehicle
             DestroyImmediate(cube.GetComponent<Collider>());
 
             _meshRenderer = cube.GetComponent<MeshRenderer>();
+        }
+
+        // --- Custom-shaped structural meshes (wedge / corner wedge) ---
+
+        /// <summary>
+        /// Build a procedural mesh child from vertices+triangles. Rendered TWO-SIDED
+        /// (each tri duplicated with reversed winding on its own vertex copies) so the
+        /// shape is always visible/lit regardless of authored winding — robust for a
+        /// builder piece. Solid-colored (no UVs needed).
+        /// </summary>
+        private GameObject BuildCustomMesh(string name, Vector3[] verts, int[] tris, Color color)
+        {
+            int n = verts.Length;
+            var v2 = new Vector3[n * 2];
+            System.Array.Copy(verts, 0, v2, 0, n);
+            System.Array.Copy(verts, 0, v2, n, n);
+
+            var t2 = new int[tris.Length * 2];
+            System.Array.Copy(tris, 0, t2, 0, tris.Length);
+            for (int i = 0; i < tris.Length; i += 3)
+            {
+                t2[tris.Length + i]     = tris[i]     + n;
+                t2[tris.Length + i + 1] = tris[i + 2] + n; // reversed winding for back face
+                t2[tris.Length + i + 2] = tris[i + 1] + n;
+            }
+
+            var mesh = new Mesh { name = name + "_Mesh" };
+            mesh.vertices = v2;
+            mesh.triangles = t2;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+
+            var go = new GameObject(name);
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = GetMeshCenter(); // (0,0,0) for 1x1x1; mesh bottom is at y=0
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            go.AddComponent<MeshRenderer>();
+            SetColor(go, color);
+            _meshRenderer = go.GetComponent<MeshRenderer>();
+            return go;
+        }
+
+        /// <summary>Triangular-prism ramp: full height at the -Z face, sloping down to
+        /// zero at +Z. Bottom sits on the cell floor; rotationSteps yaws which way it faces.</summary>
+        private void CreateWedgeMesh(Color partColor)
+        {
+            float s = CellSize;
+            float h = s * 0.5f;
+            Vector3 A = new Vector3(-h, 0f, -h);
+            Vector3 B = new Vector3( h, 0f, -h);
+            Vector3 C = new Vector3( h, 0f,  h);
+            Vector3 D = new Vector3(-h, 0f,  h);
+            Vector3 E = new Vector3(-h, s, -h);
+            Vector3 F = new Vector3( h, s, -h);
+            var verts = new[] { A, B, C, D, E, F }; // 0..5
+            var tris = new[]
+            {
+                0,2,1, 0,3,2,   // bottom (A,B,C,D)
+                0,1,5, 0,5,4,   // back vertical face at -Z (A,B,F,E)
+                3,2,5, 3,5,4,   // slope (D,C,F,E)
+                0,4,3,          // left triangle (-X)
+                1,2,5,          // right triangle (+X)
+            };
+            BuildCustomMesh("WedgeModel", verts, tris, partColor);
+        }
+
+        /// <summary>Corner ramp: full height over one cell corner, sloping down to the
+        /// opposite corner (a pyramid-like quarter). rotationSteps picks the corner.</summary>
+        private void CreateCornerWedgeMesh(Color partColor)
+        {
+            float s = CellSize;
+            float h = s * 0.5f;
+            Vector3 A = new Vector3(-h, 0f, -h);
+            Vector3 B = new Vector3( h, 0f, -h);
+            Vector3 C = new Vector3( h, 0f,  h);
+            Vector3 D = new Vector3(-h, 0f,  h);
+            Vector3 P = new Vector3(-h, s, -h); // apex over corner A
+            var verts = new[] { A, B, C, D, P }; // 0..4
+            var tris = new[]
+            {
+                0,2,1, 0,3,2,   // bottom
+                0,1,4,          // back face (-Z)
+                0,4,3,          // left face (-X)
+                1,2,4,          // slope
+                2,3,4,          // slope
+            };
+            BuildCustomMesh("CornerWedgeModel", verts, tris, partColor);
         }
 
         // ------------------------------------------------------------------
@@ -1165,13 +1307,9 @@ namespace CloseEncounters.Vehicle
 
             if (below == null || below.partData == null) return;
 
-            // Get the below block's actual visual height
-            string belowId = below.partData.id?.ToLowerInvariant() ?? "";
-            float belowMeshHeight = below.partData.size.y * CellSize; // default: full cell
-            // Match the hardcoded heights from CreateDefaultCubeMesh
-            if (belowId == "medium_frame") belowMeshHeight = 0.3f;
-            else if (belowId == "light_frame") belowMeshHeight = 0.2f;
-            else if (belowId == "tank_tracks") belowMeshHeight = 0.35f;
+            // Below block's actual rendered height (shared with the mesh builder, so
+            // half slabs / plates / new shapes are stacked onto correctly).
+            float belowMeshHeight = GetStructuralMeshSize(below.partData).y;
 
             float cellHeight = below.partData.size.y * CellSize;
             float gap = cellHeight - belowMeshHeight;

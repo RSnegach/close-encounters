@@ -93,6 +93,28 @@ namespace CloseEncounters.AI
                 spent += FillRandomVariation(domain, remaining, spent, budget, placed);
             }
 
+            // --- Guarantee armament: a bot with no weapon is a training cone. ---
+            bool hasWeapon = false;
+            for (int i = 0; i < placed.Count; i++)
+            {
+                if (placed[i].part != null && string.Equals(placed[i].part.category, "weapon",
+                    StringComparison.OrdinalIgnoreCase))
+                { hasWeapon = true; break; }
+            }
+            if (!hasWeapon)
+            {
+                // Force-add the best weapon for this domain, ignoring the budget cap.
+                PartData forced = PickBestPart("weapon", domain, int.MaxValue, template.preferredWeaponSub);
+                if (forced != null)
+                {
+                    Vector3Int wpos = FindGridPosition(forced, placed, GridZone.Top);
+                    PlacedPart wp = Place(forced, wpos, placed);
+                    placed.Add(wp);
+                    spent += forced.cost;
+                    Debug.Log($"[AIBuilder] Force-added weapon '{forced.id}' to guarantee armament");
+                }
+            }
+
             // Convert placed parts to VehicleData entries
             for (int i = 0; i < placed.Count; i++)
             {

@@ -224,8 +224,6 @@ namespace CloseEncounters.AI
         [Header("Vehicle Interface")]
         [Tooltip("Tag applied to all potential enemy vehicles.")]
         public string enemyTag = "Vehicle";
-        [Tooltip("Projectile muzzle speed used for lead prediction. Spawn logic should set this per loadout.")]
-        public float aiProjectileSpeed = 60f;
 
         // ----- public readable state -----
         public AIInput CurrentInput  { get; private set; }
@@ -276,7 +274,7 @@ namespace CloseEncounters.AI
         private float _smoothForward;
         private float _smoothStrafe;
         private float _smoothYaw;
-        private const float InputSmoothSpeed = 6f;
+        private const float InputSmoothSpeed = 9f;
 
         // ----- flank state -----
         private float _flankSide; // -1 or +1
@@ -314,6 +312,37 @@ namespace CloseEncounters.AI
         private float _baseMaxBoostFuel;
         private float _maxBoostFuel;
         private float _boostFuel;
+        private bool _boostLocked;
+
+        // ----- decoupled decision/motion (decisions tick at reaction rate,
+        //        smoothing/aim run every frame so bots aren't jerky) -----
+        private AIInput _decided = AIInput.Zero;
+
+        // ----- weapon-aware engagement (set by AICombat) -----
+        private float _weaponRange;        // max effective range of equipped weapons
+        private bool _hasAimedWeapon;       // has a turret/aimed weapon that can bear off-hull
+
+        // ----- idle patrol (ground/water) -----
+        private float _patrolTimer;
+        private Vector3 _patrolPoint;
+
+        // ----- anti-dogpile focus tracker (shared across all bots) -----
+        private static readonly Dictionary<int, int> _focusCounts = new Dictionary<int, int>();
+        private int _focusedTargetId;
+
+        // ----- perception / awareness (set by AICombat / damage events) -----
+        private int _playerId = -1;                 // own FFA id, to ignore our own shots
+
+        // Target memory: where we last SAW the current target, so we search the last
+        // known spot when LOS breaks instead of psychically tracking through walls.
+        private Vector3 _lastKnownTargetPos;
+        private bool _hasLastKnown;
+
+        // Retaliation: remember whoever last damaged us and prioritise them briefly,
+        // so a bot whips around on an off-angle attacker like a real player would.
+        private int _recentAttackerId;
+        private float _recentAttackerTimer;
+        private const float RetaliationMemory = 4f;
 
         // =====================================================================
         //  Lifecycle
@@ -329,7 +358,12 @@ namespace CloseEncounters.AI
             _preset = AIDifficultyPreset.ForLevel(difficultyLevel);
             _preset.ApplyVariance(personalityVariance);
 
+            // AICombat set the weapon range before Start ran (it rebuilds _preset),
+            // so re-apply the weapon-range-derived engage distance here.
+            if (_weaponRange > 0f) SetWeaponRange(_weaponRange);
+
             _lastStuckCheckPos = transform.position;
+            _patrolPoint = transform.position;
             _flankSide = UnityEngine.Random.value > 0.5f ? 1f : -1f;
 
             _initialized = true;
@@ -341,19 +375,93 @@ namespace CloseEncounters.AI
 
             float dt = Time.deltaTime;
 
-            // Reaction delay only gates target acquisition + decision logic.
-            // Input application + smoothing must run every frame so the vehicle keeps moving.
+            // These run EVERY frame so bots are responsive (the old code gated the
+            // whole brain behind reactionTime, which made movement/aim jerky/laggy).
+            UpdateStuckDetection(dt);   // self-gates internally
+            UpdateWeaponCycling(dt);
+
+            // Heavy DECISIONS (target pick + state machine) run at reaction cadence —
+            // that's the deliberate skill latency. Between decisions we still keep the
+            // target valid (drop corpses immediately) so bots don't shoot wreckage.
             _reactionAccum += dt;
             if (_reactionAccum >= _preset.reactionTime)
             {
                 _reactionAccum = 0f;
                 UpdateTargetSelection();
                 UpdateStateMachine(dt);
+                _decided = CurrentInput; // capture the raw decision to smooth toward
+            }
+            else
+            {
+                ValidateTarget();
             }
 
-            UpdateStuckDetection(dt);
-            UpdateWeaponCycling(dt);
+            // Motion smoothing, aim and boost-fuel tick run EVERY frame for fluidity.
+            if (_recentAttackerTimer > 0f) _recentAttackerTimer -= dt;
+            TickBoost(dt);
             ProduceSmoothedInput(dt);
+        }
+
+        /// <summary>Drop a target that died / despawned so the bot re-acquires fast
+        /// instead of pursuing and shooting a wreck until the next decision tick.</summary>
+        private void ValidateTarget()
+        {
+            if (CurrentTarget == null) return;
+            var vr = CurrentTarget.GetComponent<CloseEncounters.Arena.VehicleRuntime>();
+            if (vr == null || !vr.IsAlive || !CurrentTarget.gameObject.activeInHierarchy)
+            {
+                ReleaseFocus();
+                CurrentTarget = null;
+                _lastTarget = null;
+                if (CurrentState == AIState.Engage || CurrentState == AIState.Flank)
+                    TransitionTo(AIState.Seek);
+            }
+        }
+
+        /// <summary>Boost fuel accounting (parity with the player): burn while
+        /// boosting, regen + 25% unlock when not. Prevents infinite-boost bots.</summary>
+        private void TickBoost(float dt)
+        {
+            bool wantBoost = _decided.boost;
+            if (wantBoost && CanBoost())
+            {
+                _boostFuel -= dt;
+                if (_boostFuel <= 0f) { _boostFuel = 0f; _boostLocked = true; }
+            }
+            else
+            {
+                if (_boostFuel < _maxBoostFuel)
+                    _boostFuel = Mathf.Min(_boostFuel + dt * 0.6f, _maxBoostFuel);
+                if (_boostLocked && _maxBoostFuel > 0f && _boostFuel >= _maxBoostFuel * 0.25f)
+                    _boostLocked = false;
+            }
+        }
+
+        private bool CanBoost()
+        {
+            return _maxBoostFuel > 0f && _boostFuel > 0f && !_boostLocked;
+        }
+
+        private void OnEnable()
+        {
+            CloseEncounters.Combat.DamageSystem.OnVehicleDamaged += OnDamaged;
+        }
+
+        private void OnDisable()
+        {
+            CloseEncounters.Combat.DamageSystem.OnVehicleDamaged -= OnDamaged;
+            ReleaseFocus();
+        }
+
+        /// <summary>Damage hook: remember who just hit us so target selection can
+        /// prioritise retaliation (scaled by aggression — passive bots shrug it off).</summary>
+        private void OnDamaged(CloseEncounters.Arena.VehicleRuntime victim,
+                               CloseEncounters.Arena.VehicleRuntime attacker, int amount)
+        {
+            if (victim == null || victim.gameObject != gameObject) return;
+            if (attacker == null || attacker.gameObject == gameObject) return;
+            _recentAttackerId = attacker.transform.GetInstanceID();
+            _recentAttackerTimer = RetaliationMemory;
         }
 
         /// <summary>
@@ -363,12 +471,17 @@ namespace CloseEncounters.AI
         private void FixedUpdate()
         {
             if (!_initialized || _rb == null) return;
-            if (_isAirDomain) return; // air uses different physics
+
+            float dt = Time.fixedDeltaTime;
+
+            // Air: kinematic flight (mirrors the player's air model — no air physics
+            // component exists, so the brain flies the plane itself).
+            if (_isAirDomain) { HandleAirFlight(dt); return; }
+
             // Skip if WaterPhysics or GroundPhysics handle movement
             if (_cachedWaterPhysics != null) return;
             if (_cachedGroundPhysics != null) return;
 
-            float dt = Time.fixedDeltaTime;
             AIInput inp = CurrentInput;
 
             // Turning — same as PlayerVehicleController
@@ -408,6 +521,140 @@ namespace CloseEncounters.AI
         }
 
         // =====================================================================
+        //  Air flight — kinematic pursuit for AI planes (no air physics exists).
+        //  Drives the rigidbody like the player's air model: rotate the nose toward
+        //  the pursuit direction at a bank-limited rate, fly forward at airspeed.
+        // =====================================================================
+        private void HandleAirFlight(float dt)
+        {
+            Vector3 pos = transform.position;
+
+            // Desired heading: chase the lead point if we have a target, otherwise
+            // patrol back toward the arena centre (and don't loiter at the edge).
+            Vector3 desired;
+            if (CurrentTarget != null)
+            {
+                desired = GetAimPoint() - pos;
+            }
+            else
+            {
+                Vector3 toCentre = arenaCentre - pos;
+                Vector3 flat = new Vector3(toCentre.x, 0f, toCentre.z);
+                desired = flat.magnitude > arenaHalfSize.x * 0.7f ? toCentre : transform.forward;
+            }
+            if (desired.sqrMagnitude < 0.01f) desired = transform.forward;
+            desired.Normalize();
+
+            // Keep planes from clumping/colliding: push away from nearby bots.
+            desired += ComputeAirSeparation(pos) * 0.8f;
+
+            // Juke out of the path of incoming fire (skill-scaled; no-op for low skill).
+            desired += ComputeIncomingThreatEvasion(pos);
+
+            // Always steer back toward the play area, even while chasing — otherwise a
+            // bot follows a target out of bounds and the OOB timer kills it.
+            desired += ComputeBoundaryAvoidance() * 1.5f;
+
+            // Altitude floor: bias upward only when low AND descending (avoids the
+            // up/down porpoising the constant bias used to cause). Soft cap at 0.5.
+            const float minAlt = 55f;
+            if (pos.y < minAlt && _rb.linearVelocity.y < 2f)
+            {
+                float t = Mathf.Clamp01((minAlt - pos.y) / minAlt) * 0.5f;
+                desired = Vector3.Slerp(desired.normalized, Vector3.up, t);
+            }
+            if (desired.sqrMagnitude < 0.01f) desired = transform.forward;
+            desired.Normalize();
+
+            // Turn toward the desired heading — harder bots turn (and fight) tighter.
+            float turnRate = 70f + 70f * _preset.aggression; // deg/sec
+            Quaternion targetRot = Quaternion.LookRotation(desired, Vector3.up);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, turnRate * dt);
+
+            // Airspeed: cruise, faster on boost. Scaled by propulsion health.
+            float speedScale = _baseMoveSpeed > 0f ? Mathf.Clamp(_currentMoveSpeed / _baseMoveSpeed, 0.35f, 1f) : 1f;
+            float cruise = 48f, boostSpeed = 95f;
+            float airspeed = (CurrentInput.boost ? boostSpeed : cruise) * speedScale;
+            _rb.linearVelocity = transform.forward * airspeed;
+        }
+
+        /// <summary>3D separation steer away from nearby flying bots (boid-style),
+        /// so air bots chasing the same target don't clump and collide.</summary>
+        private Vector3 ComputeAirSeparation(Vector3 pos)
+        {
+            const float radius = 32f;
+            Vector3 push = Vector3.zero;
+            var all = CloseEncounters.Arena.VehicleRuntime.LiveInstances;
+            if (all == null) return push;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var other = all[i];
+                if (other == null || other.gameObject == gameObject || !other.IsAlive) continue;
+                Vector3 delta = pos - other.transform.position;
+                float d = delta.magnitude;
+                if (d > 0.01f && d < radius)
+                    push += delta / d * (1f - d / radius);
+            }
+            return push;
+        }
+
+        /// <summary>
+        /// Perceive in-flight enemy projectiles and return a world-space steer to
+        /// juke out of their path. Only shots on a near-collision course count, so
+        /// bots jink only when actually shot at. Gated/scaled by skill (accuracy):
+        /// low-skill bots don't dodge, high-skill bots dodge hard — a real
+        /// difficulty differentiator no other system provides.
+        /// </summary>
+        private Vector3 ComputeIncomingThreatEvasion(Vector3 pos)
+        {
+            float skill = _preset.accuracy;
+            if (skill < 0.25f) return Vector3.zero; // unskilled bots are oblivious
+
+            var projs = CloseEncounters.Combat.Projectile.Active;
+            if (projs == null || projs.Count == 0) return Vector3.zero;
+
+            const float threatRange = 70f;   // only react to nearby shots
+            const float missRadius  = 6f;    // "would hit me" perpendicular tolerance
+            Vector3 evade = Vector3.zero;
+
+            for (int i = 0; i < projs.Count; i++)
+            {
+                var p = projs[i];
+                if (p == null) continue;
+                if (p.ownerPlayerId < 0 || p.ownerPlayerId == _playerId) continue; // ours / neutral
+
+                Vector3 pp = p.transform.position;
+                Vector3 toMe = pos - pp;
+                // Cheap squared-distance cull first (skip sqrt on far shots).
+                float sqr = toMe.sqrMagnitude;
+                if (sqr > threatRange * threatRange || sqr < 0.25f) continue;
+                float dist = Mathf.Sqrt(sqr);
+
+                Vector3 vel = p.Velocity;
+                float vmag = vel.magnitude;
+                if (vmag < 1f) continue;
+                Vector3 vdir = vel / vmag;
+
+                // Closest approach of the shot's line to us; skip shots already past
+                // or not actually aimed near us.
+                float along = Vector3.Dot(toMe, vdir);
+                if (along < 0f) continue;
+                Vector3 miss = pos - (pp + vdir * along);
+                float missDist = miss.magnitude;
+                if (missDist > missRadius) continue;
+
+                // Steer perpendicular to the incoming line, away from the impact point.
+                Vector3 dodge = miss.sqrMagnitude > 0.01f
+                    ? miss.normalized
+                    : Vector3.Cross(Vector3.up, vdir).normalized;
+                float urgency = (1f - dist / threatRange) * (1f - missDist / missRadius);
+                evade += dodge * urgency;
+            }
+
+            return evade * Mathf.Lerp(0.5f, 2f, skill);
+        }
+
+        // =====================================================================
         //  External setters — vehicle health, weapon count
         // =====================================================================
 
@@ -417,9 +664,67 @@ namespace CloseEncounters.AI
             _maxHp = Mathf.Max(max, 1f);
         }
 
+        /// <summary>
+        /// World-space lead-predicted aim point for the current target. Consumed by
+        /// AICombat to aim weapons (and to point cosmetic turrets).
+        /// </summary>
+        public Vector3 GetAimPoint()
+        {
+            return ComputeLeadPosition(CurrentTarget);
+        }
+
         public void SetWeaponCount(int count)
         {
             _weaponCount = Mathf.Max(count, 1);
+        }
+
+        /// <summary>
+        /// Tell the brain its weapons' effective range so engage distance matches the
+        /// loadout (snipers keep standoff, brawlers close in) instead of a flat preset.
+        /// </summary>
+        public void SetWeaponRange(float range)
+        {
+            if (range <= 0f) return;
+            _weaponRange = range;
+            // Higher-skill bots use more of their range; clamp to a sane band.
+            float skill = Mathf.Lerp(0.55f, 0.9f, _preset.accuracy);
+            _preset.engageRange = Mathf.Clamp(range * skill, 15f, 350f);
+            // Detection must comfortably exceed engage range or bots never close in.
+            _preset.awarenessRadius = Mathf.Max(_preset.awarenessRadius, _preset.engageRange * 1.7f);
+        }
+
+        /// <summary>True when the bot has a turret/aimed weapon that can bear without
+        /// the hull facing the target — relaxes the fire-arc gate so it doesn't hold fire.</summary>
+        public void SetHasAimedWeapon(bool value)
+        {
+            _hasAimedWeapon = value;
+        }
+
+        /// <summary>Tell the brain its own FFA player id so incoming-fire dodging can
+        /// ignore the bot's own projectiles.</summary>
+        public void SetPlayerId(int id)
+        {
+            _playerId = id;
+        }
+
+        // ----- shared anti-dogpile focus accounting -----
+        private static int GetFocus(int id)
+        {
+            return _focusCounts.TryGetValue(id, out int n) ? n : 0;
+        }
+        private void AcquireFocus(int id)
+        {
+            if (id == 0) return;
+            _focusCounts[id] = GetFocus(id) + 1;
+            _focusedTargetId = id;
+        }
+        private void ReleaseFocus()
+        {
+            if (_focusedTargetId == 0) return;
+            int n = GetFocus(_focusedTargetId) - 1;
+            if (n <= 0) _focusCounts.Remove(_focusedTargetId);
+            else _focusCounts[_focusedTargetId] = n;
+            _focusedTargetId = 0;
         }
 
         public void SetDifficulty(AIDifficultyLevel level, float variance = 0.15f)
@@ -527,25 +832,35 @@ namespace CloseEncounters.AI
                 c.transform = t;
                 c.distance = dist;
 
-                // Try to read HP from a component — fall back to 1
-                var otherAI = go.GetComponent<AIController>();
-                if (otherAI != null)
-                    c.hpFraction = otherAI._maxHp > 0f ? otherAI._hp / otherAI._maxHp : 1f;
-                else
-                    c.hpFraction = 1f;
+                // Read live HP straight from the runtime (works for the player too,
+                // who has no AIController) so bots can focus-fire wounded enemies.
+                var vr = allVehicles[i];
+                c.hpFraction = vr.MaxHP > 0 ? (float)vr.TotalHP / vr.MaxHP : 1f;
 
                 c.threatScore = ComputeThreatScore(t, dist);
                 c.persistenceBonus = (t == _lastTarget) ? TargetPersistenceBonus : 0f;
                 c.hasLOS = CheckLineOfSight(myPos, t.position);
 
+                // Anti-dogpile: how many OTHER bots already focus this target.
+                int otherFocus = GetFocus(t.GetInstanceID());
+                if (t.GetInstanceID() == _focusedTargetId && otherFocus > 0) otherFocus--; // don't count self
+
                 // Composite score: lower is better
                 float distScore   = dist;
-                float hpScore     = c.hpFraction * 40f; // prefer low-HP
-                float threatScore = -c.threatScore * 20f; // prefer high-threat
+                float hpScore     = c.hpFraction * 40f;      // prefer low-HP
+                float threatScore = -c.threatScore * 20f;     // prefer high-threat
                 float losBonus    = c.hasLOS ? -15f : 20f;
                 float persist     = -c.persistenceBonus;
+                float crowdPenalty = otherFocus * 22f;        // spread fire, no swarming
 
-                c.totalScore = distScore + hpScore + threatScore + losBonus + persist;
+                // Retaliation: strongly prefer whoever just shot us (scaled by
+                // aggression, so timid bots barely react and brawlers turn hard).
+                float retaliation = (_recentAttackerTimer > 0f
+                    && t.GetInstanceID() == _recentAttackerId)
+                    ? -Mathf.Lerp(20f, 70f, _preset.aggression) : 0f;
+
+                c.totalScore = distScore + hpScore + threatScore + losBonus + persist
+                    + crowdPenalty + retaliation;
                 _candidates.Add(c);
             }
 
@@ -560,26 +875,29 @@ namespace CloseEncounters.AI
 
             Transform best = _candidates[0].transform;
 
-            // Respect switch cooldown unless target is dead/gone or no longer a candidate
+            // Respect switch cooldown unless target is dead/gone
             if (_targetSwitchTimer > 0f && _lastTarget != null && _lastTarget && _lastTarget.gameObject.activeInHierarchy)
-            {
-                bool stillCandidate = false;
-                for (int i = 0; i < _candidates.Count; i++)
-                {
-                    if (_candidates[i].transform == _lastTarget) { stillCandidate = true; break; }
-                }
-                if (stillCandidate)
-                    best = _lastTarget;
-            }
+                best = _lastTarget;
 
             if (best != _lastTarget)
             {
                 _lastTarget = best;
                 _targetSwitchTimer = TargetSwitchCooldown;
                 _targetPersistenceTimer = 0f;
+                // Update the shared focus registry so other bots avoid this target.
+                ReleaseFocus();
+                if (best != null) AcquireFocus(best.GetInstanceID());
             }
 
             CurrentTarget = best;
+
+            // Target memory: refresh last-known position only while we can actually
+            // see the target, so a broken LOS leaves us searching the last sighting.
+            if (CurrentTarget != null && CheckLineOfSight(transform.position, CurrentTarget.position))
+            {
+                _lastKnownTargetPos = CurrentTarget.position;
+                _hasLastKnown = true;
+            }
         }
 
         private float ComputeThreatScore(Transform target, float distance)
@@ -729,9 +1047,34 @@ namespace CloseEncounters.AI
         // ----- Idle -----
         private void StateIdle(float dt)
         {
-            CurrentInput = AIInput.Zero;
             if (CurrentTarget != null)
+            {
                 TransitionTo(AIState.Seek);
+                return;
+            }
+
+            // Air bots patrol in HandleAirFlight; ground/water bots roam toward random
+            // points so they aren't motionless "training cones" and drift into contact.
+            if (_isAirDomain)
+            {
+                CurrentInput = AIInput.Zero;
+                return;
+            }
+
+            _patrolTimer -= dt;
+            if (_patrolTimer <= 0f || (transform.position - _patrolPoint).sqrMagnitude < 144f)
+            {
+                _patrolTimer = UnityEngine.Random.Range(4f, 9f);
+                Vector2 r = UnityEngine.Random.insideUnitCircle * (arenaHalfSize.x * 0.5f);
+                _patrolPoint = arenaCentre + new Vector3(r.x, 0f, r.y);
+            }
+
+            var input = AIInput.Zero;
+            Vector3 dir = NavigateToward(_patrolPoint, dt);
+            ApplySteeringToInput(dir, ref input);
+            input.forward = 0.45f;
+            input.weaponIndex = _currentWeaponIndex;
+            CurrentInput = input;
         }
 
         // ----- Seek -----
@@ -741,8 +1084,9 @@ namespace CloseEncounters.AI
             if (lowHP) { TransitionTo(AIState.Retreat); return; }
 
             float dist = Vector3.Distance(transform.position, CurrentTarget.position);
+            bool seeTarget = CheckLineOfSight(transform.position, CurrentTarget.position);
 
-            if (dist < _preset.engageRange && CheckLineOfSight(transform.position, CurrentTarget.position))
+            if (dist < _preset.engageRange && seeTarget)
             {
                 // Decide: flank or engage?
                 if (UnityEngine.Random.value < _preset.flankProbability)
@@ -752,9 +1096,11 @@ namespace CloseEncounters.AI
                 return;
             }
 
-            // Drive toward target
+            // Drive toward the target if we can see it; otherwise head to where we
+            // last saw it (search the last sighting rather than tracking through walls).
+            Vector3 navTarget = (!seeTarget && _hasLastKnown) ? _lastKnownTargetPos : CurrentTarget.position;
             var input = AIInput.Zero;
-            Vector3 desiredDir = NavigateToward(CurrentTarget.position, dt);
+            Vector3 desiredDir = NavigateToward(navTarget, dt);
             ApplySteeringToInput(desiredDir, ref input);
             input.forward = 1f;
             input.boost = ShouldBoost(dist);
@@ -838,7 +1184,7 @@ namespace CloseEncounters.AI
                 input.forward = 0.1f;
 
             input.fire        = ShouldFire(dist);
-            input.boost       = (dist > idealDist + 5f) && _boostFuel > 0f;
+            input.boost       = false;
             input.weaponIndex = _currentWeaponIndex;
             CurrentInput = input;
         }
@@ -948,17 +1294,15 @@ namespace CloseEncounters.AI
             Vector3 avoidDir = ComputeObstacleAvoidance();
             Vector3 hazardDir = ComputeHazardAvoidance();
             Vector3 boundaryDir = ComputeBoundaryAvoidance();
-
-            float avoidMag   = avoidDir.magnitude;
-            float hazardMag  = hazardDir.magnitude;
-            float boundaryMag = boundaryDir.magnitude;
+            Vector3 evadeDir = ComputeIncomingThreatEvasion(transform.position);
 
             float w = _preset.obstacleAvoidWeight;
 
             Vector3 result = desiredDir
                 + avoidDir   * (w * 1.5f)
                 + hazardDir  * (w * 1.2f)
-                + boundaryDir * (w * 2.0f);
+                + boundaryDir * (w * 2.0f)
+                + evadeDir;          // already skill-scaled; juke out of incoming fire
 
             if (result.sqrMagnitude < 0.001f)
                 result = desiredDir;
@@ -1124,8 +1468,8 @@ namespace CloseEncounters.AI
             Vector3 targetVel = targetRb.linearVelocity;
             float dist = Vector3.Distance(transform.position, targetPos);
 
-            // Rough projectile speed estimate (tunable per loadout)
-            float projectileSpeed = aiProjectileSpeed > 0.01f ? aiProjectileSpeed : 60f;
+            // Rough projectile speed estimate
+            float projectileSpeed = 60f;
             float tof = dist / projectileSpeed;
 
             Vector3 predicted = targetPos + targetVel * tof * _preset.leadPredictionFactor;
@@ -1149,8 +1493,10 @@ namespace CloseEncounters.AI
             Vector3 toTarget = (CurrentTarget.position - transform.position).normalized;
             float dot = Vector3.Dot(transform.forward, toTarget);
 
-            // Tighter cone at higher accuracy
-            float minDot = Mathf.Lerp(0.80f, 0.95f, _preset.accuracy);
+            // Turret/aimed weapons can bear without the hull facing the enemy, so only
+            // require the target be in the front hemisphere. Fixed-weapon bots still
+            // need to point their hull (tighter cone scales with accuracy).
+            float minDot = _hasAimedWeapon ? 0.1f : Mathf.Lerp(0.80f, 0.95f, _preset.accuracy);
             if (dot < minDot) return false;
 
             // Range check
@@ -1199,7 +1545,9 @@ namespace CloseEncounters.AI
 
         private void ProduceSmoothedInput(float dt)
         {
-            AIInput raw = CurrentInput;
+            // Smooth toward the LAST decided input (held between reaction ticks) so
+            // motion stays fluid every frame regardless of decision cadence.
+            AIInput raw = _decided;
 
             float speed = InputSmoothSpeed * dt;
             _smoothForward = Mathf.MoveTowards(_smoothForward, raw.forward, speed);
@@ -1212,7 +1560,7 @@ namespace CloseEncounters.AI
                 strafe      = _smoothStrafe,
                 yaw         = _smoothYaw,
                 fire        = raw.fire,
-                boost       = raw.boost,
+                boost       = raw.boost && CanBoost(),
                 weaponIndex = raw.weaponIndex,
             };
         }

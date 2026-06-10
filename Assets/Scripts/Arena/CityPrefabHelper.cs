@@ -82,19 +82,7 @@ namespace CloseEncounters.Arena
 
             if (breakable)
             {
-                // Mass proportional to size: small props fly, heavy ones topple gently
-                float maxDim = GetMaxBoundsDimension(instance);
-                float mass = Mathf.Clamp(maxDim * maxDim * 2f, 1f, 150f);
-                var rb = instance.AddComponent<Rigidbody>();
-                rb.isKinematic = true;
-                rb.mass = mass;
-                rb.linearDamping = 0.5f;
-                var bp = instance.AddComponent<BreakableProp>();
-
-                var respawner = BreakablePropRespawner.GetOrCreate();
-                int id = respawner.Register(instance);
-                bp.AttachRespawner(respawner, id);
-                // Don't set isStatic -- physics needs it dynamic
+                MakeBreakable(instance);
             }
             else
             {
@@ -102,6 +90,33 @@ namespace CloseEncounters.Arena
             }
 
             return instance;
+        }
+
+        /// <summary>
+        /// Turn an already-built GameObject (prefab instance or procedural mesh) into
+        /// a breakable prop: kinematic Rigidbody (mass scaled by size), BreakableProp,
+        /// and respawner registration. The object must already have its collider(s).
+        /// </summary>
+        public static void MakeBreakable(GameObject instance)
+        {
+            if (instance == null) return;
+
+            // Mass proportional to size: small props fly, heavy ones topple gently
+            float maxDim = GetMaxBoundsDimension(instance);
+            float mass = Mathf.Clamp(maxDim * maxDim * 2f, 1f, 150f);
+            var rb = instance.GetComponent<Rigidbody>();
+            if (rb == null) rb = instance.AddComponent<Rigidbody>();
+            rb.isKinematic = true;
+            rb.mass = mass;
+            rb.linearDamping = 0.5f;
+
+            var bp = instance.GetComponent<BreakableProp>();
+            if (bp == null) bp = instance.AddComponent<BreakableProp>();
+
+            var respawner = BreakablePropRespawner.GetOrCreate();
+            int id = respawner.Register(instance);
+            bp.AttachRespawner(respawner, id);
+            // Don't set isStatic -- physics needs it dynamic
         }
 
         /// <summary>

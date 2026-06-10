@@ -499,10 +499,9 @@ namespace CloseEncounters.Arena
         }
 
         /// <summary>
-        /// Bridge: flat box between two points, elevated. Approach ramps are added
-        /// at both ends so vehicles can drive on/off from terrain ground level.
+        /// Bridge: flat box between two points, elevated.
         /// </summary>
-        protected GameObject AddBridge(Vector3 from, Vector3 to, float width, float thickness, Color color, string label = "Bridge", float rampLength = 14f)
+        protected GameObject AddBridge(Vector3 from, Vector3 to, float width, float thickness, Color color, string label = "Bridge")
         {
             Vector3 mid = (from + to) * 0.5f;
             float length = Vector3.Distance(from, to);
@@ -515,59 +514,9 @@ namespace CloseEncounters.Arena
             obj.transform.position = mid;
             obj.transform.localScale = new Vector3(width, thickness, length);
             obj.transform.rotation = Quaternion.Euler(0f, angle, 0f);
-            Material mat = MakeMaterial(color);
-            SetMaterial(obj, mat);
+            SetMaterial(obj, MakeMaterial(color));
             obj.isStatic = true;
-
-            float deckTopY = mid.y + thickness * 0.5f;
-            if (rampLength > 0.01f && deckTopY > 0.05f)
-            {
-                AddBridgeRamp(from, -dir, width, thickness, deckTopY, rampLength, mat, label + "_RampA");
-                AddBridgeRamp(to,    dir, width, thickness, deckTopY, rampLength, mat, label + "_RampB");
-            }
             return obj;
-        }
-
-        // Single approach ramp meeting the deck at `edge` (deck-end center) and
-        // sloping outward along `outDir` to ground level (y=0) at distance `rampLength`.
-        private void AddBridgeRamp(Vector3 edge, Vector3 outDir, float width, float thickness,
-                                   float deckTopY, float rampLength, Material mat, string label)
-        {
-            // Slope angle so ramp top surface descends from deckTopY at edge to y=0 at far end.
-            float slopeRad = Mathf.Atan2(deckTopY, rampLength);
-            float slopeDeg = slopeRad * Mathf.Rad2Deg;
-
-            // Box length along its local Z covers the slanted span.
-            float boxLen = Mathf.Sqrt(rampLength * rampLength + deckTopY * deckTopY);
-
-            // Place the ramp so its top-near corner meets the deck top at the edge,
-            // and its top-far corner sits on the ground.
-            // Compute centre: half-way along the slope, then offset in -surfaceNormal by thickness/2.
-            Vector3 horizMid = edge + outDir * (rampLength * 0.5f);
-            float centreY = (deckTopY + 0f) * 0.5f;
-            // Offset down along surface normal so the cube's top face is the drivable surface.
-            // Surface normal of an inclined ramp leaning down along outDir: (-outDir*sin, cos, 0-ish).
-            // Simpler: shift centre downward by (thickness/2)*cos(slope) and backward by (thickness/2)*sin(slope) along outDir.
-            float n = thickness * 0.5f;
-            Vector3 centre = new Vector3(
-                horizMid.x + outDir.x * n * Mathf.Sin(slopeRad),
-                centreY    -            n * Mathf.Cos(slopeRad),
-                horizMid.z + outDir.z * n * Mathf.Sin(slopeRad)
-            );
-
-            // Yaw to align local Z with horizontal outDir.
-            float yaw = Mathf.Atan2(outDir.x, outDir.z) * Mathf.Rad2Deg;
-            // Pitch around local X so local +Z tilts downward by slopeDeg.
-            Quaternion rot = Quaternion.Euler(slopeDeg, yaw, 0f);
-
-            var ramp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            ramp.name = label;
-            ramp.transform.SetParent(transform, false);
-            ramp.transform.position = centre;
-            ramp.transform.rotation = rot;
-            ramp.transform.localScale = new Vector3(width, thickness, boxLen);
-            SetMaterial(ramp, mat);
-            ramp.isStatic = true;
         }
 
         // =====================================================================

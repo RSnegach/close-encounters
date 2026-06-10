@@ -304,8 +304,8 @@ namespace CloseEncounters.VehiclePhysics
             if (GetBoostMultiplier() > 1f)
                 totalDrag *= 0.3f;
 
-            // Cap to prevent instability — energy-based, independent of dt
-            float maxDrag = _rb.mass * speed * 0.5f;
+            // Cap to prevent instability at high dt
+            float maxDrag = _rb.mass * speed / Time.fixedDeltaTime * 0.5f;
             totalDrag = Mathf.Min(totalDrag, maxDrag);
 
             _rb.AddForce(-vel.normalized * totalDrag, ForceMode.Force);
@@ -317,8 +317,9 @@ namespace CloseEncounters.VehiclePhysics
             {
                 float lateralDrag = 0.5f * waterDensity * lateralSpeed * Mathf.Abs(lateralSpeed)
                                     * wettedSurface * lateralDragCoeff;
-                float lateralCap = _rb.mass * Mathf.Abs(lateralSpeed) * 0.5f;
-                lateralDrag = Mathf.Clamp(lateralDrag, -lateralCap, lateralCap);
+                lateralDrag = Mathf.Clamp(lateralDrag,
+                    -_rb.mass * Mathf.Abs(lateralSpeed) / Time.fixedDeltaTime * 0.5f,
+                     _rb.mass * Mathf.Abs(lateralSpeed) / Time.fixedDeltaTime * 0.5f);
 
                 _rb.AddForce(-transform.right * lateralDrag, ForceMode.Force);
             }

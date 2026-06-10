@@ -25,8 +25,8 @@ namespace CloseEncounters.Combat
         public float sensitivityY = 2.0f;
 
         [Header("Pitch Limits")]
-        public float pitchMin = -85f;
-        public float pitchMax = 85f;
+        public float pitchMin = -20f;
+        public float pitchMax = 60f;
 
         [Header("Aim")]
         public float aimRayDistance = 500f;

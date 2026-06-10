@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using CloseEncounters.Combat;
 
 namespace CloseEncounters.Arena
@@ -22,6 +21,7 @@ namespace CloseEncounters.Arena
 
         // New tuning
         public int maxHealth = 1500;
+        public float pursueBreakoffTime = 20f;
         public float aaFireInterval = 2f;
         public int aaDamagePerShot = 5;
         public float hornMinInterval = 30f;
@@ -30,24 +30,16 @@ namespace CloseEncounters.Arena
 
         // State
         private int _wpIndex;
-        private float _scanTimer, _fireTimer, _aaTimer, _hornTimer;
+        private float _scanTimer, _fireTimer, _aaTimer, _hornTimer, _pursueTimer;
         private Transform _target;
         private Rigidbody _targetRb;
         private int _currentHealth;
         private bool _dead, _sinking;
         private float _sinkTimer;
-        private const float SinkDuration = 10f;
-        private Vector3 _sinkStartPos;
-        private Quaternion _sinkStartRot;
-        private Quaternion _sinkEndRot;
         private bool _dmg75, _dmg50, _dmg25;
         private float _speedMultiplier = 1f;
         private bool _aaCapable = true;
-
-        // Health bar
-        private Canvas _hpCanvas;
-        private RectTransform _hpFillRect;
-        private float _hpFillFullWidth;
+        private bool _pursuing;
 
         // Visual refs
         private Transform _radarA, _radarB;
@@ -76,12 +68,17 @@ namespace CloseEncounters.Arena
             _hornTimer = Random.Range(hornMinInterval, hornMaxInterval);
             _searchlightPhase = Random.Range(0f, 10f);
             BuildAudio();
-            BuildHealthBar();
         }
 
         private void Start()
         {
-            if (patrolWaypoints == null || patrolWaypoints.Length == 0) return;
+            if (patrolWaypoints == null || patrolWaypoints.Length == 0)
+            {
+                Debug.LogWarning("[Warship] no waypoints — disabling");
+                enabled = false;
+                return;
+            }
+            // snap to first waypoint
             Vector3 p = GetWaypointPos(0);
             if (p != Vector3.zero) transform.position = new Vector3(p.x, _baseY, p.z);
         }
@@ -94,13 +91,14 @@ namespace CloseEncounters.Arena
             _scanTimer -= dt;
             if (_scanTimer <= 0f) { _scanTimer = 0.5f; AcquireTarget(); }
 
-            Patrol(dt);
+            if (_pursuing) UpdatePursue(dt);
+            else Patrol(dt);
 
             _fireTimer -= dt;
             if (_target != null && _fireTimer <= 0f)
             {
                 FireMainGun();
-                _fireTimer = fireInterval;
+                _fireTimer = _pursuing ? fireInterval * 0.6f : fireInterval;
             }
 
             if (_aaCapable)
@@ -116,22 +114,10 @@ namespace CloseEncounters.Arena
             UpdateWakeEmission();
         }
 
-        // ---- patrol ----
+        // ---- patrol + pursuit ----
         private void Patrol(float dt)
         {
-            if (patrolWaypoints == null || patrolWaypoints.Length == 0)
-            {
-                if (_target != null)
-                {
-                    Vector3 toT = new Vector3(_target.position.x - transform.position.x, 0f, _target.position.z - transform.position.z);
-                    if (toT.sqrMagnitude > 0.01f)
-                    {
-                        Quaternion tRot = Quaternion.LookRotation(toT.normalized, Vector3.up);
-                        transform.rotation = Quaternion.Slerp(transform.rotation, tRot, dt);
-                    }
-                }
-                return;
-            }
+            if (patrolWaypoints.Length == 0) return;
             Vector3 wpPos = GetWaypointPos(_wpIndex);
             Vector3 flatTo = new Vector3(wpPos.x - transform.position.x, 0f, wpPos.z - transform.position.z);
             if (flatTo.sqrMagnitude < 9f)
@@ -143,6 +129,45 @@ namespace CloseEncounters.Arena
             transform.position += dir * patrolSpeed * _speedMultiplier * dt;
             Quaternion target = Quaternion.LookRotation(dir, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, dt);
+        }
+
+        private void UpdatePursue(float dt)
+        {
+            _pursueTimer += dt;
+            if (_target == null || !_target.gameObject.activeInHierarchy || _pursueTimer > pursueBreakoffTime)
+            {
+                _pursuing = false;
+                _pursueTimer = 0f;
+                _wpIndex = FindNearestWaypointIndex();
+                return;
+            }
+            Vector3 chase = _target.position;
+            if (leadTargets && _targetRb != null) chase += _targetRb.linearVelocity.normalized * 50f;
+            chase.y = _baseY;
+            Vector3 flatTo = new Vector3(chase.x - transform.position.x, 0f, chase.z - transform.position.z);
+            if (flatTo.sqrMagnitude < 0.01f) return;
+            Vector3 dir = flatTo.normalized;
+            transform.position += dir * patrolSpeed * 1.6f * _speedMultiplier * dt;
+            Quaternion target = Quaternion.LookRotation(dir, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, target, dt);
+            if (Vector3.Distance(transform.position, _target.position) > detectionRange * 2f)
+            {
+                _pursuing = false; _pursueTimer = 0f;
+                _wpIndex = FindNearestWaypointIndex();
+            }
+        }
+
+        private int FindNearestWaypointIndex()
+        {
+            int best = 0; float bestD = float.MaxValue;
+            for (int i = 0; i < patrolWaypoints.Length; i++)
+            {
+                Vector3 p = GetWaypointPos(i);
+                if (p == Vector3.zero) continue;
+                float d = (p - transform.position).sqrMagnitude;
+                if (d < bestD) { bestD = d; best = i; }
+            }
+            return best;
         }
 
         private Vector3 GetWaypointPos(int i)
@@ -167,6 +192,7 @@ namespace CloseEncounters.Arena
             }
             _target = best;
             _targetRb = best != null ? best.GetComponent<Rigidbody>() : null;
+            if (_target != null && !_pursuing) { _pursuing = true; _pursueTimer = 0f; }
         }
 
         private void FireMainGun()
@@ -175,14 +201,6 @@ namespace CloseEncounters.Arena
             Vector3 aim = _target.position;
             if (leadTargets && _targetRb != null) aim += _targetRb.linearVelocity * 0.3f;
             Vector3 dir = (aim - origin).normalized;
-
-            if (barrelTransform != null && barrelTransform.parent != null)
-            {
-                var turret = barrelTransform.parent;
-                Vector3 flat = new Vector3(dir.x, 0f, dir.z);
-                if (flat.sqrMagnitude > 0.001f)
-                    turret.rotation = Quaternion.LookRotation(flat.normalized, Vector3.up);
-            }
 
             VFXManager.MuzzleFlash(origin, dir, 1.8f);
             SpawnTracer(origin, origin + dir * detectionRange * 1.2f, new Color(1.5f, 0.6f, 0.1f, 1f));
@@ -253,7 +271,6 @@ namespace CloseEncounters.Arena
             if (!_dmg75 && f <= 0.75f) { _dmg75 = true; AttachVfx(VFXManager.GroundFog, transform.position + Vector3.up * 4f, 1.5f); }
             if (!_dmg50 && f <= 0.5f) { _dmg50 = true; _speedMultiplier = 0.8f; AttachVfx(VFXManager.LargeFlames, transform.position + Vector3.up * 4f, 1.5f); }
             if (!_dmg25 && f <= 0.25f) { _dmg25 = true; _aaCapable = false; AttachVfx(VFXManager.LargeFlames, transform.position + Vector3.up * 1f, 1.8f); }
-            UpdateHealthBar();
             if (_currentHealth == 0) Die();
         }
 
@@ -267,30 +284,18 @@ namespace CloseEncounters.Arena
         {
             _dead = true;
             _sinking = true;
-            _sinkTimer = 0f;
-            _sinkStartPos = transform.position;
-            _sinkStartRot = transform.rotation;
-            // keel-up: roll 180 around forward axis
-            _sinkEndRot = transform.rotation * Quaternion.Euler(0f, 0f, 180f);
             VFXManager.BigExplosion(transform.position + Vector3.up * 3f, 3f);
             VFXManager.LargeFlames(transform.position + Vector3.up * 2f, 2.5f);
             VFXManager.SmallExplosion(transform.position + Vector3.up * 4f, 2f);
             DamageSystem.DealAreaDamage(transform.position, 15f, 150);
-            if (_hpCanvas != null) _hpCanvas.gameObject.SetActive(false);
+            Destroy(gameObject, 8f);
         }
 
         private void UpdateSink()
         {
             _sinkTimer += Time.deltaTime;
-            float t = Mathf.Clamp01(_sinkTimer / SinkDuration);
-            Vector3 endPos = _sinkStartPos + Vector3.down * 12f;
-            transform.position = Vector3.Lerp(_sinkStartPos, endPos, t);
-            transform.rotation = Quaternion.Slerp(_sinkStartRot, _sinkEndRot, t);
-            if (t >= 1f)
-            {
-                _sinking = false;
-                gameObject.SetActive(false);
-            }
+            transform.position += Vector3.down * 0.5f * Time.deltaTime;
+            transform.Rotate(0.5f * Time.deltaTime, 0f, 1.2f * Time.deltaTime, Space.Self);
         }
 
         // ---- cosmetic updates ----
@@ -331,62 +336,7 @@ namespace CloseEncounters.Arena
         {
             if (_wake == null) return;
             var em = _wake.emission;
-            em.rateOverTime = (patrolWaypoints != null && patrolWaypoints.Length > 0) ? 40f : 0f;
-        }
-
-        // ---- health bar ----
-        private void BuildHealthBar()
-        {
-            var canvasGo = new GameObject("HealthBarCanvas");
-            canvasGo.transform.SetParent(transform, false);
-            canvasGo.transform.localPosition = new Vector3(0f, 6f, 0f);
-            _hpCanvas = canvasGo.AddComponent<Canvas>();
-            _hpCanvas.renderMode = RenderMode.WorldSpace;
-            _hpCanvas.sortingOrder = 100;
-            var canvasRT = (RectTransform)canvasGo.transform;
-            canvasRT.sizeDelta = new Vector2(6f, 0.6f);
-            canvasRT.localScale = Vector3.one;
-
-            var bgGo = new GameObject("BG");
-            bgGo.transform.SetParent(canvasGo.transform, false);
-            var bgImg = bgGo.AddComponent<Image>();
-            bgImg.color = new Color(0.12f, 0.12f, 0.12f, 0.85f);
-            var bgRT = bgImg.rectTransform;
-            bgRT.anchorMin = new Vector2(0f, 0f);
-            bgRT.anchorMax = new Vector2(1f, 1f);
-            bgRT.offsetMin = Vector2.zero;
-            bgRT.offsetMax = Vector2.zero;
-
-            var fillGo = new GameObject("Fill");
-            fillGo.transform.SetParent(canvasGo.transform, false);
-            var fillImg = fillGo.AddComponent<Image>();
-            fillImg.color = new Color(0.95f, 0.15f, 0.15f, 1f);
-            _hpFillRect = fillImg.rectTransform;
-            _hpFillRect.anchorMin = new Vector2(0f, 0f);
-            _hpFillRect.anchorMax = new Vector2(0f, 1f);
-            _hpFillRect.pivot = new Vector2(0f, 0.5f);
-            _hpFillFullWidth = 6f;
-            _hpFillRect.sizeDelta = new Vector2(_hpFillFullWidth, 0f);
-            _hpFillRect.anchoredPosition = Vector2.zero;
-        }
-
-        private void UpdateHealthBar()
-        {
-            if (_hpFillRect == null) return;
-            float ratio = maxHealth > 0 ? Mathf.Clamp01((float)_currentHealth / maxHealth) : 0f;
-            var s = _hpFillRect.sizeDelta;
-            s.x = _hpFillFullWidth * ratio;
-            _hpFillRect.sizeDelta = s;
-        }
-
-        private void LateUpdate()
-        {
-            if (_hpCanvas == null || !_hpCanvas.gameObject.activeSelf) return;
-            var cam = Camera.main;
-            if (cam == null) return;
-            Vector3 toCam = _hpCanvas.transform.position - cam.transform.position;
-            if (toCam.sqrMagnitude < 0.001f) return;
-            _hpCanvas.transform.rotation = Quaternion.LookRotation(toCam.normalized, Vector3.up);
+            em.rateOverTime = _pursuing ? 110f : 40f;
         }
 
         // ---- audio ----

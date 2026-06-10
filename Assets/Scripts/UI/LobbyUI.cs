@@ -37,14 +37,14 @@ namespace CloseEncounters.UI
         private static readonly Dictionary<string, string[]> ArenaNames = new Dictionary<string, string[]>
         {
             { "Ground", new[] { "Albuquerque", "Fentchester", "Canada", "Florida", "Kyrgyzstan" } },
-            { "Water",  new[] { "Archipelago", "Titan's Peak", "Arctic", "Dragon Deez Nuts", "Strait of Hormuz" } },
+            { "Water",  new[] { "Archipelago", "Titan's Peak", "Frozen Strait", "Dragon Deez Nuts", "Corsair Bay" } },
             { "Air",    new[] { "Air Arena" } }
         };
 
         private static readonly Dictionary<string, string[]> ArenaKeys = new Dictionary<string, string[]>
         {
             { "Ground", new[] { "desert_flat", "town", "arctic", "volcanic", "highlands" } },
-            { "Water",  new[] { "archipelago", "titans_peak", "arctic", "kraken_lair", "strait_of_hormuz" } },
+            { "Water",  new[] { "archipelago", "titans_peak", "frozen_strait", "kraken_lair", "corsair_bay" } },
             { "Air",    new[] { "air_arena" } }
         };
 

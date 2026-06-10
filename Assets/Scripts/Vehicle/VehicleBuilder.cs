@@ -42,6 +42,8 @@ namespace CloseEncounters.Vehicle
         private PartData _selectedPart;
         private int _currentLayer; // Y layer the cursor moves on
         private float _forwardAngle; // vehicle forward direction
+        private bool _armorVertical = true; // armor mounts on a side face (vertical slab) vs top/bottom (horizontal)
+        private int _currentRotation = 0;   // 0..3 = 0/90/180/270 yaw for directional shapes (wedges, panels)
         private Vector3Int _hoverCell = new Vector3Int(-1, -1, -1);
         private GameObject _ghostPreview;
         private bool _ghostValid;
@@ -78,6 +80,31 @@ namespace CloseEncounters.Vehicle
         public event Action<float> OnForwardChanged;
         public event Action<int> OnLayerChanged;
         public event Action<PartData> OnPartSelected;
+        public event Action<bool> OnArmorOrientationChanged; // (isVertical)
+        public event Action<int> OnRotationChanged;          // (rotationSteps 0..3)
+
+        /// <summary>True if newly-placed armor mounts on a side face (vertical slab),
+        /// false for a top/bottom horizontal slab.</summary>
+        public bool ArmorVertical => _armorVertical;
+
+        /// <summary>Current placement yaw in 90° steps (0..3) for directional shapes.</summary>
+        public int CurrentRotation => _currentRotation;
+
+        /// <summary>Toggle whether new armor is placed vertically (side face) or
+        /// horizontally (top/bottom). Existing armor is unaffected.</summary>
+        public void ToggleArmorOrientation()
+        {
+            _armorVertical = !_armorVertical;
+            OnArmorOrientationChanged?.Invoke(_armorVertical);
+        }
+
+        /// <summary>Cycle the placement yaw (R key / UI). Applies to the next placed
+        /// directional shape and to the ghost preview; existing parts are unaffected.</summary>
+        public void CycleRotation()
+        {
+            _currentRotation = (_currentRotation + 1) & 3;
+            OnRotationChanged?.Invoke(_currentRotation);
+        }
 
         // ==================================================================
         // Initialization
@@ -310,6 +337,18 @@ namespace CloseEncounters.Vehicle
                 OnForwardChanged?.Invoke(_forwardAngle);
             }
 
+            // V: toggle armor orientation (vertical side slab vs horizontal top/bottom)
+            if (Input.GetKeyDown(KeyCode.V))
+            {
+                ToggleArmorOrientation();
+            }
+
+            // R: rotate the part to place (wedges, panels, ramps) by 90°
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                CycleRotation();
+            }
+
             // Escape: deselect current part
             if (Input.GetKeyDown(KeyCode.Escape))
             {
@@ -343,11 +382,12 @@ namespace CloseEncounters.Vehicle
                 }
                 else if (_selectedPart == null && IsValidCell(_hoverCell) && _grid.ContainsKey(_hoverCell))
                 {
-                    // Pick up the existing part for repositioning
+                    // Pick up the existing part for repositioning (keep its rotation)
                     PlacedPart placed = _grid[_hoverCell];
                     _selectedPart = placed.partData;
+                    _currentRotation = placed.rotationSteps;
+                    OnRotationChanged?.Invoke(_currentRotation);
                     RemovePartInternal(placed);
-                    _redoStack.Clear();
                     OnPartSelected?.Invoke(_selectedPart);
                 }
             }
@@ -389,9 +429,12 @@ namespace CloseEncounters.Vehicle
             if (plane.Raycast(ray, out float enter))
             {
                 Vector3 hitPoint = ray.GetPoint(enter);
-                int gx = Mathf.FloorToInt(hitPoint.x / CellSize);
+                // Cells are CENTERED on integer coords (a 1x1 part at cell N renders
+                // centered on world N), so the cell under the cursor is the NEAREST
+                // integer, not the floor. Flooring made blocks land half a cell off.
+                int gx = Mathf.RoundToInt(hitPoint.x / CellSize);
                 int gy = _currentLayer;
-                int gz = Mathf.FloorToInt(hitPoint.z / CellSize);
+                int gz = Mathf.RoundToInt(hitPoint.z / CellSize);
 
                 return new Vector3Int(gx, gy, gz);
             }
@@ -526,8 +569,10 @@ namespace CloseEncounters.Vehicle
                 }
             }
 
-            // Place it
-            PlacedPart placed = new PlacedPart(part, origin);
+            // Place it. Rotation only applies to rotation-invariant 1x1x1 footprints
+            // (so a yawed mesh never disagrees with its grid occupancy).
+            int placeRotation = (part.size == Vector3Int.one) ? _currentRotation : 0;
+            PlacedPart placed = new PlacedPart(part, origin, placeRotation);
 
             for (int dx = 0; dx < part.size.x; dx++)
             for (int dy = 0; dy < part.size.y; dy++)
@@ -606,28 +651,51 @@ namespace CloseEncounters.Vehicle
             if (IsArmorPart(placed.partData))
                 node.armorFace = DetectArmorFace(placed);
 
+            // Directional shape yaw (wedges, panels) — set before Setup builds the mesh
+            node.rotationSteps = placed.rotationSteps;
+
             node.Setup(placed.partData, placed.origin);
 
             _partObjects[placed.origin] = go;
         }
 
         /// <summary>
-        /// For armor, find the direction toward the first non-armor neighbor.
-        /// Returns e.g. (1,0,0) if neighbor is at +X → armor faces +X.
-        /// Falls back to (0,1,0) for a top-mounted horizontal slab.
+        /// For armor, find the direction toward the protected (non-armor) neighbor so
+        /// the slab mounts FLUSH against it. Honors the vertical/horizontal toggle:
+        /// vertical prefers a side face (±X/±Z), horizontal prefers top/bottom (±Y).
+        /// Always falls back to the other orientation if the preferred one has no
+        /// neighbor, so armor is never left floating.
         /// </summary>
         private Vector3Int DetectArmorFace(PlacedPart placed)
         {
-            Vector3Int[] dirs = {
+            // Side faces → vertical slab.
+            Vector3Int[] vertical = {
                 new Vector3Int( 1, 0, 0),  // +X
                 new Vector3Int(-1, 0, 0),  // -X
                 new Vector3Int( 0, 0, 1),  // +Z
                 new Vector3Int( 0, 0,-1),  // -Z
-                new Vector3Int( 0,-1, 0),  // below (top slab)
-                new Vector3Int( 0, 1, 0),  // above (bottom slab)
+            };
+            // Top/bottom faces → horizontal slab. (0,-1,0) = neighbor below (slab on
+            // the cell floor); (0,1,0) = neighbor above (slab on the cell ceiling).
+            Vector3Int[] horizontal = {
+                new Vector3Int( 0,-1, 0),
+                new Vector3Int( 0, 1, 0),
             };
 
-            // Check all cells of the armor part
+            Vector3Int[] primary   = _armorVertical ? vertical : horizontal;
+            Vector3Int[] secondary = _armorVertical ? horizontal : vertical;
+
+            if (TryFindNeighborFace(placed, primary, out Vector3Int face)) return face;
+            if (TryFindNeighborFace(placed, secondary, out face)) return face;
+
+            // No neighbor at all (shouldn't happen — placement requires adjacency).
+            return _armorVertical ? new Vector3Int(1, 0, 0) : new Vector3Int(0, -1, 0);
+        }
+
+        /// <summary>Return the first direction in <paramref name="dirs"/> that points at
+        /// a non-armor neighbor of any cell the armor part occupies.</summary>
+        private bool TryFindNeighborFace(PlacedPart placed, Vector3Int[] dirs, out Vector3Int face)
+        {
             for (int d = 0; d < dirs.Length; d++)
             {
                 for (int dx = 0; dx < placed.partData.size.x; dx++)
@@ -637,11 +705,14 @@ namespace CloseEncounters.Vehicle
                     Vector3Int cell = placed.origin + new Vector3Int(dx, dy, dz);
                     Vector3Int neighbor = cell + dirs[d];
                     if (_grid.TryGetValue(neighbor, out var adj) && !IsArmorPart(adj.partData))
-                        return dirs[d];
+                    {
+                        face = dirs[d];
+                        return true;
+                    }
                 }
             }
-
-            return new Vector3Int(0, -1, 0); // default: horizontal on top
+            face = Vector3Int.zero;
+            return false;
         }
 
         private void DestroyPartVisual(Vector3Int origin)
@@ -671,6 +742,9 @@ namespace CloseEncounters.Vehicle
             {
                 _ghostPreview = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 _ghostPreview.name = "GhostPreview";
+                // Parent to the builder so the ghost shares the exact same frame as
+                // placed parts (which use localPosition) — preview = placement.
+                _ghostPreview.transform.SetParent(transform, false);
                 DestroyImmediate(_ghostPreview.GetComponent<Collider>());
                 var renderer = _ghostPreview.GetComponent<MeshRenderer>();
                 renderer.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -679,19 +753,46 @@ namespace CloseEncounters.Vehicle
 
             _ghostPreview.SetActive(true);
 
-            // Position and scale to match part size
+            // Position and scale to match where the part actually renders. The ghost is
+            // a child of the builder (same frame as placed parts), so we work in the
+            // part's local space added to the cell's local origin.
             Vector3 worldPos = GridToWorld(_hoverCell);
-            Vector3 center = worldPos + new Vector3(
-                (_selectedPart.size.x - 1) * CellSize * 0.5f,
-                (_selectedPart.size.y - 1) * CellSize * 0.5f,
-                (_selectedPart.size.z - 1) * CellSize * 0.5f
-            );
-            _ghostPreview.transform.position = center;
-            _ghostPreview.transform.localScale = new Vector3(
-                _selectedPart.size.x * CellSize * 0.95f,
-                _selectedPart.size.y * CellSize * 0.95f,
-                _selectedPart.size.z * CellSize * 0.95f
-            );
+            Vector3 localPos;
+            Vector3 scale;
+
+            if (IsArmorPart(_selectedPart))
+            {
+                // Preview the actual thin slab on the face it will mount to, using the
+                // SAME geometry the real armor mesh uses (single source of truth) and
+                // the SAME face detection placement will use at this cell.
+                Vector3Int face = DetectArmorFace(new PlacedPart(_selectedPart, _hoverCell));
+                PartNode.GetArmorSlabGeometry(_selectedPart.size, face,
+                    out Vector3 slabPos, out Vector3 slabScale);
+                localPos = worldPos + slabPos;
+                scale = slabScale;
+            }
+            else
+            {
+                // Use the part's actual rendered box size (so a half slab previews as a
+                // half-height block, a wall panel as a thin wall, etc.). Footprint
+                // CENTERED on the cell horizontally, BOTTOM-aligned to the layer plane.
+                Vector3 ms = PartNode.GetStructuralMeshSize(_selectedPart);
+                localPos = worldPos + new Vector3(
+                    (_selectedPart.size.x - 1) * CellSize * 0.5f,
+                    ms.y * 0.5f,
+                    (_selectedPart.size.z - 1) * CellSize * 0.5f
+                );
+                scale = new Vector3(ms.x * 0.97f, ms.y * 0.97f, ms.z * 0.97f);
+            }
+
+            _ghostPreview.transform.localPosition = localPos;
+            _ghostPreview.transform.localScale = scale;
+
+            // Yaw the ghost to match the placement rotation (1x1x1 directional shapes).
+            _ghostPreview.transform.localRotation =
+                (!IsArmorPart(_selectedPart) && _selectedPart.size == Vector3Int.one)
+                    ? Quaternion.Euler(0f, _currentRotation * 90f, 0f)
+                    : Quaternion.identity;
 
             // Color: green if valid, red if invalid
             _ghostValid = CanPlaceAt(_selectedPart, _hoverCell);
@@ -1080,16 +1181,11 @@ namespace CloseEncounters.Vehicle
             // Get all occupied cells
             var allCells = new HashSet<Vector3Int>(_grid.Keys);
 
-            // Start from the origin of the first part we find in the grid
-            Vector3Int startCell = default;
-            bool haveStart = false;
-            foreach (var kv in _grid)
-            {
-                startCell = kv.Value.origin;
-                haveStart = true;
-                break;
-            }
-            if (!haveStart) return true;
+            // Start from the first occupied cell
+            var enumerator = allCells.GetEnumerator();
+            enumerator.MoveNext();
+            Vector3Int startCell = enumerator.Current;
+            enumerator.Dispose();
 
             queue.Enqueue(startCell);
             visited.Add(startCell);
@@ -1142,15 +1238,19 @@ namespace CloseEncounters.Vehicle
                 return false;
             }
 
-            // Air vehicles can mount propulsion anywhere (engines on wings/tail);
-            // ground/water still require it in the base layer for traction/buoyancy.
-            if (!string.Equals(_domain, "air", StringComparison.OrdinalIgnoreCase))
+            // Must have propulsion
+            if (_domain == "air")
             {
-                if (!HasPropulsionInBaseLayer())
+                if (!HasPropulsionAnywhere())
                 {
-                    error = "Vehicle requires at least one propulsion part in the base layer (layer 0).";
+                    error = "Vehicle requires at least one propulsion part.";
                     return false;
                 }
+            }
+            else if (!HasPropulsionInBaseLayer())
+            {
+                error = "Vehicle requires at least one propulsion part in the base layer (layer 0).";
+                return false;
             }
 
             // Must be connected
@@ -1307,7 +1407,7 @@ namespace CloseEncounters.Vehicle
                 }
 
                 data.parts.Add(new PartEntry(placed.partData.id,
-                    new int[] { origin.x, origin.y, origin.z }, face));
+                    new int[] { origin.x, origin.y, origin.z }, face, placed.rotationSteps));
             }
 
             return data;
@@ -1326,39 +1426,25 @@ namespace CloseEncounters.Vehicle
             _gridSize = GetGridSize(_domain);
             _forwardAngle = data.forwardAngle;
 
-            bool controlModulePlaced = false;
             for (int i = 0; i < data.parts.Count; i++)
             {
                 PartEntry entry = data.parts[i];
                 PartData partData = PartRegistry.Instance?.GetPart(entry.id);
                 if (partData == null) continue;
 
-                if (entry.gridPosition == null || entry.gridPosition.Length < 3)
-                {
-                    Debug.LogWarning($"[VehicleBuilder] Skipping '{entry.id}': gridPosition missing or has fewer than 3 axes.");
-                    continue;
-                }
-
-                if (partData.IsControlModule())
-                {
-                    if (controlModulePlaced)
-                    {
-                        Debug.LogWarning($"[VehicleBuilder] Skipping additional control module '{entry.id}': vehicle already has one.");
-                        continue;
-                    }
-                }
-
                 Vector3Int origin = new Vector3Int(
-                    entry.gridPosition[0],
-                    entry.gridPosition[1],
-                    entry.gridPosition[2]
+                    entry.gridPosition.Length > 0 ? entry.gridPosition[0] : 0,
+                    entry.gridPosition.Length > 1 ? entry.gridPosition[1] : 0,
+                    entry.gridPosition.Length > 2 ? entry.gridPosition[2] : 0
                 );
 
-                if (TryPlacePart(partData, origin) && partData.IsControlModule())
-                {
-                    controlModulePlaced = true;
-                }
+                // Restore the saved per-part rotation for this placement.
+                _currentRotation = entry.rotationSteps & 3;
+                TryPlacePart(partData, origin);
             }
+
+            _currentRotation = 0;
+            OnRotationChanged?.Invoke(_currentRotation);
         }
 
         // ------------------------------------------------------------------
@@ -1508,6 +1594,16 @@ namespace CloseEncounters.Vehicle
             return false;
         }
 
+        private bool HasPropulsionAnywhere()
+        {
+            foreach (var kv in _grid)
+            {
+                if (string.Equals(kv.Value.partData.category, "propulsion", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
+
         private HashSet<Vector3Int> GetUniqueOrigins()
         {
             var origins = new HashSet<Vector3Int>();
@@ -1559,11 +1655,13 @@ namespace CloseEncounters.Vehicle
         {
             public PartData partData;
             public Vector3Int origin;
+            public int rotationSteps; // 0..3 yaw for directional shapes
 
-            public PlacedPart(PartData data, Vector3Int origin)
+            public PlacedPart(PartData data, Vector3Int origin, int rotationSteps = 0)
             {
                 this.partData = data;
                 this.origin = origin;
+                this.rotationSteps = rotationSteps;
             }
         }
 

@@ -64,11 +64,14 @@ namespace CloseEncounters.Arena
             if (addCollider)
                 AddPreciseColliders(instance, convex: breakable);
 
-            // Only large rocks and cactuses stay static; everything else is breakable
-            // (even if it's large) so the tornado can lift it.
+            // Rocks and cactuses are scenery — always static so the tornado can't
+            // rip them out of the ground. Everything else stays breakable so the
+            // tornado can lift it. (Previously a 4-unit size threshold let smaller
+            // boulders fall through to the breakable branch and detach.)
             float maxDim = GetMaxBoundsDimension(instance);
-            bool isLandmark = maxDim > 4f &&
-                              (ContainsNoCase(resourcePath, "rock") || ContainsNoCase(resourcePath, "cactus"));
+            bool isLandmark = ContainsNoCase(resourcePath, "rock") ||
+                              ContainsNoCase(resourcePath, "cactus") ||
+                              ContainsNoCase(resourcePath, "boulder");
 
             if (breakable && !isLandmark)
             {

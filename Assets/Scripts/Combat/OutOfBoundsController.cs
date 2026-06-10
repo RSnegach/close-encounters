@@ -126,8 +126,12 @@ namespace CloseEncounters.Combat
                 var c = allColliders[i];
                 if (c == null) continue;
                 string n = c.gameObject.name;
+                // "AirBounds_*" are the expanded trigger walls AirArenaExpander builds
+                // for air mode (the original ArenaWall_* are destroyed there). Contains()
+                // is a position test, so trigger colliders work fine here.
                 if (n.StartsWith("ArenaWall", StringComparison.Ordinal) ||
-                    n.StartsWith("InvisibleWall", StringComparison.Ordinal))
+                    n.StartsWith("InvisibleWall", StringComparison.Ordinal) ||
+                    n.StartsWith("AirBounds", StringComparison.Ordinal))
                 {
                     s_wallBuffer.Add(c);
                 }

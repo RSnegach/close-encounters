@@ -11,14 +11,16 @@ namespace CloseEncounters.Core
         public string id;
         public int[] gridPosition;
         public int[] armorFace; // null for non-armor, [x,y,z] for armor orientation
+        public int rotationSteps; // 0..3 = 0/90/180/270 yaw for directional shapes
 
         public PartEntry() { }
 
-        public PartEntry(string id, int[] gridPosition, int[] armorFace = null)
+        public PartEntry(string id, int[] gridPosition, int[] armorFace = null, int rotationSteps = 0)
         {
             this.id = id;
             this.gridPosition = gridPosition;
             this.armorFace = armorFace;
+            this.rotationSteps = rotationSteps;
         }
 
         public Dictionary<string, object> ToDictionary()
@@ -41,6 +43,10 @@ namespace CloseEncounters.Core
                     faceArray.Add(armorFace[i]);
                 dict["armorFace"] = faceArray;
             }
+
+            // Only write rotation when set, to keep old/zero-rotation files clean.
+            if (rotationSteps != 0)
+                dict["rotationSteps"] = rotationSteps;
 
             return dict;
         }
@@ -90,6 +96,15 @@ namespace CloseEncounters.Core
                     else if (int.TryParse(faceList[i]?.ToString(), out int fp)) entry.armorFace[i] = fp;
                 }
             }
+
+            // Parse rotationSteps if present (absent → 0 for back-compat).
+            object rotObj = null;
+            if (!dict.TryGetValue("rotationSteps", out rotObj))
+                dict.TryGetValue("rotation_steps", out rotObj);
+            if (rotObj is long rl) entry.rotationSteps = (int)rl;
+            else if (rotObj is double rd) entry.rotationSteps = (int)rd;
+            else if (rotObj is int ri) entry.rotationSteps = ri;
+            else if (rotObj != null && int.TryParse(rotObj.ToString(), out int rp)) entry.rotationSteps = rp;
 
             return entry;
         }

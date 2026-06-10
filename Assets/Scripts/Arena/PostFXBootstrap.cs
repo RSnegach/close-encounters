@@ -40,7 +40,6 @@ namespace CloseEncounters.Arena
             volume.isGlobal = true;
             volume.priority = 1;
 
-#if UNITY_RENDERING_URP || UNITY_URP || UNITY_2023_1_OR_NEWER
             var profile = ScriptableObject.CreateInstance<VolumeProfile>();
 
             var bloom = profile.Add<Bloom>(true);
@@ -62,7 +61,6 @@ namespace CloseEncounters.Arena
             vig.color.Override(Color.black);
 
             volume.sharedProfile = profile;
-#endif
         }
     }
 }

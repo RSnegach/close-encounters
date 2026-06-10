@@ -1,325 +1,168 @@
 using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using CloseEncounters.Arena;
 
 namespace CloseEncounters.Combat
 {
+    /// <summary>
+    /// Spectator system: when the player dies, this takes over.
+    /// For real players: uses their camera directly (same view).
+    /// For AI: mouse-controlled free-look chase camera.
+    /// Left-click cycles to next alive vehicle.
+    /// </summary>
     public class SpectatorCamera : MonoBehaviour
     {
-        public enum ViewMode { ThirdPersonChase, FirstPerson, FreeCam }
-
-        private readonly List<VehicleRuntime> _aliveVehicles = new List<VehicleRuntime>();
+        private List<VehicleRuntime> _aliveVehicles = new List<VehicleRuntime>();
         private int _currentIndex;
+        private Camera _chaseCam;
+        private GameObject _chaseCamObj;
 
-        private Camera _specCam;
-        private GameObject _specCamObj;
-
-        private ViewMode _viewMode = ViewMode.ThirdPersonChase;
-
-        // Chase cam state
+        // Free-look chase cam (mouse-controlled, same style as player camera)
         private float _yaw;
         private float _pitch = 20f;
         private float _cameraDistance = 16f;
         private float _cameraHeight = 6f;
-        private const float Sensitivity = 2f;
-
-        // Free cam state
-        private float _freeYaw;
-        private float _freePitch;
-        private const float FreeSpeed = 30f;
-        private const float FreeSprintSpeed = 90f;
-
-        // Smooth target switch
-        private Coroutine _switchTween;
-        private bool _tweening;
-
-        // Owner of the SpectatorCamera (the dead vehicle to filter from list)
-        private VehicleRuntime _selfOwner;
-
-        // Cached HUD
-        private CloseEncounters.UI.HUD _hud;
-
-        // Layer mask for camera collision: ~0 minus "Vehicle" layer if it exists
-        private int _collisionMask;
-
-        private void Awake()
-        {
-            _specCamObj = new GameObject("SpectatorCam");
-            _specCam = _specCamObj.AddComponent<Camera>();
-            _specCam.clearFlags = CameraClearFlags.Skybox;
-            _specCam.backgroundColor = new Color(0.4f, 0.6f, 0.9f);
-            _specCam.fieldOfView = 60f;
-            _specCam.nearClipPlane = 0.3f;
-            _specCam.farClipPlane = 1000f;
-
-            if (FindAnyObjectByType<AudioListener>() == null)
-                _specCamObj.AddComponent<AudioListener>();
-
-            int vehicleLayer = LayerMask.NameToLayer("Vehicle");
-            _collisionMask = vehicleLayer >= 0 ? ~(1 << vehicleLayer) : ~0;
-        }
+        private float _sensitivity = 2f;
 
         private void Start()
         {
-            _hud = FindAnyObjectByType<CloseEncounters.UI.HUD>();
             RefreshAliveList();
-            PushViewModeToHUD();
-        }
-
-        public void SetTarget(VehicleRuntime target)
-        {
-            // Capture the dead vehicle to filter from cycling list (the prior player vehicle)
-            if (ArenaManager.Instance != null)
-            {
-                var pv = ArenaManager.Instance.GetPlayerVehicle();
-                if (pv != null) _selfOwner = pv;
-            }
-
-            RefreshAliveList();
-            _currentIndex = _aliveVehicles.IndexOf(target);
-            if (_currentIndex < 0) _currentIndex = 0;
-            ClampIndex();
-            SnapCameraToCurrent();
-            PushTargetDataToHUD();
         }
 
         private void Update()
         {
-            // View mode toggle
-            if (Input.GetKeyDown(KeyCode.V))
+            // Left click cycles spectate target
+            if (Input.GetMouseButtonDown(0))
+                CycleTarget();
+
+            // Scroll wheel zooms in/out
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Abs(scroll) > 0.001f)
             {
-                _viewMode = (ViewMode)(((int)_viewMode + 1) % 3);
-                PushViewModeToHUD();
-                if (_viewMode == ViewMode.FreeCam)
+                _cameraDistance -= scroll * _cameraDistance * 0.5f;
+                _cameraDistance = Mathf.Clamp(_cameraDistance, 5f, 40f);
+            }
+
+            // Free-look chase cam for AI targets
+            if (_chaseCamObj != null && _currentIndex >= 0 && _currentIndex < _aliveVehicles.Count)
+            {
+                var target = _aliveVehicles[_currentIndex];
+                if (target == null || !target.IsAlive)
                 {
-                    InitFreeCamFromCurrent();
+                    CycleTarget();
+                    return;
                 }
-                else
-                {
-                    SnapCameraToCurrent();
-                }
-            }
 
-            // Cycling (no-op in FreeCam)
-            if (_viewMode != ViewMode.FreeCam)
-            {
-                if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.D)
-                    || Input.GetKeyDown(KeyCode.RightArrow) || Input.GetMouseButtonDown(0))
-                {
-                    CycleTarget(1);
-                }
-                else if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.A)
-                    || Input.GetKeyDown(KeyCode.LeftArrow))
-                {
-                    CycleTarget(-1);
-                }
-            }
+                // Mouse controls camera angle
+                _yaw += Input.GetAxisRaw("Mouse X") * _sensitivity;
+                _pitch -= Input.GetAxisRaw("Mouse Y") * _sensitivity;
+                _pitch = Mathf.Clamp(_pitch, 5f, 60f);
 
-            // Scroll wheel zoom (chase only)
-            if (_viewMode == ViewMode.ThirdPersonChase)
-            {
-                float scroll = Input.GetAxis("Mouse ScrollWheel");
-                if (Mathf.Abs(scroll) > 0.001f)
-                {
-                    _cameraDistance -= scroll * _cameraDistance * 0.5f;
-                    _cameraDistance = Mathf.Clamp(_cameraDistance, 5f, 40f);
-                }
-            }
+                Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
+                Vector3 offset = rot * new Vector3(0f, 0f, -_cameraDistance);
+                offset.y += _cameraHeight;
 
-            switch (_viewMode)
-            {
-                case ViewMode.ThirdPersonChase: TickChase(); break;
-                case ViewMode.FirstPerson:      TickFirstPerson(); break;
-                case ViewMode.FreeCam:          TickFreeCam(); break;
+                Vector3 desiredPos = target.transform.position + offset;
+                _chaseCamObj.transform.position = Vector3.Lerp(
+                    _chaseCamObj.transform.position, desiredPos, 8f * Time.deltaTime);
+                _chaseCamObj.transform.rotation = rot;
             }
-
-            PushTargetDataToHUD();
         }
 
-        private void TickChase()
+        public void SetTarget(VehicleRuntime target)
         {
-            if (!EnsureValidTarget(out var target)) return;
-
-            _yaw += Input.GetAxisRaw("Mouse X") * Sensitivity;
-            _pitch -= Input.GetAxisRaw("Mouse Y") * Sensitivity;
-            _pitch = Mathf.Clamp(_pitch, 5f, 60f);
-
-            Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
-            Vector3 pivot = target.transform.position + Vector3.up * 1.5f;
-            Vector3 dir = rot * Vector3.back;
-
-            float dist = _cameraDistance;
-            if (Physics.SphereCast(pivot, 0.4f, dir, out RaycastHit hit, _cameraDistance, _collisionMask, QueryTriggerInteraction.Ignore))
-            {
-                dist = Mathf.Max(1.0f, hit.distance - 0.5f);
-            }
-
-            Vector3 desiredPos = pivot + dir * dist + Vector3.up * (_cameraHeight - 1.5f);
-
-            if (!_tweening)
-            {
-                _specCamObj.transform.position = Vector3.Lerp(
-                    _specCamObj.transform.position, desiredPos, 8f * Time.unscaledDeltaTime);
-            }
-            _specCamObj.transform.rotation = rot;
+            RefreshAliveList();
+            _currentIndex = _aliveVehicles.IndexOf(target);
+            if (_currentIndex < 0) _currentIndex = 0;
+            AttachToTarget();
         }
 
-        private void TickFirstPerson()
-        {
-            if (!EnsureValidTarget(out var target)) return;
-
-            // Mount near the front of the vehicle, looking forward.
-            Vector3 fwdAnchor = target.transform.position
-                + target.transform.forward * 1.4f
-                + target.transform.up * 1.0f;
-
-            if (!_tweening)
-            {
-                _specCamObj.transform.position = fwdAnchor;
-            }
-
-            _specCam.fieldOfView = 70f;
-            // Auto-roll with target (full rotation of vehicle, including roll/pitch).
-            _specCamObj.transform.rotation = target.transform.rotation;
-        }
-
-        private void TickFreeCam()
-        {
-            _specCam.fieldOfView = 60f;
-
-            _freeYaw += Input.GetAxisRaw("Mouse X") * Sensitivity;
-            _freePitch -= Input.GetAxisRaw("Mouse Y") * Sensitivity;
-            _freePitch = Mathf.Clamp(_freePitch, -85f, 85f);
-
-            Quaternion rot = Quaternion.Euler(_freePitch, _freeYaw, 0f);
-            _specCamObj.transform.rotation = rot;
-
-            float speed = Input.GetKey(KeyCode.LeftShift) ? FreeSprintSpeed : FreeSpeed;
-            Vector3 move = Vector3.zero;
-            if (Input.GetKey(KeyCode.W)) move += rot * Vector3.forward;
-            if (Input.GetKey(KeyCode.S)) move += rot * Vector3.back;
-            if (Input.GetKey(KeyCode.A)) move += rot * Vector3.left;
-            if (Input.GetKey(KeyCode.D)) move += rot * Vector3.right;
-            if (Input.GetKey(KeyCode.Space))     move += Vector3.up;
-            if (Input.GetKey(KeyCode.LeftControl)) move += Vector3.down;
-
-            if (move.sqrMagnitude > 0.001f)
-            {
-                _specCamObj.transform.position += move.normalized * speed * Time.unscaledDeltaTime;
-            }
-        }
-
-        private void InitFreeCamFromCurrent()
-        {
-            Vector3 e = _specCamObj.transform.eulerAngles;
-            _freePitch = NormalizeAngle(e.x);
-            _freeYaw = e.y;
-        }
-
-        private static float NormalizeAngle(float a)
-        {
-            a %= 360f;
-            if (a > 180f) a -= 360f;
-            return a;
-        }
-
-        private bool EnsureValidTarget(out VehicleRuntime target)
-        {
-            target = null;
-            if (_aliveVehicles.Count == 0)
-            {
-                RefreshAliveList();
-                if (_aliveVehicles.Count == 0) return false;
-            }
-            ClampIndex();
-            target = _aliveVehicles[_currentIndex];
-            if (target == null || !target.IsAlive)
-            {
-                RefreshAliveList();
-                if (_aliveVehicles.Count == 0) return false;
-                ClampIndex();
-                target = _aliveVehicles[_currentIndex];
-                if (target == null) return false;
-            }
-            return true;
-        }
-
-        private void CycleTarget(int direction)
+        private void CycleTarget()
         {
             RefreshAliveList();
             if (_aliveVehicles.Count == 0) return;
 
-            int n = _aliveVehicles.Count;
-            _currentIndex = ((_currentIndex + direction) % n + n) % n;
+            _currentIndex = (_currentIndex + 1) % _aliveVehicles.Count;
+            AttachToTarget();
 
-            // Start tween from current camera position.
-            if (_switchTween != null) StopCoroutine(_switchTween);
-            _switchTween = StartCoroutine(SmoothSwitchTween());
-
-            PushTargetDataToHUD();
+            // Update HUD with next target name
+            UpdateHUDName();
         }
 
-        private IEnumerator SmoothSwitchTween()
+        private void AttachToTarget()
         {
-            _tweening = true;
-            Vector3 startPos = _specCamObj.transform.position;
-            float t = 0f;
-            const float dur = 0.3f;
-            while (t < dur)
+            if (_aliveVehicles.Count == 0) return;
+            if (_currentIndex < 0 || _currentIndex >= _aliveVehicles.Count)
+                _currentIndex = 0;
+
+            var target = _aliveVehicles[_currentIndex];
+            if (target == null) return;
+
+            // Clean up any chase cam we created previously
+            if (_chaseCamObj != null)
             {
-                t += Time.unscaledDeltaTime;
-                float u = Mathf.Clamp01(t / dur);
-                float s = u * u * (3f - 2f * u);
-                Vector3 destPos = ComputeDesiredCamPos();
-                _specCamObj.transform.position = Vector3.Lerp(startPos, destPos, s);
-                yield return null;
+                Destroy(_chaseCamObj);
+                _chaseCamObj = null;
+                _chaseCam = null;
             }
-            _tweening = false;
-            _switchTween = null;
+
+            // Check if target has its own player camera
+            var pvc = target.GetComponent<PlayerVehicleController>();
+            if (pvc != null)
+            {
+                // Real player -- use their camera. Disable all other cameras.
+                var allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+                for (int i = 0; i < allCams.Length; i++)
+                {
+                    var owner = allCams[i].GetComponentInParent<VehicleRuntime>();
+                    allCams[i].enabled = (owner == target);
+                }
+            }
+            else
+            {
+                // AI vehicle -- create mouse-controlled chase cam
+                var allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+                for (int i = 0; i < allCams.Length; i++)
+                    allCams[i].enabled = false;
+
+                _chaseCamObj = new GameObject("SpectatorChaseCam");
+                _chaseCam = _chaseCamObj.AddComponent<Camera>();
+                _chaseCam.clearFlags = CameraClearFlags.Skybox;
+                _chaseCam.backgroundColor = new Color(0.4f, 0.6f, 0.9f);
+                _chaseCam.fieldOfView = 60f;
+                _chaseCam.nearClipPlane = 0.3f;
+                _chaseCam.farClipPlane = 1000f;
+
+                if (FindAnyObjectByType<AudioListener>() == null)
+                    _chaseCamObj.AddComponent<AudioListener>();
+
+                // Snap camera to position behind the AI target immediately
+                _yaw = target.transform.eulerAngles.y + 180f;
+                _pitch = 20f;
+                Quaternion startRot = Quaternion.Euler(_pitch, _yaw, 0f);
+                Vector3 startOffset = startRot * new Vector3(0f, 0f, -_cameraDistance);
+                startOffset.y += _cameraHeight;
+                _chaseCamObj.transform.position = target.transform.position + startOffset;
+                _chaseCamObj.transform.LookAt(target.transform.position + Vector3.up * 1.5f);
+            }
+
+            UpdateHUDName();
         }
 
-        private Vector3 ComputeDesiredCamPos()
+        private void UpdateHUDName()
         {
-            if (!EnsureValidTarget(out var target))
-                return _specCamObj.transform.position;
+            if (_aliveVehicles.Count == 0) return;
 
-            if (_viewMode == ViewMode.FirstPerson)
-            {
-                return target.transform.position
-                    + target.transform.forward * 1.4f
-                    + target.transform.up * 1.0f;
-            }
+            // Figure out next target name for the hint text
+            int nextIdx = (_currentIndex + 1) % _aliveVehicles.Count;
+            var next = _aliveVehicles[nextIdx];
+            string nextName = next != null
+                ? (next.IsAI ? $"AI {next.PlayerId}" : $"Player {next.PlayerId}")
+                : "???";
 
-            // Chase
-            Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
-            Vector3 pivot = target.transform.position + Vector3.up * 1.5f;
-            Vector3 dir = rot * Vector3.back;
-            float dist = _cameraDistance;
-            if (Physics.SphereCast(pivot, 0.4f, dir, out RaycastHit hit, _cameraDistance, _collisionMask, QueryTriggerInteraction.Ignore))
-                dist = Mathf.Max(1.0f, hit.distance - 0.5f);
-            return pivot + dir * dist + Vector3.up * (_cameraHeight - 1.5f);
-        }
-
-        private void SnapCameraToCurrent()
-        {
-            if (!EnsureValidTarget(out var target)) return;
-
-            if (_viewMode == ViewMode.FirstPerson)
-            {
-                _specCam.fieldOfView = 70f;
-                _specCamObj.transform.position = target.transform.position
-                    + target.transform.forward * 1.4f
-                    + target.transform.up * 1.0f;
-                _specCamObj.transform.rotation = target.transform.rotation;
-                return;
-            }
-
-            _specCam.fieldOfView = 60f;
-            _yaw = target.transform.eulerAngles.y + 180f;
-            _pitch = 20f;
-            _specCamObj.transform.position = ComputeDesiredCamPos();
-            _specCamObj.transform.LookAt(target.transform.position + Vector3.up * 1.5f);
+            var hud = FindAnyObjectByType<CloseEncounters.UI.HUD>();
+            if (hud != null)
+                hud.SetSpectatingTarget(nextName);
         }
 
         private void RefreshAliveList()
@@ -330,57 +173,15 @@ namespace CloseEncounters.Combat
             var all = ArenaManager.Instance.GetVehicles();
             for (int i = 0; i < all.Count; i++)
             {
-                var v = all[i];
-                if (v == null || !v.IsAlive) continue;
-                if (_selfOwner != null && ReferenceEquals(v, _selfOwner)) continue;
-                _aliveVehicles.Add(v);
+                if (all[i] != null && all[i].IsAlive)
+                    _aliveVehicles.Add(all[i]);
             }
-        }
-
-        private void ClampIndex()
-        {
-            if (_aliveVehicles.Count == 0) { _currentIndex = 0; return; }
-            if (_currentIndex < 0) _currentIndex = 0;
-            if (_currentIndex >= _aliveVehicles.Count)
-                _currentIndex = _aliveVehicles.Count - 1;
-        }
-
-        private void PushTargetDataToHUD()
-        {
-            if (_hud == null) _hud = FindAnyObjectByType<CloseEncounters.UI.HUD>();
-            if (_hud == null) return;
-
-            if (_viewMode == ViewMode.FreeCam || _aliveVehicles.Count == 0)
-            {
-                _hud.SetSpectatorTargetData(string.Empty, false, 0, 0);
-                return;
-            }
-
-            ClampIndex();
-            var t = _aliveVehicles[_currentIndex];
-            if (t == null) return;
-
-            string name = t.IsAI ? $"AI {t.PlayerId}" : $"Player {t.PlayerId}";
-            _hud.SetSpectatorTargetData(name, t.IsAI, t.TotalHP, t.MaxHP);
-        }
-
-        private void PushViewModeToHUD()
-        {
-            if (_hud == null) _hud = FindAnyObjectByType<CloseEncounters.UI.HUD>();
-            if (_hud == null) return;
-            string label = _viewMode switch
-            {
-                ViewMode.ThirdPersonChase => "CHASE",
-                ViewMode.FirstPerson      => "FPS",
-                ViewMode.FreeCam          => "FREECAM",
-                _ => "?"
-            };
-            _hud.SetSpectatorViewMode(label);
         }
 
         private void OnDestroy()
         {
-            if (_specCamObj != null) Destroy(_specCamObj);
+            if (_chaseCamObj != null)
+                Destroy(_chaseCamObj);
         }
     }
 }

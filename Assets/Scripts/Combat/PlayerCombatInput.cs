@@ -46,16 +46,20 @@ namespace CloseEncounters.Combat
                 }
             }
 
-            // Attach TurretAim to any weapon that uses a defence turret prefab
+            // Give every AIMED weapon aim-tracking so its barrel points where the
+            // player is aiming while it's the selected weapon (individual or all).
+            // Fixed and broadside weapons fire in a set direction, so they keep their
+            // mounted orientation and are skipped. TurretAim auto-detects whether the
+            // weapon has a turret rig (Base/Tower) or needs whole-model rotation.
             for (int w = 0; w < _weapons.Count; w++)
             {
                 var slot = _weapons[w];
                 if (slot.node == null) continue;
                 string wid = slot.partData.id?.ToLowerInvariant() ?? "";
-                bool hasTurret = wid == "heavy_cannon" || wid == "laser"
-                    || wid == "rocket_pod" || wid == "rocket"
-                    || wid == "machine_gun";
-                if (hasTurret && slot.node.GetComponent<TurretAim>() == null)
+                bool isFixed = slot.partData.GetStat<bool>("fixed", false);
+                bool isBroadside = wid == "broadside_cannon";
+                bool aimed = !isFixed && !isBroadside;
+                if (aimed && slot.node.GetComponent<TurretAim>() == null)
                 {
                     slot.node.gameObject.AddComponent<TurretAim>();
                 }

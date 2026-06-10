@@ -17,10 +17,10 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             // ── Terrain ────────────────────────────────────────────
-            // why: 750x750 gives ~2.5x old playable area (600x600); offset -375 keeps origin-centred
+            // why: 1125x1125 (1.5x of 750) gives even more playable area; offset -562.5 keeps origin-centred
             var terrain = TerrainFactory.Create(transform,
-                new Vector3(-375f, 0f, -375f), new Vector3(750f, 60f, 750f),
-                513, "DesertTerrain");
+                new Vector3(-562.5f, 0f, -562.5f), new Vector3(1125f, 60f, 1125f),
+                769, "DesertTerrain");
 
             TerrainFactory.SetHeights(terrain, (nx, nz) =>
             {
@@ -113,18 +113,18 @@ namespace CloseEncounters.Arena
             // ── Spawn on cliff/mesa tops ───────────────────────────
             // Place spawn points on elevated terrain (mesas) so players
             // start with a commanding view and drive down into the arena
-            // why: spawn ring pushed outward to ~250 to match expanded arena; mesa tops kept but on outer ring
+            // why: spawn ring scaled 1.5x to ~375 to match expanded arena; mesa tops kept but on outer ring
             AddSpawnPoints(
-                new Vector3(-230f, 12f, 220f),
-                new Vector3(-150f, 12f, 240f),
-                new Vector3( 230f, 10f,-200f),
-                new Vector3( 160f, 10f,-230f),
-                new Vector3( -50f,  8f,-250f),
-                new Vector3(  30f,  8f,-240f),
-                new Vector3(-260f,  3f,   0f),
-                new Vector3( 260f,  3f,   0f)
+                new Vector3(-345f, 12f, 330f),
+                new Vector3(-225f, 12f, 360f),
+                new Vector3( 345f, 10f,-300f),
+                new Vector3( 240f, 10f,-345f),
+                new Vector3( -75f,  8f,-375f),
+                new Vector3(  45f,  8f,-360f),
+                new Vector3(-390f,  3f,   0f),
+                new Vector3( 390f,  3f,   0f)
             );
-            AddInvisibleWalls(375f, 50f);
+            AddInvisibleWalls(562f, 50f);
 
             // ── Desert warm sun ─────────────────────────────────────
             var desertSun = new GameObject("DesertSun");
@@ -147,80 +147,105 @@ namespace CloseEncounters.Arena
             VFXManager.SandSwirls(new Vector3(0, 1, 0), 5f);
             VFXManager.HeatDistortion(new Vector3(0, 2, 0), 4f);
             VFXManager.DustMotes(new Vector3(0, 3, 0), 6f);
-            VFXManager.SandSwirls(new Vector3(-180f, 1f, 120f), 4f);
-            VFXManager.SandSwirls(new Vector3( 200f, 1f,-140f), 4f);
+            VFXManager.SandSwirls(new Vector3(-270f, 1f, 180f), 4f);
+            VFXManager.SandSwirls(new Vector3( 300f, 1f,-210f), 4f);
         }
 
         // ── CANYON RIM: mountain/canyon prefabs around arena edges ──
         private void BuildCanyonRim()
         {
-            // why: rim pushed to ~340 to hug the new 375 half-extent wall
-            // ── North wall (z = 300..340) ── 5 canyon mountains
+            // why: rim scaled 1.5x to ~500 to hug the new 562 half-extent wall; extra peaks added to seal the longer perimeter
+            // ── North wall (z ~480..517) ── 8 canyon mountains (was 5) ──
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(-240f, 0f, 330f), 0f, 12f);
+                new Vector3(-360f, 0f, 495f), 0f, 12f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(-110f, 0f, 340f), 45f, 11f);
+                new Vector3(-165f, 0f, 510f), 45f, 11f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3(  30f, 0f, 320f), 90f, 13f);
+                new Vector3(  45f, 0f, 480f), 90f, 13f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3( 170f, 0f, 335f), 135f, 10f);
+                new Vector3( 255f, 0f, 502f), 135f, 10f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3( 290f, 0f, 325f), 200f, 11f);
+                new Vector3( 435f, 0f, 487f), 200f, 11f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
+                new Vector3(-470f, 0f, 470f), 20f, 12f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3( -60f, 0f, 505f), 70f, 11f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
+                new Vector3( 150f, 0f, 495f), 110f, 12f);
 
-            // ── South wall ── 5 canyon mountains
+            // ── South wall ── 8 canyon mountains (was 5) ──
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(-220f, 0f, -330f), 180f, 11f);
+                new Vector3(-330f, 0f, -495f), 180f, 11f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3( -70f, 0f, -345f), 135f, 13f);
+                new Vector3(-105f, 0f, -517f), 135f, 13f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(  90f, 0f, -325f), 90f, 12f);
+                new Vector3( 135f, 0f, -487f), 90f, 12f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3( 230f, 0f, -340f), 45f, 10f);
+                new Vector3( 345f, 0f, -510f), 45f, 10f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(-300f, 0f, -320f), 225f, 11f);
-
-            // ── East wall ── 4 canyon mountains
-            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(340f, 0f, -160f), 90f, 11f);
-            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(325f, 0f,  -30f), 135f, 13f);
+                new Vector3(-450f, 0f, -480f), 225f, 11f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(345f, 0f,  110f), 45f, 12f);
+                new Vector3( 470f, 0f, -485f), 200f, 12f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(330f, 0f,  230f), 70f, 10f);
-
-            // ── West wall ── 4 canyon mountains
+                new Vector3(  15f, 0f, -500f), 100f, 11f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3(-335f, 0f, -160f), 0f, 12f);
-            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(-345f, 0f,  -30f), 90f, 11f);
+                new Vector3(-225f, 0f, -505f), 160f, 12f);
+
+            // ── East wall ── 7 canyon mountains (was 4) ──
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(-325f, 0f,  110f), 180f, 13f);
+                new Vector3(510f, 0f, -240f), 90f, 11f);
             DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(-340f, 0f,  240f), 225f, 10f);
+                new Vector3(487f, 0f,  -45f), 135f, 13f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
+                new Vector3(517f, 0f,  165f), 45f, 12f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
+                new Vector3(495f, 0f,  345f), 70f, 10f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(500f, 0f, -420f), 110f, 11f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
+                new Vector3(505f, 0f,   60f), 130f, 12f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
+                new Vector3(490f, 0f,  450f), 150f, 11f);
+
+            // ── West wall ── 7 canyon mountains (was 4) ──
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(-502f, 0f, -240f), 0f, 12f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
+                new Vector3(-517f, 0f,  -45f), 90f, 11f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
+                new Vector3(-487f, 0f,  165f), 180f, 13f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
+                new Vector3(-510f, 0f,  360f), 225f, 10f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
+                new Vector3(-500f, 0f, -420f), 60f, 11f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
+                new Vector3(-505f, 0f,   60f), 200f, 12f);
+            DesertPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(-490f, 0f,  455f), 240f, 11f);
 
             // ── Corner cliff details for continuity ──
             DesertPrefabHelper.PlaceLowPoly(transform, "CliffCorner_01",
-                new Vector3( 320f, 0f,  310f), 45f, 16f);
+                new Vector3( 480f, 0f,  465f), 45f, 16f);
             DesertPrefabHelper.PlaceLowPoly(transform, "CliffCorner_02",
-                new Vector3(-320f, 0f,  310f), 135f, 15f);
+                new Vector3(-480f, 0f,  465f), 135f, 15f);
             DesertPrefabHelper.PlaceLowPoly(transform, "Cliff_01",
-                new Vector3( 320f, 0f, -315f), 0f, 14f);
+                new Vector3( 480f, 0f, -472f), 0f, 14f);
             DesertPrefabHelper.PlaceLowPoly(transform, "CliffCorner_01",
-                new Vector3(-320f, 0f, -315f), 90f, 16f);
+                new Vector3(-480f, 0f, -472f), 90f, 16f);
         }
 
         // ── OASIS: water feature + palm trees + rocks ──────────────
         private void BuildOasis()
         {
-            Vector3 oasisCenter = new Vector3(0f, 0f, 75f);
+            Vector3 oasisCenter = new Vector3(0f, 0f, 112.5f);
 
             // ── Deep water pool (Fentchester canal style) ──────────
+            // why: oasis is the off-centre destination feature — position moved 1.5x (z 75->112.5), pool size kept as centrepiece
             {
                 var waterGO = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                 waterGO.name = "OasisWater";
                 waterGO.transform.SetParent(transform, false);
-                waterGO.transform.position = new Vector3(0f, -0.5f, 75f);
+                waterGO.transform.position = new Vector3(0f, -0.5f, 112.5f);
                 waterGO.transform.localScale = new Vector3(50f, 1f, 50f);
                 Object.DestroyImmediate(waterGO.GetComponent<Collider>());
 
@@ -237,40 +262,42 @@ namespace CloseEncounters.Arena
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 SetMaterial(waterGO, mat);
             }
-            AddWaterHazard(new Vector3(0f, -0.3f, 75f), new Vector3(48f, 4f, 48f), "OasisHazard");
+            AddWaterHazard(new Vector3(0f, -0.3f, 112.5f), new Vector3(48f, 4f, 48f), "OasisHazard");
 
-            // ── Palm trees spread wide (radius 30-45) ──────────────
-            AddTree(new Vector3(-35f, 1f, 110f),  9f, 3.5f, "Palm_1");
-            AddTree(new Vector3(38f,  1f, 105f),  8f, 3.0f, "Palm_2");
-            AddTree(new Vector3(-40f, 1f, 70f),   7f, 2.5f, "Palm_3");
-            AddTree(new Vector3(35f,  1f, 45f),  10f, 4.0f, "Palm_4");
-            AddTree(new Vector3(-15f, 1f, 40f),   8f, 3.5f, "Palm_5");
-            AddTree(new Vector3(42f,  1f, 80f),   9f, 3.0f, "Palm_6");
-            AddTree(new Vector3(-8f,  1f, 115f),  7f, 3.0f, "Palm_7");
-            AddTree(new Vector3(10f,  1f, 35f),   8f, 3.0f, "Palm_8");
+            // ── Palm trees spread wide (positions 1.5x) ────────────
+            AddTree(new Vector3(-52f, 1f, 165f),  9f, 3.5f, "Palm_1");
+            AddTree(new Vector3(57f,  1f, 157f),  8f, 3.0f, "Palm_2");
+            AddTree(new Vector3(-60f, 1f, 105f),  7f, 2.5f, "Palm_3");
+            AddTree(new Vector3(52f,  1f, 67f),  10f, 4.0f, "Palm_4");
+            AddTree(new Vector3(-22f, 1f, 60f),   8f, 3.5f, "Palm_5");
+            AddTree(new Vector3(63f,  1f, 120f),  9f, 3.0f, "Palm_6");
+            AddTree(new Vector3(-12f, 1f, 172f),  7f, 3.0f, "Palm_7");
+            AddTree(new Vector3(15f,  1f, 52f),   8f, 3.0f, "Palm_8");
+            AddTree(new Vector3(-70f, 1f, 135f),  9f, 3.2f, "Palm_9");
+            AddTree(new Vector3(70f,  1f, 90f),   8f, 3.4f, "Palm_10");
 
-            // ── Rocks spread wider (radius 30-40) ──────────────────
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_01", new Vector3(-30f, 1f, 108f), 0f,   1.5f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_02", new Vector3(32f,  1f, 100f), 45f,  1.2f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_03", new Vector3(-38f, 1f, 85f),  120f, 1.4f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_04", new Vector3(36f,  1f, 55f),  200f, 1.8f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_05", new Vector3(-12f, 1f, 38f),  90f,  1.0f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_01", new Vector3(18f,  1f, 42f),  270f, 1.6f);
+            // ── Rocks spread wider (positions 1.5x) ────────────────
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_01", new Vector3(-45f, 1f, 162f), 0f,   1.5f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_02", new Vector3(48f,  1f, 150f), 45f,  1.2f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_03", new Vector3(-57f, 1f, 127f), 120f, 1.4f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_04", new Vector3(54f,  1f, 82f),  200f, 1.8f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_05", new Vector3(-18f, 1f, 57f),  90f,  1.0f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Rock_01", new Vector3(27f,  1f, 63f),  270f, 1.6f);
 
-            // ── Vegetation spread wider ────────────────────────────
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_01", new Vector3(-28f, 1f, 105f), 0f,  1.5f);
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_02", new Vector3(25f,  1f, 98f),  30f, 1.5f);
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_01", new Vector3(-32f, 1f, 58f),  150f,1.2f);
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_02", new Vector3(30f,  1f, 50f),  220f,1.3f);
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertTree", new Vector3(-45f, 1f, 90f), 45f,  1.2f);
-            DesertPrefabHelper.PlaceDesertProp(transform, "DesertTree", new Vector3(40f,  1f, 55f), 180f, 1.1f);
+            // ── Vegetation spread wider (positions 1.5x) ───────────
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_01", new Vector3(-42f, 1f, 157f), 0f,  1.5f);
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_02", new Vector3(37f,  1f, 147f), 30f, 1.5f);
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_01", new Vector3(-48f, 1f, 87f),  150f,1.2f);
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertGrass_02", new Vector3(45f,  1f, 75f),  220f,1.3f);
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertTree", new Vector3(-67f, 1f, 135f), 45f,  1.2f);
+            DesertPrefabHelper.PlaceDesertProp(transform, "DesertTree", new Vector3(60f,  1f, 82f), 180f, 1.1f);
 
-            // ── Cacti ring (radius 50-60) ──────────────────────────
-            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_01", new Vector3(-55f, 1f, 120f), 0f,   2.5f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_02", new Vector3(55f,  1f, 110f), 90f,  2.5f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_03", new Vector3(-50f, 1f, 40f),  180f, 2.5f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_01", new Vector3(50f,  1f, 35f),  270f, 2.5f);
-            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_02", new Vector3(-15f, 1f, 25f),  45f,  2.5f);
+            // ── Cacti ring (positions 1.5x) ────────────────────────
+            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_01", new Vector3(-82f, 1f, 180f), 0f,   2.5f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_02", new Vector3(82f,  1f, 165f), 90f,  2.5f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_03", new Vector3(-75f, 1f, 60f),  180f, 2.5f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_01", new Vector3(75f,  1f, 52f),  270f, 2.5f);
+            DesertPrefabHelper.PlaceLowPoly(transform, "Cactus_02", new Vector3(-22f, 1f, 37f),  45f,  2.5f);
         }
 
         // ── SETTLEMENT: desert buildings cluster ────────────────────
@@ -279,48 +306,49 @@ namespace CloseEncounters.Arena
             // ── Settlement buildings (x=30..130, z=0..75) ──────────
             // Place all 5 Desert Building variants around a central plaza (~x=80, z=40)
             // Place all 5 building variants -- scale 2x for visibility, y=2 above terrain
+            // why: settlement cluster positions scaled 1.5x so it stays proportionally placed in the bigger map
             var b1 = DesertPrefabHelper.PlaceBuilding(transform, "Desert_Building_V1",
-                new Vector3(60f, 2f, 55f), 15f, 2.0f);
+                new Vector3(90f, 2f, 82f), 15f, 2.0f);
             if (b1 == null) Debug.LogWarning("[GroundDesert] Desert_Building_V1 failed to load!");
             var b2 = DesertPrefabHelper.PlaceBuilding(transform, "Desert_Building_V2",
-                new Vector3(95f, 2f, 60f), 210f, 2.0f);
+                new Vector3(142f, 2f, 90f), 210f, 2.0f);
             if (b2 == null) Debug.LogWarning("[GroundDesert] Desert_Building_V2 failed to load!");
             var b3 = DesertPrefabHelper.PlaceBuilding(transform, "Desert_Building_V3",
-                new Vector3(115f, 2f, 35f), 120f, 2.0f);
+                new Vector3(172f, 2f, 52f), 120f, 2.0f);
             if (b3 == null) Debug.LogWarning("[GroundDesert] Desert_Building_V3 failed to load!");
             var b4 = DesertPrefabHelper.PlaceBuilding(transform, "Desert_Building_V4",
-                new Vector3(85f, 2f, 15f), 275f, 2.0f);
+                new Vector3(127f, 2f, 22f), 275f, 2.0f);
             if (b4 == null) Debug.LogWarning("[GroundDesert] Desert_Building_V4 failed to load!");
             var b5 = DesertPrefabHelper.PlaceBuilding(transform, "Desert_Building_V5",
-                new Vector3(45f, 2f, 25f), 340f, 2.0f);
+                new Vector3(67f, 2f, 37f), 340f, 2.0f);
             if (b5 == null) Debug.LogWarning("[GroundDesert] Desert_Building_V5 failed to load!");
 
-            // ── Lookout platforms near settlement ────────────────────
+            // ── Lookout platforms near settlement (positions 1.5x) ───
             DesertPrefabHelper.PlaceDesertProp(transform, "DesertPlatform_01",
-                new Vector3(130f, 0f, 10f), 45f, 1.5f);
+                new Vector3(195f, 0f, 15f), 45f, 1.5f);
             DesertPrefabHelper.PlaceDesertProp(transform, "DesertPlatform_01",
-                new Vector3(35f, 0f, 70f), 200f, 1.5f);
+                new Vector3(52f, 0f, 105f), 200f, 1.5f);
 
-            // ── Ancient adobe ruins SW of settlement ─────────────────
+            // ── Ancient adobe ruins SW of settlement (positions 1.5x) ─
             Color ruin = new Color(0.65f, 0.55f, 0.40f);
-            AddBlock(new Vector3(-80f, 3f, -60f), new Vector3(14f, 6f, 14f), ruin, "Ruin_Base");
-            AddBlock(new Vector3(-80f, 8f, -60f), new Vector3(10f, 4f, 10f), ruin, "Ruin_Upper");
-            AddBlock(new Vector3(-90f, 2f, -45f), new Vector3(5f, 4f, 8f), ruin, "Ruin_Wall_1");
-            AddBlock(new Vector3(-66f, 1.5f, -68f), new Vector3(6f, 3f, 5f), ruin, "Ruin_Wall_2");
-            AddBlock(new Vector3(-72f, 1f, -75f), new Vector3(8f, 2f, 4f), ruin, "Ruin_Wall_3");
+            AddBlock(new Vector3(-120f, 3f, -90f), new Vector3(14f, 6f, 14f), ruin, "Ruin_Base");
+            AddBlock(new Vector3(-120f, 8f, -90f), new Vector3(10f, 4f, 10f), ruin, "Ruin_Upper");
+            AddBlock(new Vector3(-135f, 2f, -67f), new Vector3(5f, 4f, 8f), ruin, "Ruin_Wall_1");
+            AddBlock(new Vector3(-99f, 1.5f, -102f), new Vector3(6f, 3f, 5f), ruin, "Ruin_Wall_2");
+            AddBlock(new Vector3(-108f, 1f, -112f), new Vector3(8f, 2f, 4f), ruin, "Ruin_Wall_3");
 
-            // ── Desert cave south of ruins ───────────────────────────
+            // ── Desert cave south of ruins (position 1.5x) ───────────
             DesertPrefabHelper.PlaceDesertProp(transform, "DesertCave",
-                new Vector3(-120f, 0f, -100f), 30f, 2f);
+                new Vector3(-180f, 0f, -150f), 30f, 2f);
         }
 
         // ── DESERT FLOOR: scattered rocks, cacti, vegetation ────────
         private void BuildDesertFloor()
         {
-            // Exclusion zones:
-            //   Oasis:     roughly x=-30..30, z=55..95
-            //   Settlement: x=25..135, z=-5..80
-            //   Spawn ring: radius 200 from origin (keep 8+ units away)
+            // Exclusion zones (scaled 1.5x):
+            //   Oasis:     roughly x=-45..45, z=82..142
+            //   Settlement: x=37..202, z=-7..120
+            //   Spawn ring: radius 300 from origin (keep 8+ units away)
 
             string[] envRocks  = { "DesertRock_01", "DesertRock_02", "DesertRock_03" };
             string[] lpRocks   = { "Rock_01", "Rock_02", "Rock_03", "Rock_04", "Rock_05" };
@@ -329,32 +357,39 @@ namespace CloseEncounters.Arena
             string[] mountains = { "DesertMountain_01", "DesertMountain_02", "DesertMountain_03" };
             string[] grasses   = { "DesertGrass_01", "DesertGrass_02" };
 
-            // why: 14 clusters (was 8) spread into new outer ring 200-320 to avoid empty expansion zones
+            // why: 21 clusters (was 14) with centres scaled 1.5x to fill the bigger map (count ~1.5x for density)
             Vector2[] clusterCenters =
             {
-                new Vector2(-120f, -80f),
-                new Vector2(-160f,  40f),
-                new Vector2( -70f, -140f),
-                new Vector2(  60f, -120f),
-                new Vector2( 150f, -60f),
-                new Vector2(-100f,  130f),
-                new Vector2( 140f,  110f),
-                new Vector2( -20f, -50f),
-                new Vector2(-260f,  180f),
-                new Vector2( 270f,   60f),
-                new Vector2( 220f, -220f),
-                new Vector2(-280f, -180f),
-                new Vector2(  60f,  250f),
-                new Vector2(-190f, -250f),
+                new Vector2(-180f, -120f),
+                new Vector2(-240f,   60f),
+                new Vector2(-105f, -210f),
+                new Vector2(  90f, -180f),
+                new Vector2( 225f,  -90f),
+                new Vector2(-150f,  195f),
+                new Vector2( 210f,  165f),
+                new Vector2( -30f,  -75f),
+                new Vector2(-390f,  270f),
+                new Vector2( 405f,   90f),
+                new Vector2( 330f, -330f),
+                new Vector2(-420f, -270f),
+                new Vector2(  90f,  375f),
+                new Vector2(-285f, -375f),
+                new Vector2( 360f,  300f),
+                new Vector2(-360f,  -60f),
+                new Vector2( 150f, -390f),
+                new Vector2(-120f,  390f),
+                new Vector2( 270f,  360f),
+                new Vector2(-450f,  120f),
+                new Vector2( 420f, -180f),
             };
 
             foreach (var center in clusterCenters)
             {
-                int count = Random.Range(3, 5); // 3-4 rocks per cluster
+                int count = Random.Range(6, 10); // 6-9 rocks per cluster (~2.25x density)
                 for (int i = 0; i < count; i++)
                 {
-                    float ox = center.x + Random.Range(-8f, 8f);
-                    float oz = center.y + Random.Range(-8f, 8f);
+                    float ox = center.x + Random.Range(-12f, 12f);
+                    float oz = center.y + Random.Range(-12f, 12f);
                     float rot = Random.Range(0f, 360f);
                     float scl = Random.Range(0.5f, 2.0f);
 
@@ -374,23 +409,23 @@ namespace CloseEncounters.Arena
                 }
             }
 
-            // why: 36 cacti (was 22) over the larger range to keep density up in the 2.5x arena
+            // why: 81 cacti (was 36, ~2.25x) over the 1.5x range to keep density up in the bigger arena
             int cactiPlaced = 0;
-            int cactiTarget = 36;
+            int cactiTarget = 81;
             int cactiAttempts = 0;
-            while (cactiPlaced < cactiTarget && cactiAttempts < 400)
+            while (cactiPlaced < cactiTarget && cactiAttempts < 900)
             {
                 cactiAttempts++;
-                float cx = Random.Range(-330f, 330f);
-                float cz = Random.Range(-330f, 330f);
+                float cx = Random.Range(-495f, 495f);
+                float cz = Random.Range(-495f, 495f);
 
-                // Skip oasis zone
-                if (cx > -30f && cx < 30f && cz > 55f && cz < 95f) continue;
-                // Skip settlement zone
-                if (cx > 25f && cx < 135f && cz > -5f && cz < 80f) continue;
-                // Skip spawn ring proximity
+                // Skip oasis zone (1.5x)
+                if (cx > -45f && cx < 45f && cz > 82f && cz < 142f) continue;
+                // Skip settlement zone (1.5x)
+                if (cx > 37f && cx < 202f && cz > -7f && cz < 120f) continue;
+                // Skip spawn ring proximity (1.5x)
                 float dist = Mathf.Sqrt(cx * cx + cz * cz);
-                if (dist > 192f && dist < 208f) continue;
+                if (dist > 288f && dist < 312f) continue;
 
                 float rot = Random.Range(0f, 360f);
                 float scl = Random.Range(2.0f, 3.5f);
@@ -411,31 +446,51 @@ namespace CloseEncounters.Arena
                 cactiPlaced++;
             }
 
-            // ── Desert mountains (8 peaks for medium cover — doubled, outer pushed farther) ────
+            // ── Desert mountains (18 peaks for medium cover — positions 1.5x, count ~2.25x) ────
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
-                new Vector3(-180f, 1f, -20f), Random.Range(0f, 360f), 2.5f);
+                new Vector3(-270f, 1f, -30f), Random.Range(0f, 360f), 2.5f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
-                new Vector3(170f, 1f, 140f), Random.Range(0f, 360f), 2.0f);
+                new Vector3(255f, 1f, 210f), Random.Range(0f, 360f), 2.0f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
-                new Vector3(-140f, 1f, -160f), Random.Range(0f, 360f), 1.8f);
+                new Vector3(-210f, 1f, -240f), Random.Range(0f, 360f), 1.8f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
-                new Vector3(100f, 1f, -150f), Random.Range(0f, 360f), 2.2f);
+                new Vector3(150f, 1f, -225f), Random.Range(0f, 360f), 2.2f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
-                new Vector3(-280f, 1f,  220f), Random.Range(0f, 360f), 2.8f);
+                new Vector3(-420f, 1f,  330f), Random.Range(0f, 360f), 2.8f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
-                new Vector3( 290f, 1f,  230f), Random.Range(0f, 360f), 2.4f);
+                new Vector3( 435f, 1f,  345f), Random.Range(0f, 360f), 2.4f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
-                new Vector3(-260f, 1f, -280f), Random.Range(0f, 360f), 2.6f);
+                new Vector3(-390f, 1f, -420f), Random.Range(0f, 360f), 2.6f);
             DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
-                new Vector3( 250f, 1f, -300f), Random.Range(0f, 360f), 2.3f);
+                new Vector3( 375f, 1f, -450f), Random.Range(0f, 360f), 2.3f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
+                new Vector3(-90f, 1f,  300f), Random.Range(0f, 360f), 2.1f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
+                new Vector3( 120f, 1f,  330f), Random.Range(0f, 360f), 2.5f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
+                new Vector3(-330f, 1f,  150f), Random.Range(0f, 360f), 2.2f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
+                new Vector3( 345f, 1f,  -90f), Random.Range(0f, 360f), 1.9f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
+                new Vector3(-150f, 1f, -360f), Random.Range(0f, 360f), 2.4f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
+                new Vector3( 240f, 1f, -360f), Random.Range(0f, 360f), 2.3f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
+                new Vector3(-450f, 1f,  -60f), Random.Range(0f, 360f), 2.6f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[0],
+                new Vector3( 450f, 1f,  120f), Random.Range(0f, 360f), 2.5f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[1],
+                new Vector3(-240f, 1f,  420f), Random.Range(0f, 360f), 2.2f);
+            DesertPrefabHelper.PlaceDesertProp(transform, mountains[2],
+                new Vector3( 300f, 1f,  -270f), Random.Range(0f, 360f), 2.0f);
 
-            // ── Grass tufts (28 total, near rock clusters and cacti) ───────
-            for (int i = 0; i < 28; i++)
+            // ── Grass tufts (63 total, ~2.25x, near rock clusters and cacti) ───────
+            for (int i = 0; i < 63; i++)
             {
                 // Place grass near a random cluster center with offset
                 var nearCluster = clusterCenters[Random.Range(0, clusterCenters.Length)];
-                float gx = nearCluster.x + Random.Range(-20f, 20f);
-                float gz = nearCluster.y + Random.Range(-20f, 20f);
+                float gx = nearCluster.x + Random.Range(-30f, 30f);
+                float gz = nearCluster.y + Random.Range(-30f, 30f);
                 float scl = Random.Range(1.0f, 2.0f);
                 string grass = grasses[Random.Range(0, grasses.Length)];
 
@@ -443,18 +498,29 @@ namespace CloseEncounters.Arena
                     new Vector3(gx, 1f, gz), Random.Range(0f, 360f), scl);
             }
 
-            // ── Trees (9 total, scattered across the map, not near oasis) ──
+            // ── Trees (20 total, ~2.25x, positions 1.5x, not near oasis) ──
             Vector3[] treePositions =
             {
-                new Vector3(-100f, 1f,  -90f),
-                new Vector3( 160f, 1f,  -30f),
-                new Vector3(-170f, 1f,  100f),
-                new Vector3(  80f, 1f, -170f),
-                new Vector3( -50f, 1f, -160f),
-                new Vector3( 240f, 1f,  180f),
-                new Vector3(-240f, 1f, -110f),
-                new Vector3( 190f, 1f, -260f),
-                new Vector3(-260f, 1f,  260f),
+                new Vector3(-150f, 1f,  -135f),
+                new Vector3( 240f, 1f,  -45f),
+                new Vector3(-255f, 1f,  150f),
+                new Vector3( 120f, 1f, -255f),
+                new Vector3( -75f, 1f, -240f),
+                new Vector3( 360f, 1f,  270f),
+                new Vector3(-360f, 1f, -165f),
+                new Vector3( 285f, 1f, -390f),
+                new Vector3(-390f, 1f,  390f),
+                new Vector3( 180f, 1f,  240f),
+                new Vector3(-210f, 1f,  -45f),
+                new Vector3(  60f, 1f, -330f),
+                new Vector3(-300f, 1f,  300f),
+                new Vector3( 420f, 1f,  -60f),
+                new Vector3(-435f, 1f,   45f),
+                new Vector3( 150f, 1f,  420f),
+                new Vector3(-120f, 1f, -420f),
+                new Vector3( 330f, 1f,  150f),
+                new Vector3(-180f, 1f,  255f),
+                new Vector3( 270f, 1f, -150f),
             };
 
             for (int i = 0; i < treePositions.Length; i++)
@@ -470,6 +536,73 @@ namespace CloseEncounters.Arena
                     DesertPrefabHelper.PlaceLowPoly(transform, "Tree_01",
                         treePositions[i], rot, scl);
             }
+
+            // ── DENSITY PASS 1: breakable grass/shrub carpet across the open desert ──
+            // why: fills the enlarged 1.5x floor with low breakable cover (DesertGrass is breakable PlaceDesertProp)
+            {
+                string[] shrubs = { "DesertGrass_01", "DesertGrass_02", "DesertTree" };
+                int shrubPlaced = 0, shrubAttempts = 0;
+                while (shrubPlaced < 70 && shrubAttempts < 700)
+                {
+                    shrubAttempts++;
+                    float sx = Random.Range(-510f, 510f);
+                    float sz = Random.Range(-510f, 510f);
+                    if (sx > -45f && sx < 45f && sz > 82f && sz < 142f) continue;  // oasis
+                    if (sx > 37f && sx < 202f && sz > -7f && sz < 120f) continue;  // settlement
+                    float d = Mathf.Sqrt(sx * sx + sz * sz);
+                    if (d > 288f && d < 312f) continue;                            // spawn ring
+                    string shrub = shrubs[Random.Range(0, shrubs.Length)];
+                    DesertPrefabHelper.PlaceDesertProp(transform, shrub,
+                        new Vector3(sx, 1f, sz), Random.Range(0f, 360f), Random.Range(1.0f, 1.8f));
+                    shrubPlaced++;
+                }
+            }
+
+            // ── DENSITY PASS 2: static boulder/rock landmarks for cover in the new outer ring ──
+            // why: rock-named props stay static (landmarks) — used as hard cover lining the wider arena
+            {
+                string[] bigRocks = { "DesertRock_01", "DesertRock_02", "DesertRock_03" };
+                string[] lpBigRocks = { "Rock_01", "Rock_03", "Rock_05" };
+                int rockPlaced = 0, rockAttempts = 0;
+                while (rockPlaced < 40 && rockAttempts < 400)
+                {
+                    rockAttempts++;
+                    float rx = Random.Range(-500f, 500f);
+                    float rz = Random.Range(-500f, 500f);
+                    float d = Mathf.Sqrt(rx * rx + rz * rz);
+                    if (d < 230f) continue;                                        // keep to outer ring only
+                    if (d > 288f && d < 312f) continue;                            // spawn ring
+                    float rot = Random.Range(0f, 360f);
+                    float scl = Random.Range(2.0f, 4.0f);
+                    if (Random.value > 0.5f)
+                        DesertPrefabHelper.PlaceDesertProp(transform, bigRocks[Random.Range(0, bigRocks.Length)],
+                            new Vector3(rx, 1f, rz), rot, scl);
+                    else
+                        DesertPrefabHelper.PlaceLowPoly(transform, lpBigRocks[Random.Range(0, lpBigRocks.Length)],
+                            new Vector3(rx, 1f, rz), rot, scl);
+                    rockPlaced++;
+                }
+            }
+
+            // ── DENSITY PASS 3: extra cactus garden mid-field for variety ──
+            // why: Cactus-named props stay static landmarks; adds vertical interest between clusters
+            {
+                string[] gardenCacti = { "Cactus_01", "Cactus_02", "Cactus_03", "Cactus_04" };
+                int cgPlaced = 0, cgAttempts = 0;
+                while (cgPlaced < 45 && cgAttempts < 450)
+                {
+                    cgAttempts++;
+                    float gx = Random.Range(-460f, 460f);
+                    float gz = Random.Range(-460f, 460f);
+                    if (gx > -45f && gx < 45f && gz > 82f && gz < 142f) continue;  // oasis
+                    if (gx > 37f && gx < 202f && gz > -7f && gz < 120f) continue;  // settlement
+                    float d = Mathf.Sqrt(gx * gx + gz * gz);
+                    if (d > 288f && d < 312f) continue;                            // spawn ring
+                    DesertPrefabHelper.PlaceDesertProp(transform, gardenCacti[Random.Range(0, gardenCacti.Length)],
+                        new Vector3(gx, 1f, gz), Random.Range(0f, 360f), Random.Range(2.0f, 3.5f));
+                    cgPlaced++;
+                }
+            }
         }
 
         // ── STORM EFFECTS: Habrador physics tornado ──────
@@ -481,7 +614,7 @@ namespace CloseEncounters.Arena
             var ts = tornadoSpawner.AddComponent<HabradorTornadoSpawner>();
             ts.prefabPath = "HabradorTornado/TornadoPrefab";
             ts.scale = 1f;
-            ts.spawnRadius = 180f;
+            ts.spawnRadius = 270f;
             ts.minInterval = 60f;
             ts.maxInterval = 60f;
             ts.minLifetime = 40f;
@@ -512,24 +645,37 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             // ── Terrain ────────────────────────────────────────────
-            // why: 750x750 for ~2.5x playable area; normalized block flatten coords still line up on centre roads
+            // why: 1125x1125 (1.5x of 750) for ~5.6x playable area; canal stays centred on z=0 (nz=0.5) automatically.
+            // res bumped 513->769 so detail-per-metre holds at the larger size.
+            // why: the terrain is lowered to y-4 so the canal can be a real ~5-deep
+            // trench, while the city surface stays at world y1 (cityH 0.10 →
+            // -4 + 0.10*50 = 1). The canal floor (h=0) lands at y-4. Everything placed
+            // on the city surface at y1 is unaffected — only the trench changes.
+            const float cityH = 0.10f;
             var terrain = TerrainFactory.Create(transform,
-                new Vector3(-375f, 0f, -375f), new Vector3(750f, 50f, 750f),
-                513, "CityTerrain");
+                new Vector3(-562.5f, -4f, -562.5f), new Vector3(1125f, 50f, 1125f),
+                769, "CityTerrain");
+
+            // Canal geometry (world z, terrain is 1125 wide so nz-dist = |z|/1125):
+            //   floor   |z| < 18  (dist 0.016)   → trench bottom, y-4
+            //   bank     18..23   (dist..0.0204) → wall sloping up to the street
+            // Wider water + a deep trench vs the old shallow 1-deep, ±12 cut.
+            const float canalFloorNz = 0.016f;   // |z| = 18
+            const float canalBankNz  = 0.0204f;  // |z| = 23
 
             TerrainFactory.SetHeights(terrain, (nx, nz) =>
             {
-                float h = 0.02f; // flat city base (~1 world unit)
+                float h = cityH; // flat city base → world y1
                 h += 0.003f * Mathf.PerlinNoise(nx * 8f, nz * 8f); // subtle variation
 
-                // Canal cut at nz ~0.5 (world z=0)
+                // Canal trench cut at nz ~0.5 (world z=0)
                 float canalDist = Mathf.Abs(nz - 0.5f);
-                if (canalDist < 0.025f)
-                    h = 0.0f; // canal floor
-                else if (canalDist < 0.04f)
+                if (canalDist < canalFloorNz)
+                    h = 0.0f; // canal floor (world y-4)
+                else if (canalDist < canalBankNz)
                 {
-                    float t = (canalDist - 0.025f) / 0.015f;
-                    h = Mathf.Lerp(0f, h, t * t); // steep bank
+                    float t = (canalDist - canalFloorNz) / (canalBankNz - canalFloorNz);
+                    h = Mathf.Lerp(0f, cityH, t * t); // bank wall up to street level
                 }
 
                 return Mathf.Max(0f, h);
@@ -537,19 +683,19 @@ namespace CloseEncounters.Arena
 
             // Flatten all city blocks where buildings will sit
             // North blocks: z=55..115 (nz 0.592..0.692)
-            TerrainFactory.Flatten(terrain, 0.267f, 0.592f, 0.400f, 0.692f, 0.02f); // block x:-140..-60
-            TerrainFactory.Flatten(terrain, 0.400f, 0.592f, 0.500f, 0.692f, 0.02f); // block x:-60..0
-            TerrainFactory.Flatten(terrain, 0.500f, 0.592f, 0.600f, 0.692f, 0.02f); // block x:0..60
-            TerrainFactory.Flatten(terrain, 0.600f, 0.592f, 0.733f, 0.692f, 0.02f); // block x:60..140
+            TerrainFactory.Flatten(terrain, 0.267f, 0.592f, 0.400f, 0.692f, cityH); // block x:-140..-60
+            TerrainFactory.Flatten(terrain, 0.400f, 0.592f, 0.500f, 0.692f, cityH); // block x:-60..0
+            TerrainFactory.Flatten(terrain, 0.500f, 0.592f, 0.600f, 0.692f, cityH); // block x:0..60
+            TerrainFactory.Flatten(terrain, 0.600f, 0.592f, 0.733f, 0.692f, cityH); // block x:60..140
             // Far north: z=115..180 (nz 0.692..0.800)
-            TerrainFactory.Flatten(terrain, 0.267f, 0.692f, 0.733f, 0.800f, 0.02f);
+            TerrainFactory.Flatten(terrain, 0.267f, 0.692f, 0.733f, 0.800f, cityH);
             // South blocks: z=-115..-55 (nz 0.308..0.408)
-            TerrainFactory.Flatten(terrain, 0.267f, 0.308f, 0.400f, 0.408f, 0.02f);
-            TerrainFactory.Flatten(terrain, 0.400f, 0.308f, 0.500f, 0.408f, 0.02f);
-            TerrainFactory.Flatten(terrain, 0.500f, 0.308f, 0.600f, 0.408f, 0.02f);
-            TerrainFactory.Flatten(terrain, 0.600f, 0.308f, 0.733f, 0.408f, 0.02f);
+            TerrainFactory.Flatten(terrain, 0.267f, 0.308f, 0.400f, 0.408f, cityH);
+            TerrainFactory.Flatten(terrain, 0.400f, 0.308f, 0.500f, 0.408f, cityH);
+            TerrainFactory.Flatten(terrain, 0.500f, 0.308f, 0.600f, 0.408f, cityH);
+            TerrainFactory.Flatten(terrain, 0.600f, 0.308f, 0.733f, 0.408f, cityH);
             // Far south: z=-180..-115 (nz 0.200..0.308)
-            TerrainFactory.Flatten(terrain, 0.267f, 0.200f, 0.733f, 0.308f, 0.02f);
+            TerrainFactory.Flatten(terrain, 0.267f, 0.200f, 0.733f, 0.308f, cityH);
 
             // ── Splatmap ───────────────────────────────────────────
             TerrainFactory.PaintSplatmap(terrain, (nx, nz, height, steepness) =>
@@ -567,8 +713,8 @@ namespace CloseEncounters.Arena
                 for (int r = 0; r < nsRoads.Length; r++)
                     if (Mathf.Abs(nx - nsRoads[r]) < roadHalf) onRoad = true;
 
-                // Canal zone
-                bool inCanal = Mathf.Abs(nz - 0.5f) < 0.04f;
+                // Canal zone (matches the widened trench)
+                bool inCanal = Mathf.Abs(nz - 0.5f) < 0.0204f;
 
                 if (onRoad)
                 {
@@ -597,8 +743,9 @@ namespace CloseEncounters.Arena
                 var waterGO = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 waterGO.name = "CanalWater";
                 waterGO.transform.SetParent(transform, false);
-                waterGO.transform.position = new Vector3(0f, 0.5f, 0f);
-                waterGO.transform.localScale = new Vector3(560f, 0.2f, 24f);
+                // Surface at y-0.8 (well below the deck), filling the wider trench.
+                waterGO.transform.position = new Vector3(0f, -2.4f, 0f);
+                waterGO.transform.localScale = new Vector3(560f, 3.2f, 36f);
                 Object.DestroyImmediate(waterGO.GetComponent<Collider>());
 
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -614,15 +761,33 @@ namespace CloseEncounters.Arena
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 SetMaterial(waterGO, mat);
             }
-            AddWaterHazard(new Vector3(0f, 0.3f, 0f), new Vector3(560f, 3f, 24f), "CanalHazard");
+            // ── Canal kill-water ───────────────────────────────────
+            // One continuous hazard filling the trench BELOW deck level (top y0.3;
+            // the deck bottom is y0.4). Anything that falls into the canal dies, while
+            // vehicles crossing on a bridge sit at y1, safely above it — so no need to
+            // carve gaps around the bridges anymore.
+            float[] bridgeX = { -140f, -60f, 0f, 60f, 140f };
+            AddWaterHazard(new Vector3(0f, -1.85f, 0f),
+                new Vector3(560f, 4.3f, 36f), "CanalHazard");
 
             // ── Bridges (5 crossings) ──────────────────────────────
+            // Each deck is a flat slab whose TOP sits exactly at street level (y1) and
+            // spans the full trench onto solid ground at both ends (z=±28, past the
+            // bank lip at z=23), so cars roll on/off flush with zero step and no steep
+            // ramp. Deck bottom (y0.4) clears the water surface (y-0.8) — no clipping.
             Color bridgeStone = new Color(0.50f, 0.48f, 0.45f);
-            AddBridge(new Vector3(-140f, 1.2f, -14f), new Vector3(-140f, 1.2f, 14f), 10f, 1f, bridgeStone, "Bridge_FarW");
-            AddBridge(new Vector3(-60f, 1.2f, -14f), new Vector3(-60f, 1.2f, 14f), 10f, 1f, bridgeStone, "Bridge_W");
-            AddBridge(new Vector3(0f, 1.2f, -14f), new Vector3(0f, 1.2f, 14f), 10f, 1f, bridgeStone, "Bridge_Center");
-            AddBridge(new Vector3(60f, 1.2f, -14f), new Vector3(60f, 1.2f, 14f), 10f, 1f, bridgeStone, "Bridge_E");
-            AddBridge(new Vector3(140f, 1.2f, -14f), new Vector3(140f, 1.2f, 14f), 10f, 1f, bridgeStone, "Bridge_FarE");
+            const float deckHalfZ = 28f;   // reaches solid ground beyond the z=23 lip
+            const float deckWidth = 16f;
+            for (int b = 0; b < bridgeX.Length; b++)
+            {
+                float x = bridgeX[b];
+                // Deck: 16 wide, 0.6 thick, centre y0.7 → top y1.0 (street level).
+                AddBridge(new Vector3(x, 0.7f, -deckHalfZ), new Vector3(x, 0.7f, deckHalfZ),
+                    deckWidth, 0.6f, bridgeStone, b == 2 ? "Bridge_Center" : $"Bridge_{b}");
+                // Side rails so vehicles don't slip off into the trench while crossing.
+                AddWall(new Vector3(x - 8.2f, 1f, -deckHalfZ), new Vector3(x - 8.2f, 1f, deckHalfZ), 1f, 0.4f, bridgeStone, $"BridgeRailL_{b}");
+                AddWall(new Vector3(x + 8.2f, 1f, -deckHalfZ), new Vector3(x + 8.2f, 1f, deckHalfZ), 1f, 0.4f, bridgeStone, $"BridgeRailR_{b}");
+            }
             BuildCanalDetail();
 
             // ── City districts (filled by dedicated builder methods) ──
@@ -639,18 +804,18 @@ namespace CloseEncounters.Arena
 
             // ── Spawn points — pushed outward into new outskirts (avoids canal z=-15..15) ──
             AddSpawnPoints(
-                new Vector3(-250f, 1f,  120f),
-                new Vector3( 250f, 1f,  120f),
-                new Vector3(-250f, 1f, -120f),
-                new Vector3( 250f, 1f, -120f),
-                new Vector3(   0f, 1f,  260f),
-                new Vector3(   0f, 1f, -260f),
-                new Vector3(-200f, 1f,  240f),
-                new Vector3( 200f, 1f, -240f),
-                new Vector3(-300f, 1f,    60f),
-                new Vector3( 300f, 1f,   -60f)
+                new Vector3(-375f, 1f,  180f),
+                new Vector3( 375f, 1f,  180f),
+                new Vector3(-375f, 1f, -180f),
+                new Vector3( 375f, 1f, -180f),
+                new Vector3(   0f, 1f,  390f),
+                new Vector3(   0f, 1f, -390f),
+                new Vector3(-300f, 1f,  360f),
+                new Vector3( 300f, 1f, -360f),
+                new Vector3(-450f, 1f,    90f),
+                new Vector3( 450f, 1f,   -90f)
             );
-            AddInvisibleWalls(375f, 45f);
+            AddInvisibleWalls(562f, 45f);
 
             // ── City key light (overcast) ──────────────────────────
             var cityLight = new GameObject("CitySun");
@@ -833,15 +998,15 @@ namespace CloseEncounters.Arena
                 new Vector3(-112f, 1f, 155f), 90f, 1.0f);
 
             // Bus stops along main roads
-            CityPrefabHelper.PlaceProp(transform, "Bus_stop_prefab",
+            CityPrefabHelper.PlaceProp(transform, "Bus stop prefab",
                 new Vector3(-155f, 1f, 60f), 0f, 1.0f);
-            CityPrefabHelper.PlaceProp(transform, "Bus_stop_prefab",
+            CityPrefabHelper.PlaceProp(transform, "Bus stop prefab",
                 new Vector3(-95f, 1f, 120f), 180f, 1.0f);
 
             // Phone booths near hospital and shops
-            CityPrefabHelper.PlaceProp(transform, "Phone_booth_prefab",
+            CityPrefabHelper.PlaceProp(transform, "phone booth prefab",
                 new Vector3(-170f, 1f, 88f), 90f, 1.0f);
-            CityPrefabHelper.PlaceProp(transform, "Phone_booth_prefab",
+            CityPrefabHelper.PlaceProp(transform, "phone booth prefab",
                 new Vector3(-92f, 1f, 63f), 0f, 1.0f);
         }
 
@@ -1107,13 +1272,11 @@ namespace CloseEncounters.Arena
         {
             // Towers straddle the origin. Tower A sits at x=-30, Tower B at x=+30
             // so the player spawns near the center surrounded by the crash site.
-            // Footprint stays at 6.5× scale; height stretched 3× (= 19.5×) for skyscraper silhouette.
-            var towerA = CityPrefabHelper.PlaceBuilding(transform, "Building_I_1_prefab",
+            // Scale 6.5× vs. the old 3.5× — much taller landmark.
+            CityPrefabHelper.PlaceBuilding(transform, "Building_I_1_prefab",
                 new Vector3(-30f, 1f, 0f), 0f, 6.5f);
-            var towerB = CityPrefabHelper.PlaceBuilding(transform, "Building_I_2_Prefab",
+            CityPrefabHelper.PlaceBuilding(transform, "Building_I_2_Prefab",
                 new Vector3( 30f, 1f, 0f), 18f, 6.5f);
-            if (towerA != null) towerA.transform.localScale = new Vector3(6.5f, 19.5f, 6.5f);
-            if (towerB != null) towerB.transform.localScale = new Vector3(6.5f, 19.5f, 6.5f);
 
             // ── Fighters clearly protruding from the towers ────────────
             // Tower A fighter: enters the east face, body diagonal, nose buried
@@ -1134,12 +1297,12 @@ namespace CloseEncounters.Arena
             AddRockCluster(new Vector3( 55f, 1f,   4f), 7f, 1.8f, debris, "Debris_B3");
             AddRockCluster(new Vector3( 48f, 1f, -18f), 6f, 1.5f, debris, "Debris_B4");
 
-            // ── Skyline backdrop — tall dark silhouette blocks at arena edges ─
+            // ── Skyline backdrop — tall dark silhouette blocks at arena edges (1.5x pos, wider spans) ─
             Color skyline = new Color(0.25f, 0.25f, 0.30f);
-            AddBlock(new Vector3(240f, 20f, 0f), new Vector3(6f, 40f, 120f), skyline, "Skyline_E");
-            AddBlock(new Vector3(-240f, 18f, 30f), new Vector3(6f, 36f, 100f), skyline, "Skyline_W");
-            AddBlock(new Vector3(0f, 15f, 240f), new Vector3(160f, 30f, 6f), skyline, "Skyline_N");
-            AddBlock(new Vector3(0f, 12f, -240f), new Vector3(140f, 24f, 6f), skyline, "Skyline_S");
+            AddBlock(new Vector3(360f, 20f, 0f), new Vector3(6f, 40f, 180f), skyline, "Skyline_E");
+            AddBlock(new Vector3(-360f, 18f, 45f), new Vector3(6f, 36f, 150f), skyline, "Skyline_W");
+            AddBlock(new Vector3(0f, 15f, 360f), new Vector3(240f, 30f, 6f), skyline, "Skyline_N");
+            AddBlock(new Vector3(0f, 12f, -360f), new Vector3(210f, 24f, 6f), skyline, "Skyline_S");
         }
 
         private void BuildWaterfront()
@@ -1168,34 +1331,8 @@ namespace CloseEncounters.Arena
             CityPrefabHelper.PlaceBuilding(transform, "Building_W_prefab",
                 new Vector3(170f, 1f, -27f), 90f, 0.85f);
 
-            // ── Canal-edge fences ─────────────────────────────────
-            // North bank fence segments along z=15
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_1",
-                new Vector3(-150f, 1f, 15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_2",
-                new Vector3(-80f, 1f, 15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_1",
-                new Vector3(20f, 1f, 15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_2",
-                new Vector3(110f, 1f, 15f), 0f, 1f);
-            // South bank fence segments along z=-15
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_2",
-                new Vector3(-130f, 1f, -15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_1",
-                new Vector3(-30f, 1f, -15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_2",
-                new Vector3(60f, 1f, -15f), 0f, 1f);
-            CityPrefabHelper.PlaceBuilding(transform, "Fence_B_1",
-                new Vector3(150f, 1f, -15f), 0f, 1f);
-
-            // ── Stone bollards along canal edges ──────────────────
-            for (int i = -4; i <= 4; i++)
-            {
-                CityPrefabHelper.PlaceBuilding(transform, "Stone 1 Prefab",
-                    new Vector3(i * 40f, 1f, 14f), 0f, 0.6f);
-                CityPrefabHelper.PlaceBuilding(transform, "Stone 1 Prefab",
-                    new Vector3(i * 40f + 20f, 1f, -14f), 0f, 0.6f);
-            }
+            // Canal-edge barriers are now breakable guardrails built along the new
+            // (widened) canal lip in BuildCanalDetail — see AddBreakableGuardrail.
         }
 
         // ── CITY PROPS: trees, benches, bins, traffic, vending, mail/ATM ──
@@ -1345,50 +1482,85 @@ namespace CloseEncounters.Arena
         }
 
         // ── CANAL DETAIL: low walls, lamps, trees, and south park ──────
+        /// <summary>
+        /// A short highway-style guardrail (rail beam on posts) running along X,
+        /// breakable so vehicles can crash through it into the canal. Centre sits on
+        /// the ground; length is along X.
+        /// </summary>
+        private void AddBreakableGuardrail(Vector3 center, float length)
+        {
+            var parent = new GameObject("CanalGuardrail");
+            parent.transform.SetParent(transform, false);
+            parent.transform.position = center;
+
+            Color metal = new Color(0.62f, 0.64f, 0.66f);
+
+            // Horizontal rail beam (runs along X)
+            var rail = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            rail.name = "Rail";
+            rail.transform.SetParent(parent.transform, false);
+            rail.transform.localPosition = new Vector3(0f, 0.55f, 0f);
+            rail.transform.localScale = new Vector3(length, 0.22f, 0.12f);
+            SetMaterial(rail, MakeMaterial(metal));
+            Object.DestroyImmediate(rail.GetComponent<Collider>());
+
+            // Support posts every ~4 units
+            int posts = Mathf.Max(2, Mathf.RoundToInt(length / 4f));
+            for (int i = 0; i < posts; i++)
+            {
+                float tx = Mathf.Lerp(-length * 0.5f + 0.3f, length * 0.5f - 0.3f, i / (float)(posts - 1));
+                var post = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                post.name = "Post";
+                post.transform.SetParent(parent.transform, false);
+                post.transform.localPosition = new Vector3(tx, 0.3f, 0f);
+                post.transform.localScale = new Vector3(0.14f, 0.7f, 0.14f);
+                SetMaterial(post, MakeMaterial(metal));
+                Object.DestroyImmediate(post.GetComponent<Collider>());
+            }
+
+            // One parent collider for the whole rail, then make it breakable.
+            var box = parent.AddComponent<BoxCollider>();
+            box.center = new Vector3(0f, 0.45f, 0f);
+            box.size = new Vector3(length, 0.95f, 0.25f);
+
+            CityPrefabHelper.MakeBreakable(parent);
+        }
+
         // Adds detail along both canal banks and fills the far south edge
         // with a small park area.
         private void BuildCanalDetail()
         {
-            // ── Canal-side walls / railings (both banks) ─────────────
-            Color canalWall = new Color(0.45f, 0.43f, 0.40f);
+            // ── Breakable guardrails lining both canal lips ──────────
+            // Highway-guardrail style: cars and shots smash through them and tumble
+            // into the wider/deeper trench. Continuous along each lip EXCEPT a gap in
+            // front of every bridge approach so the crossings stay open.
+            float[] railBridgeX = { -140f, -60f, 0f, 60f, 140f };
+            const float railClear = 13f;   // clear zone each side of a bridge centre (deck 16 wide)
+            const float railStep = 16f;
+            const float lipZ = 23f;        // canal lip (bank top)
+            for (float gx = -264f; gx <= 264f; gx += railStep)
+            {
+                bool nearBridge = false;
+                for (int b = 0; b < railBridgeX.Length; b++)
+                    if (Mathf.Abs(gx - railBridgeX[b]) < railClear) { nearBridge = true; break; }
+                if (nearBridge) continue;
+                AddBreakableGuardrail(new Vector3(gx, 1f,  lipZ), railStep - 2f);
+                AddBreakableGuardrail(new Vector3(gx, 1f, -lipZ), railStep - 2f);
+            }
 
-            // North bank wall segments (z=16, between bridges)
-            AddWall(new Vector3(-135f, 1f, 16f), new Vector3(-65f, 1f, 16f), 1.5f, 0.5f, canalWall, "CanalWall_N1");
-            AddWall(new Vector3(-55f, 1f, 16f), new Vector3(-5f, 1f, 16f), 1.5f, 0.5f, canalWall, "CanalWall_N2");
-            AddWall(new Vector3(5f, 1f, 16f), new Vector3(55f, 1f, 16f), 1.5f, 0.5f, canalWall, "CanalWall_N3");
-            AddWall(new Vector3(65f, 1f, 16f), new Vector3(135f, 1f, 16f), 1.5f, 0.5f, canalWall, "CanalWall_N4");
+            // ── Canal-side lamps (set back on solid ground beyond the lip) ──
+            for (float lx = -125f; lx <= 125f; lx += 50f)
+            {
+                CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(lx, 1f, 26f));
+                CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(lx + 25f, 1f, -26f));
+            }
 
-            // South bank wall segments (z=-16, between bridges)
-            AddWall(new Vector3(-135f, 1f, -16f), new Vector3(-65f, 1f, -16f), 1.5f, 0.5f, canalWall, "CanalWall_S1");
-            AddWall(new Vector3(-55f, 1f, -16f), new Vector3(-5f, 1f, -16f), 1.5f, 0.5f, canalWall, "CanalWall_S2");
-            AddWall(new Vector3(5f, 1f, -16f), new Vector3(55f, 1f, -16f), 1.5f, 0.5f, canalWall, "CanalWall_S3");
-            AddWall(new Vector3(65f, 1f, -16f), new Vector3(135f, 1f, -16f), 1.5f, 0.5f, canalWall, "CanalWall_S4");
-
-            // ── Canal-side lamps (10 total, every ~50 units) ─────────
-            // North bank lamps along z=18
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(-125f, 1f, 18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(-75f, 1f, 18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(-25f, 1f, 18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(25f, 1f, 18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(75f, 1f, 18f));
-            // South bank lamps along z=-18
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(-100f, 1f, -18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(-50f, 1f, -18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(0f, 1f, -18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(50f, 1f, -18f));
-            CityPrefabHelper.PlaceLamp(transform, "Lamp_4_prefab", new Vector3(100f, 1f, -18f));
-
-            // ── Canal-side potted trees (8 total) ────────────────────
-            // North bank walkway at z=19
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(-110f, 1f, 19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(-40f, 1f, 19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(40f, 1f, 19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(110f, 1f, 19f));
-            // South bank walkway at z=-19
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(-90f, 1f, -19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(-20f, 1f, -19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(60f, 1f, -19f));
-            CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(120f, 1f, -19f));
+            // ── Canal-side potted trees ──────────────────────────────
+            for (float tx = -110f; tx <= 110f; tx += 70f)
+            {
+                CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(tx, 1f, 27f));
+                CityPrefabHelper.PlaceProp(transform, "Pot_tree prefab", new Vector3(tx + 20f, 1f, -27f));
+            }
 
             // ── Far south park area (z=-150 to -180) ─────────────────
             // Trees in a park-like cluster around x=-30..30, z=-160
@@ -1653,116 +1825,206 @@ namespace CloseEncounters.Arena
             //      the expanded playable area doesn't feel empty
             // ══════════════════════════════════════════════════════
 
-            // ── Far-north suburban ring (z=210..290) ────────────────
+            // ── Far-north / far-south suburban ring (1.5x: z=330..435; counts ~2.25x) ────
             string[] subBuildings = {
                 "Building_A1_prefab", "Building_B1_prefab", "Building_D1_prefab",
                 "Building_S_prefab",  "Building_T_prefab",  "Building_V_prefab",
                 "Building_W_prefab",  "Building_Y_prefab",  "Building_p_prefab",
                 "Building_u_prefab",  "building_X_prefab",
             };
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 22; i++)
             {
-                float bx = -280f + i * 60f + Random.Range(-8f, 8f);
-                float bz = 220f + Random.Range(0f, 70f);
+                float bx = -420f + i * 40f + Random.Range(-12f, 12f);
+                float bz = 330f + Random.Range(0f, 105f);
                 float rot = Random.Range(0, 4) * 90f;
                 float scl = Random.Range(0.80f, 1.05f);
                 CityPrefabHelper.PlaceBuilding(transform, subBuildings[i % subBuildings.Length],
                     new Vector3(bx, 1f, bz), rot, scl);
             }
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 22; i++)
             {
-                float bx = -280f + i * 60f + Random.Range(-8f, 8f);
-                float bz = -290f + Random.Range(0f, 70f);
+                float bx = -420f + i * 40f + Random.Range(-12f, 12f);
+                float bz = -435f + Random.Range(0f, 105f);
                 float rot = Random.Range(0, 4) * 90f;
                 float scl = Random.Range(0.80f, 1.05f);
                 CityPrefabHelper.PlaceBuilding(transform, subBuildings[(i + 3) % subBuildings.Length],
                     new Vector3(bx, 1f, bz), rot, scl);
             }
 
-            // ── Far-east / far-west outskirts ──────────────────────
-            for (int i = 0; i < 6; i++)
+            // ── Far-east / far-west outskirts (1.5x pos, ~2.25x count) ──────────
+            for (int i = 0; i < 14; i++)
             {
-                float bz = -180f + i * 60f + Random.Range(-6f, 6f);
+                float bz = -270f + i * 40f + Random.Range(-9f, 9f);
                 CityPrefabHelper.PlaceBuilding(transform, subBuildings[i % subBuildings.Length],
-                    new Vector3(250f + Random.Range(-8f, 20f), 1f, bz),
+                    new Vector3(375f + Random.Range(-12f, 30f), 1f, bz),
                     Random.Range(0, 4) * 90f, Random.Range(0.80f, 1.05f));
                 CityPrefabHelper.PlaceBuilding(transform, subBuildings[(i + 5) % subBuildings.Length],
-                    new Vector3(-250f - Random.Range(0f, 28f), 1f, bz),
+                    new Vector3(-375f - Random.Range(0f, 42f), 1f, bz),
                     Random.Range(0, 4) * 90f, Random.Range(0.80f, 1.05f));
             }
 
-            // ── Trees along outskirts roads (40 trees) ─────────────
-            for (int i = 0; i < 20; i++)
+            // ── Trees along outskirts roads (1.5x pos, ~2.25x count) ─────────────
+            for (int i = 0; i < 45; i++)
             {
-                float ax = Random.Range(-320f, 320f);
-                float azN =  220f + Random.Range(0f, 90f);
-                float azS = -310f + Random.Range(0f, 90f);
+                float ax = Random.Range(-480f, 480f);
+                float azN =  330f + Random.Range(0f, 135f);
+                float azS = -465f + Random.Range(0f, 135f);
                 CityPrefabHelper.PlaceProp(transform, "Tree prefab",
-                    new Vector3(ax + Random.Range(-4f, 4f), 1f, azN),
+                    new Vector3(ax + Random.Range(-6f, 6f), 1f, azN),
                     Random.Range(0f, 360f), Random.Range(0.9f, 1.2f));
                 CityPrefabHelper.PlaceProp(transform, "Tree prefab",
-                    new Vector3(ax + Random.Range(-4f, 4f), 1f, azS),
+                    new Vector3(ax + Random.Range(-6f, 6f), 1f, azS),
                     Random.Range(0f, 360f), Random.Range(0.9f, 1.2f));
             }
 
-            // ── Bushes / hedges / pot trees scattered in suburbs ───
+            // ── Bushes / hedges / pot trees scattered in suburbs (~2.25x count) ───
             string[] subGreens = { "Bush prefab", "hedge prefab", "Pot_tree prefab" };
-            for (int i = 0; i < 30; i++)
+            for (int i = 0; i < 68; i++)
             {
-                float gx = Random.Range(-320f, 320f);
+                float gx = Random.Range(-480f, 480f);
                 float gz;
-                if (i % 2 == 0) gz = Random.Range(215f, 310f);
-                else            gz = Random.Range(-310f, -215f);
+                if (i % 2 == 0) gz = Random.Range(323f, 465f);
+                else            gz = Random.Range(-465f, -323f);
                 CityPrefabHelper.PlaceProp(transform, subGreens[Random.Range(0, subGreens.Length)],
                     new Vector3(gx, 1f, gz), Random.Range(0f, 360f), Random.Range(0.9f, 1.2f));
             }
 
-            // ── Street lamps along new outer road loops ────────────
-            for (int i = 0; i < 12; i++)
+            // ── Street lamps along new outer road loops (1.5x radius, more lamps) ────────────
+            for (int i = 0; i < 24; i++)
             {
-                float t = (i / 12f) * Mathf.PI * 2f;
+                float t = (i / 24f) * Mathf.PI * 2f;
                 CityPrefabHelper.PlaceLamp(transform, "Lamp_2_prefab",
-                    new Vector3(Mathf.Cos(t) * 290f, 1f, Mathf.Sin(t) * 290f),
+                    new Vector3(Mathf.Cos(t) * 435f, 1f, Mathf.Sin(t) * 435f),
                     Mathf.Rad2Deg * (-t));
             }
 
-            // ── Dumpsters / bins / benches alley dressing ──────────
+            // ── Dumpsters / bins / benches alley dressing (~2.25x count) ──────────
             string[] alleyProps = {
                 "Big_trash_bin prefab", "Bin prefab", "trashcan prefab",
                 "bench prefab", "Bench 2 prefab", "StreetSellerStand prefab"
             };
-            for (int i = 0; i < 18; i++)
+            for (int i = 0; i < 40; i++)
             {
-                float ax = Random.Range(-310f, 310f);
+                float ax = Random.Range(-465f, 465f);
                 float az;
-                if (i % 2 == 0) az = Random.Range(220f, 300f);
-                else            az = Random.Range(-300f, -220f);
+                if (i % 2 == 0) az = Random.Range(330f, 450f);
+                else            az = Random.Range(-450f, -330f);
                 CityPrefabHelper.PlaceProp(transform, alleyProps[Random.Range(0, alleyProps.Length)],
                     new Vector3(ax, 1f, az), Random.Range(0, 4) * 90f, 1f);
             }
 
-            // ── Power poles along outer roads ──────────────────────
-            for (int z = -300; z <= 300; z += 60)
+            // ── Power poles along outer roads (1.5x pos) ──────────────────────
+            for (int z = -450; z <= 450; z += 60)
             {
                 CityPrefabHelper.PlaceProp(transform, "Power_poles prefab",
-                    new Vector3( 320f, 1f, z));
+                    new Vector3( 480f, 1f, z));
                 CityPrefabHelper.PlaceProp(transform, "Power_poles prefab",
-                    new Vector3(-320f, 1f, z));
+                    new Vector3(-480f, 1f, z));
             }
 
-            // ── Secondary crashed fighter clusters at new edges ────
+            // ── Secondary crashed fighter clusters at new edges (1.5x pos) ────
             Color rubble = new Color(0.5f, 0.5f, 0.5f);
-            AddRockCluster(new Vector3( 260f, 1f,  220f), 7f, 1.8f, rubble, "Outer_Debris_NE");
-            AddRockCluster(new Vector3(-260f, 1f, -230f), 7f, 1.8f, rubble, "Outer_Debris_SW");
-            AddRockCluster(new Vector3(-250f, 1f,  260f), 6f, 1.6f, rubble, "Outer_Debris_NW");
-            AddRockCluster(new Vector3( 250f, 1f, -260f), 6f, 1.6f, rubble, "Outer_Debris_SE");
+            AddRockCluster(new Vector3( 390f, 1f,  330f), 7f, 1.8f, rubble, "Outer_Debris_NE");
+            AddRockCluster(new Vector3(-390f, 1f, -345f), 7f, 1.8f, rubble, "Outer_Debris_SW");
+            AddRockCluster(new Vector3(-375f, 1f,  390f), 6f, 1.6f, rubble, "Outer_Debris_NW");
+            AddRockCluster(new Vector3( 375f, 1f, -390f), 6f, 1.6f, rubble, "Outer_Debris_SE");
 
-            // ── Skyline backdrop extension at new edges ────────────
+            // ── Skyline backdrop extension at new edges (1.5x pos, wider spans) ────────────
             Color skyline = new Color(0.22f, 0.22f, 0.28f);
-            AddBlock(new Vector3( 340f, 22f,   0f), new Vector3(6f, 44f, 180f), skyline, "Skyline2_E");
-            AddBlock(new Vector3(-340f, 20f,  30f), new Vector3(6f, 40f, 150f), skyline, "Skyline2_W");
-            AddBlock(new Vector3(   0f, 18f, 340f), new Vector3(220f, 36f, 6f), skyline, "Skyline2_N");
-            AddBlock(new Vector3(   0f, 15f,-340f), new Vector3(200f, 30f, 6f), skyline, "Skyline2_S");
+            AddBlock(new Vector3( 510f, 22f,   0f), new Vector3(6f, 44f, 270f), skyline, "Skyline2_E");
+            AddBlock(new Vector3(-510f, 20f,  45f), new Vector3(6f, 40f, 225f), skyline, "Skyline2_W");
+            AddBlock(new Vector3(   0f, 18f, 510f), new Vector3(330f, 36f, 6f), skyline, "Skyline2_N");
+            AddBlock(new Vector3(   0f, 15f,-510f), new Vector3(300f, 30f, 6f), skyline, "Skyline2_S");
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 1: outer-ring static building wall to seal gaps
+            // why: the 1.5x perimeter (±480..±540) is long; a denser ring of
+            //      static buildings keeps the wider boundary visually walled.
+            // PlaceBuilding is static (good hard cover, no breakage).
+            // ══════════════════════════════════════════════════════
+            {
+                int ringPlaced = 0, ringAttempts = 0;
+                while (ringPlaced < 36 && ringAttempts < 360)
+                {
+                    ringAttempts++;
+                    float t = Random.Range(0f, Mathf.PI * 2f);
+                    float r = Random.Range(470f, 535f);
+                    float bx = Mathf.Cos(t) * r;
+                    float bz = Mathf.Sin(t) * r;
+                    if (Mathf.Abs(bz) < 30f) continue; // keep clear of canal mouth at the edges
+                    CityPrefabHelper.PlaceBuilding(transform,
+                        subBuildings[Random.Range(0, subBuildings.Length)],
+                        new Vector3(bx, 1f, bz),
+                        Random.Range(0, 4) * 90f, Random.Range(0.85f, 1.15f));
+                    ringPlaced++;
+                }
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 2: breakable street-furniture carpet across the
+            // expanded mid-to-outer band (±200..±520). PlaceProp items are
+            // breakable cover; excludes canal/road core (|z|<200) so the city
+            // grid and canal corridor stay clean.
+            // ══════════════════════════════════════════════════════
+            {
+                string[] furniture = {
+                    "Bin prefab", "trashcan prefab", "Big_trash_bin prefab",
+                    "bench prefab", "Bench 2 prefab", "Bush prefab",
+                    "hedge prefab", "Pot_tree prefab", "Tree prefab",
+                    "Bus stop prefab", "Mail_box prefab",
+                };
+                int furPlaced = 0, furAttempts = 0;
+                while (furPlaced < 90 && furAttempts < 900)
+                {
+                    furAttempts++;
+                    float fx = Random.Range(-520f, 520f);
+                    float fz = Random.Range(-520f, 520f);
+                    float d = Mathf.Sqrt(fx * fx + fz * fz);
+                    if (d < 200f) continue;             // leave the core city/canal alone
+                    if (d > 545f) continue;             // stay inside the 562 wall
+                    CityPrefabHelper.PlaceProp(transform,
+                        furniture[Random.Range(0, furniture.Length)],
+                        new Vector3(fx, 1f, fz), Random.Range(0f, 360f),
+                        Random.Range(0.9f, 1.25f));
+                    furPlaced++;
+                }
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 3: breakable traffic-sign + lamp dressing along the
+            // outer ring band so the wider streets read as a real city edge.
+            // PlaceSign / PlaceLamp are breakable.
+            // ══════════════════════════════════════════════════════
+            {
+                string[] signs = {
+                    "stop sign", "parking sign", "traffic sign 3",
+                    "traffic sign 4", "traffic sign 5", "traffic sign 6",
+                    "traffic sign speed 50", "traffic sign speed 70",
+                };
+                string[] lamps = {
+                    "Lamp_1_prefab", "Lamp_2_prefab", "Lamp_5_prefab",
+                    "street lamp 2 prefab",
+                };
+                int sgPlaced = 0, sgAttempts = 0;
+                while (sgPlaced < 60 && sgAttempts < 600)
+                {
+                    sgAttempts++;
+                    float sx = Random.Range(-520f, 520f);
+                    float sz = Random.Range(-520f, 520f);
+                    float d = Mathf.Sqrt(sx * sx + sz * sz);
+                    if (d < 210f) continue;
+                    if (d > 545f) continue;
+                    if (Random.value > 0.5f)
+                        CityPrefabHelper.PlaceSign(transform,
+                            signs[Random.Range(0, signs.Length)],
+                            new Vector3(sx, 1f, sz), Random.Range(0, 4) * 90f);
+                    else
+                        CityPrefabHelper.PlaceLamp(transform,
+                            lamps[Random.Range(0, lamps.Length)],
+                            new Vector3(sx, 1f, sz), Random.Range(0f, 360f));
+                    sgPlaced++;
+                }
+            }
         }
     }
 
@@ -1780,12 +2042,12 @@ namespace CloseEncounters.Arena
             Color darkRock  = new Color(0.35f, 0.33f, 0.30f);
             Color cliffGray = new Color(0.50f, 0.48f, 0.45f);
 
-            // --- Unity Terrain: 750x750, height 50 (why: 2.5x playable area) ---
+            // --- Unity Terrain: 1125x1125, height 50 (why: 1.5x enlarge of 750) ---
             var terrain = TerrainFactory.Create(
                 transform,
-                new Vector3(-375f, 0f, -375f),
-                new Vector3(750f, 50f, 750f),
-                513,
+                new Vector3(-562.5f, 0f, -562.5f),
+                new Vector3(1125f, 50f, 1125f),
+                769,
                 "ArcticTerrain");
 
             // Gentle rolling hills with a few rocky outcrops
@@ -1866,80 +2128,165 @@ namespace CloseEncounters.Arena
             AddCylinder(new Vector3(15f, -0.1f, -15f), 35f, 0.2f, ice, "FrozenLake");
             AddIceHazard(new Vector3(15f, 0f, -15f), new Vector3(70f, 2f, 70f), "LakeIce");
 
-            // Pine forests -- west cluster
-            float[] treeX = { -120f, -105f, -127.5f, -97.5f, -112.5f, -135f, -90f, -142.5f };
-            float[] treeZ = { 45f, 67.5f, 30f, 82.5f, 15f, 60f, 52.5f, 22.5f };
+            // Pine forests -- west cluster (1.5x positions; ~2.25x density via second pass)
+            float[] treeX = { -180f, -157.5f, -191.25f, -146.25f, -168.75f, -202.5f, -135f, -213.75f };
+            float[] treeZ = { 67.5f, 101.25f, 45f, 123.75f, 22.5f, 90f, 78.75f, 33.75f };
             for (int i = 0; i < treeX.Length; i++)
             {
                 AddPine(new Vector3(treeX[i], 0f, treeZ[i]), Random.Range(8f, 14f), $"Pine_W_{i}");
             }
+            // West cluster densify pass (fill-in pines, jittered between the originals)
+            for (int i = 0; i < treeX.Length; i++)
+            {
+                AddPine(new Vector3(treeX[i] + Random.Range(-14f, 14f), 0f, treeZ[i] + Random.Range(-14f, 14f)),
+                    Random.Range(8f, 14f), $"Pine_W_fill_{i}");
+            }
 
-            // Pine forests -- east cluster
-            float[] treeX2 = { 90f, 105f, 82.5f, 112.5f, 120f, 97.5f, 127.5f };
-            float[] treeZ2 = { -75f, -60f, -90f, -52.5f, -82.5f, -105f, -67.5f };
+            // Pine forests -- east cluster (1.5x positions; ~2.25x density via second pass)
+            float[] treeX2 = { 135f, 157.5f, 123.75f, 168.75f, 180f, 146.25f, 191.25f };
+            float[] treeZ2 = { -112.5f, -90f, -135f, -78.75f, -123.75f, -157.5f, -101.25f };
             for (int i = 0; i < treeX2.Length; i++)
             {
                 AddPine(new Vector3(treeX2[i], 0f, treeZ2[i]), Random.Range(8f, 14f), $"Pine_E_{i}");
             }
-
-            // Ice rock formations
-            AddRockCluster(new Vector3(-45f, 0f, -60f), 4f, 8f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_1");
-            AddRockCluster(new Vector3(60f, 0f, 30f), 3f, 6f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_2");
-            AddRockCluster(new Vector3(-22.5f, 0f, 45f), 3.5f, 7f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_3");
-            AddRockCluster(new Vector3(37.5f, 0f, -75f), 2.5f, 5f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_4");
-
-            // Rock clusters
-            AddRockCluster(new Vector3(75f, 0f, 90f), 8f, 3f, darkRock, "Rocks_NE");
-            AddRockCluster(new Vector3(-60f, 0f, -105f), 6f, 2.5f, cliffGray, "Rocks_S");
-
-            // ── Outer pine forest rings (new expansion zone) ──────────
-            // why: keeps the expanded outskirts visually interesting without blocking spawn lanes
-            for (int i = 0; i < 26; i++)
+            // East cluster densify pass
+            for (int i = 0; i < treeX2.Length; i++)
             {
-                float t = (i / 26f) * Mathf.PI * 2f;
-                float r = Random.Range(210f, 320f);
-                float px = Mathf.Cos(t) * r + Random.Range(-12f, 12f);
-                float pz = Mathf.Sin(t) * r + Random.Range(-12f, 12f);
+                AddPine(new Vector3(treeX2[i] + Random.Range(-14f, 14f), 0f, treeZ2[i] + Random.Range(-14f, 14f)),
+                    Random.Range(8f, 14f), $"Pine_E_fill_{i}");
+            }
+
+            // Ice rock formations (1.5x positions)
+            AddRockCluster(new Vector3(-67.5f, 0f, -90f), 4f, 8f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_1");
+            AddRockCluster(new Vector3(90f, 0f, 45f), 3f, 6f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_2");
+            AddRockCluster(new Vector3(-33.75f, 0f, 67.5f), 3.5f, 7f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_3");
+            AddRockCluster(new Vector3(56.25f, 0f, -112.5f), 2.5f, 5f * 0.3f, new Color(0.7f, 0.85f, 0.95f), "IceRock_4");
+
+            // Rock clusters (1.5x positions)
+            AddRockCluster(new Vector3(112.5f, 0f, 135f), 8f, 3f, darkRock, "Rocks_NE");
+            AddRockCluster(new Vector3(-90f, 0f, -157.5f), 6f, 2.5f, cliffGray, "Rocks_S");
+
+            // ── Outer pine forest rings (1.5x radii; count 26→58 for the longer perimeter) ──
+            // why: keeps the expanded outskirts visually interesting without blocking spawn lanes
+            for (int i = 0; i < 58; i++)
+            {
+                float t = (i / 58f) * Mathf.PI * 2f;
+                float r = Random.Range(315f, 480f);
+                float px = Mathf.Cos(t) * r + Random.Range(-18f, 18f);
+                float pz = Mathf.Sin(t) * r + Random.Range(-18f, 18f);
                 AddPine(new Vector3(px, 0f, pz), Random.Range(8f, 16f), $"Pine_Outer_{i}");
             }
 
-            // ── Outer rock clusters ──────────────────────────────────
-            AddRockCluster(new Vector3( 240f, 0f,  220f), 10f, 3.5f, darkRock, "Rocks_NE_Outer");
-            AddRockCluster(new Vector3(-230f, 0f,  230f), 9f, 3f, cliffGray, "Rocks_NW_Outer");
-            AddRockCluster(new Vector3( 250f, 0f, -240f), 8f, 3f, darkRock, "Rocks_SE_Outer");
-            AddRockCluster(new Vector3(-250f, 0f, -220f), 10f, 3.5f, cliffGray, "Rocks_SW_Outer");
-            AddRockCluster(new Vector3(-300f, 0f,    0f), 8f, 3f, darkRock, "Rocks_W_Outer");
-            AddRockCluster(new Vector3( 300f, 0f,   40f), 8f, 3f, cliffGray, "Rocks_E_Outer");
-            AddRockCluster(new Vector3(   0f, 0f,  300f), 10f, 3.5f, darkRock, "Rocks_N_Outer");
-            AddRockCluster(new Vector3(  20f, 0f, -300f), 9f, 3f, cliffGray, "Rocks_S_Outer");
+            // ── Outer rock clusters (1.5x positions) ──────────────────
+            AddRockCluster(new Vector3( 360f, 0f,  330f), 10f, 3.5f, darkRock, "Rocks_NE_Outer");
+            AddRockCluster(new Vector3(-345f, 0f,  345f), 9f, 3f, cliffGray, "Rocks_NW_Outer");
+            AddRockCluster(new Vector3( 375f, 0f, -360f), 8f, 3f, darkRock, "Rocks_SE_Outer");
+            AddRockCluster(new Vector3(-375f, 0f, -330f), 10f, 3.5f, cliffGray, "Rocks_SW_Outer");
+            AddRockCluster(new Vector3(-450f, 0f,    0f), 8f, 3f, darkRock, "Rocks_W_Outer");
+            AddRockCluster(new Vector3( 450f, 0f,   60f), 8f, 3f, cliffGray, "Rocks_E_Outer");
+            AddRockCluster(new Vector3(   0f, 0f,  450f), 10f, 3.5f, darkRock, "Rocks_N_Outer");
+            AddRockCluster(new Vector3(  30f, 0f, -450f), 9f, 3f, cliffGray, "Rocks_S_Outer");
 
-            // ── Ice rock clusters scattered in outer ring ────────────
+            // ── Perimeter enclosure ring of rock peaks lining the 562 wall ───────
+            // why: the longer 1.5x perimeter needs more peaks so there are no visible
+            //      gaps; ring radius ~510 sits just inside the 562 invisible wall.
+            for (int i = 0; i < 30; i++)
+            {
+                float t = (i / 30f) * Mathf.PI * 2f;
+                float r = Random.Range(495f, 535f);
+                float wx = Mathf.Cos(t) * r;
+                float wz = Mathf.Sin(t) * r;
+                Color wallCol = (i % 2 == 0) ? darkRock : cliffGray;
+                AddRockCluster(new Vector3(wx, 0f, wz), Random.Range(9f, 13f), Random.Range(3.5f, 5f),
+                    wallCol, $"Rocks_Wall_{i}");
+            }
+
+            // ── Ice rock clusters scattered in outer ring (1.5x radii; count 10→23) ──
             Color iceCol = new Color(0.7f, 0.85f, 0.95f);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 23; i++)
             {
                 float t = Random.Range(0f, Mathf.PI * 2f);
-                float r = Random.Range(180f, 300f);
+                float r = Random.Range(270f, 450f);
                 AddRockCluster(new Vector3(Mathf.Cos(t) * r, 0f, Mathf.Sin(t) * r),
                     Random.Range(3f, 6f), Random.Range(1.5f, 2.5f), iceCol, $"IceRock_Outer_{i}");
             }
 
-            // ── Snow drift blocks (low white cover props) ────────────
+            // ── Snow drift blocks (1.5x range ±480; count 14→32) ────────────
             Color drift = new Color(0.92f, 0.96f, 1f);
-            for (int i = 0; i < 14; i++)
+            for (int i = 0; i < 32; i++)
             {
-                float dx = Random.Range(-320f, 320f);
-                float dz = Random.Range(-320f, 320f);
-                if (Mathf.Sqrt(dx * dx + dz * dz) < 80f) continue; // keep center clean
+                float dx = Random.Range(-480f, 480f);
+                float dz = Random.Range(-480f, 480f);
+                if (Mathf.Sqrt(dx * dx + dz * dz) < 120f) continue; // keep center clean
                 float sx = Random.Range(4f, 10f);
                 float sz = Random.Range(4f, 10f);
                 AddBlockUnchecked(new Vector3(dx, 0.4f, dz), new Vector3(sx, 0.8f, sz), drift, $"SnowDrift_{i}");
             }
 
-            // why: spawn ring pushed from 160→260 so players start outside the new dense props
-            AddSpawnRing(Vector3.zero, 260f, 8, 1f);
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 1: mid-band pine scatter (filling the 1.5x ring gap)
+            // why: between the inner forests (±200) and outer ring (±315) the
+            //      enlarged map had a sparse band; ~45 jittered pines add cover.
+            // ══════════════════════════════════════════════════════
+            for (int i = 0; i < 45; i++)
+            {
+                float t = Random.Range(0f, Mathf.PI * 2f);
+                float r = Random.Range(180f, 320f);
+                float px = Mathf.Cos(t) * r + Random.Range(-20f, 20f);
+                float pz = Mathf.Sin(t) * r + Random.Range(-20f, 20f);
+                AddPine(new Vector3(px, 0f, pz), Random.Range(8f, 15f), $"Pine_Mid_{i}");
+            }
 
-            // Invisible arena boundary walls (expanded)
-            AddInvisibleWalls(375f, 50f);
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 2: scattered ice + dark rock clusters across the
+            // expanded mid-to-outer band (±150..±500). Static landmark cover.
+            // ══════════════════════════════════════════════════════
+            {
+                int rkPlaced = 0, rkAttempts = 0;
+                while (rkPlaced < 40 && rkAttempts < 400)
+                {
+                    rkAttempts++;
+                    float rx = Random.Range(-500f, 500f);
+                    float rz = Random.Range(-500f, 500f);
+                    float d = Mathf.Sqrt(rx * rx + rz * rz);
+                    if (d < 150f) continue;   // leave the frozen-lake core clear
+                    if (d > 510f) continue;   // stay inside the perimeter wall ring
+                    bool icy = (rkPlaced % 3 == 0);
+                    Color rc = icy ? iceCol : ((rkPlaced % 2 == 0) ? darkRock : cliffGray);
+                    AddRockCluster(new Vector3(rx, 0f, rz),
+                        Random.Range(4f, 8f), Random.Range(2f, 3.5f), rc, $"Rocks_Scatter_{rkPlaced}");
+                    rkPlaced++;
+                }
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 3: low snow-drift cover carpet (breakable-feel low
+            // blocks) across the mid-to-outer band so the wider field reads as
+            // a populated snowscape, not empty terrain.
+            // ══════════════════════════════════════════════════════
+            {
+                int dPlaced = 0, dAttempts = 0;
+                while (dPlaced < 36 && dAttempts < 360)
+                {
+                    dAttempts++;
+                    float dx = Random.Range(-500f, 500f);
+                    float dz = Random.Range(-500f, 500f);
+                    float d = Mathf.Sqrt(dx * dx + dz * dz);
+                    if (d < 140f) continue;
+                    if (d > 515f) continue;
+                    float sx = Random.Range(3f, 8f);
+                    float sz = Random.Range(3f, 8f);
+                    AddBlockUnchecked(new Vector3(dx, 0.35f, dz), new Vector3(sx, 0.7f, sz),
+                        drift, $"SnowDrift_Scatter_{dPlaced}");
+                    dPlaced++;
+                }
+            }
+
+            // why: spawn ring radius 260→390 (1.5x) so players start outside the new dense props
+            AddSpawnRing(Vector3.zero, 390f, 8, 1f);
+
+            // Invisible arena boundary walls (1.5x: 375→562)
+            AddInvisibleWalls(562f, 50f);
 
             // ── Cold directional light ─────────────────────────────
             var arcticSun = new GameObject("ArcticSun");
@@ -1960,8 +2307,8 @@ namespace CloseEncounters.Arena
 
             // Ambient VFX
             VFXManager.GroundFog(Vector3.zero, 6f);
-            VFXManager.GroundFog(new Vector3( 200f, 1f,  200f), 4f);
-            VFXManager.GroundFog(new Vector3(-200f, 1f, -200f), 4f);
+            VFXManager.GroundFog(new Vector3( 300f, 1f,  300f), 4f);
+            VFXManager.GroundFog(new Vector3(-300f, 1f, -300f), 4f);
             VFXManager.Rain(new Vector3(0, 30, 0), 8f);
             VFXManager.DustMotes(new Vector3(0, 10, 0), 5f); // snow specks feel
         }
@@ -1980,10 +2327,10 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             // ── Terrain ────────────────────────────────────────────
-            // why: 750x750 for ~2.5x playable area
+            // why: 1.5x enlarge of 750 -> 1125x1125; res 513->769 to hold detail-per-metre
             var terrain = TerrainFactory.Create(transform,
-                new Vector3(-375f, 0f, -375f), new Vector3(750f, 80f, 750f),
-                513, "VolcanicTerrain");
+                new Vector3(-562.5f, 0f, -562.5f), new Vector3(1125f, 80f, 1125f),
+                769, "VolcanicTerrain");
 
             TerrainFactory.SetHeights(terrain, (nx, nz) =>
             {
@@ -2024,24 +2371,22 @@ namespace CloseEncounters.Arena
                 return w;
             });
 
-            // ── Spawn + bounds ─────────────────────────────────────
-            // why: spawns kept in a clear mid-ring (~150) outside caldera/lava (r<~115)
-            // and well clear of outer mountain wall (r~250+) so vehicles aren't wedged.
-            // Registered before props so prop scatter can avoid spawn pads.
-            AddSpawnPoints(
-                new Vector3(-150f, 3f,  150f),  new Vector3(150f, 3f,  150f),
-                new Vector3(-150f, 3f, -150f),  new Vector3(150f, 3f, -150f),
-                new Vector3(-160f, 3f,    0f),  new Vector3(160f, 3f,    0f),
-                new Vector3(   0f, 3f,  160f),  new Vector3(  0f, 3f, -160f)
-            );
-            AddInvisibleWalls(375f, 50f);
-
             // ── District builders ──────────────────────────────────
             BuildCalderaAndLava();
             BuildVolcanicMountains();
             BuildMagmaFormations();
             BuildVolcanicProps();
             BuildFireAndAtmosphere();
+
+            // ── Spawn + bounds ─────────────────────────────────────
+            // why: spawn x/z multiplied by 1.5 (outer ring ~330..390) away from caldera & magma fields
+            AddSpawnPoints(
+                new Vector3(-330f, 3f,  270f),  new Vector3(330f, 3f,  270f),
+                new Vector3(-330f, 3f, -270f),  new Vector3(330f, 3f, -270f),
+                new Vector3(-390f, 3f,    0f),  new Vector3(390f, 3f,    0f),
+                new Vector3(   0f, 3f,  390f),  new Vector3(  0f, 3f, -390f)
+            );
+            AddInvisibleWalls(562f, 50f);
         }
 
         // ── CALDERA: lava pool + streams ───────────────────────────
@@ -2081,275 +2426,310 @@ namespace CloseEncounters.Arena
             Color volcanicTint = new Color(0.4f, 0.3f, 0.3f);
             GameObject mtn;
 
-            // ── North wall (z = 240..270): 3 canyon + 2 magma ───────
+            // ── North wall (z ≈ 368..405, 1.5x): 3 canyon + 2 magma ──
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(-200f, 0f, 255f), 15f, 7f);
+                new Vector3(-300f, 0f, 382.5f), 15f, 7f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_01",
-                new Vector3(-100f, 0f, 245f), 60f, 4f);
+                new Vector3(-150f, 0f, 367.5f), 60f, 4f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(0f, 0f, 260f), 90f, 8f);
+                new Vector3(0f, 0f, 390f), 90f, 8f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_02",
-                new Vector3(100f, 0f, 248f), 150f, 3f);
+                new Vector3(150f, 0f, 372f), 150f, 3f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3(200f, 0f, 252f), 200f, 6f);
+                new Vector3(300f, 0f, 378f), 200f, 6f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
-            // ── South wall (z = -270..-240): 3 canyon + 2 magma ─────
+            // ── South wall (z ≈ -405..-368, 1.5x): 3 canyon + 2 magma ─
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(-190f, 0f, -258f), 180f, 7f);
+                new Vector3(-285f, 0f, -387f), 180f, 7f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_03",
-                new Vector3(-80f, 0f, -245f), 240f, 5f);
+                new Vector3(-120f, 0f, -367.5f), 240f, 5f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(30f, 0f, -265f), 135f, 8f);
+                new Vector3(45f, 0f, -397.5f), 135f, 8f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_01",
-                new Vector3(130f, 0f, -250f), 300f, 4f);
+                new Vector3(195f, 0f, -375f), 300f, 4f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(210f, 0f, -255f), 45f, 6f);
+                new Vector3(315f, 0f, -382.5f), 45f, 6f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
-            // ── East wall (x = 240..270): 3 canyon + 1 magma ────────
+            // ── East wall (x ≈ 368..405, 1.5x): 3 canyon + 1 magma ───
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(260f, 0f, -150f), 90f, 7f);
+                new Vector3(390f, 0f, -225f), 90f, 7f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_02",
-                new Vector3(250f, 0f, -40f), 120f, 5f);
+                new Vector3(375f, 0f, -60f), 120f, 5f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3(265f, 0f, 60f), 270f, 6f);
+                new Vector3(397.5f, 0f, 90f), 270f, 6f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(255f, 0f, 170f), 160f, 5f);
+                new Vector3(382.5f, 0f, 255f), 160f, 5f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
-            // ── West wall (x = -270..-240): 3 canyon + 1 magma ─────
+            // ── West wall (x ≈ -405..-368, 1.5x): 3 canyon + 1 magma ─
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(-265f, 0f, -160f), 0f, 6f);
+                new Vector3(-397.5f, 0f, -240f), 0f, 6f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(-258f, 0f, -40f), 315f, 7f);
+                new Vector3(-387f, 0f, -60f), 315f, 7f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaMountain_03",
-                new Vector3(-252f, 0f, 70f), 210f, 4f);
+                new Vector3(-378f, 0f, 105f), 210f, 4f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
 
             mtn = VolcanicPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(-260f, 0f, 180f), 100f, 5f);
+                new Vector3(-390f, 0f, 270f), 100f, 5f);
             if (mtn != null) VolcanicPrefabHelper.TintVolcanic(mtn, volcanicTint);
+
+            // ── Perimeter peak in-fill ring lining the 562 wall ──────
+            // why: the 1.5x perimeter is longer; the 4 hand-placed walls (~5 each =
+            //      20 peaks) leave gaps. Add 28 more peaks on a ~395..425 ring so the
+            //      longer edge stays walled with no visible see-through gaps.
+            string[] ringCanyons = { "mountain_canyon_01", "mountain_canyon_02",
+                "mountain_canyon_03", "mountain_canyon_04", "mountain_canyon_05" };
+            string[] ringMagma = { "MagmaMountain_01", "MagmaMountain_02", "MagmaMountain_03" };
+            for (int i = 0; i < 28; i++)
+            {
+                float t = (i / 28f) * Mathf.PI * 2f + 0.11f; // offset so they sit between the hand-placed peaks
+                float r = Random.Range(395f, 425f);
+                float wx = Mathf.Cos(t) * r;
+                float wz = Mathf.Sin(t) * r;
+                GameObject peak = (i % 3 == 0)
+                    ? VolcanicPrefabHelper.PlaceStaticProp(transform,
+                        ringMagma[Random.Range(0, ringMagma.Length)],
+                        new Vector3(wx, 0f, wz), Random.Range(0f, 360f), Random.Range(3f, 5f))
+                    : VolcanicPrefabHelper.PlaceMountain(transform,
+                        ringCanyons[Random.Range(0, ringCanyons.Length)],
+                        new Vector3(wx, 0f, wz), Random.Range(0f, 360f), Random.Range(5f, 8f));
+                if (peak != null) VolcanicPrefabHelper.TintVolcanic(peak, volcanicTint);
+            }
         }
 
         // ── MAGMA FORMATIONS: rocks, platforms, cave ───────────────
         private void BuildMagmaFormations()
         {
-            // ── 8 rock clusters (2-3 rocks each) ────────────────────
+            // ── 8 rock clusters (2-3 rocks each), positions ×1.5 ────
             // Cluster 1 – NE quadrant
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(100f, 2f, 80f), 0f, 3.0f);
+                new Vector3(150f, 2f, 120f), 0f, 3.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(108f, 2f, 74f), 45f, 2.5f);
+                new Vector3(162f, 2f, 111f), 45f, 2.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(94f, 2f, 88f), 120f, 2.0f);
+                new Vector3(141f, 2f, 132f), 120f, 2.0f);
 
             // Cluster 2 – NW quadrant
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(-110f, 2f, 90f), 90f, 3.5f);
+                new Vector3(-165f, 2f, 135f), 90f, 3.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(-102f, 2f, 96f), 200f, 2.8f);
+                new Vector3(-153f, 2f, 144f), 200f, 2.8f);
 
             // Cluster 3 – SE quadrant
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(90f, 2f, -100f), 180f, 3.0f);
+                new Vector3(135f, 2f, -150f), 180f, 3.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(98f, 2f, -94f), 270f, 2.5f);
+                new Vector3(147f, 2f, -141f), 270f, 2.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(83f, 2f, -108f), 135f, 3.2f);
+                new Vector3(124.5f, 2f, -162f), 135f, 3.2f);
 
             // Cluster 4 – SW quadrant
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(-95f, 2f, -110f), 60f, 4.0f);
+                new Vector3(-142.5f, 2f, -165f), 60f, 4.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(-103f, 2f, -104f), 150f, 2.5f);
+                new Vector3(-154.5f, 2f, -156f), 150f, 2.5f);
 
             // Cluster 5 – east-center
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(140f, 2f, -20f), 30f, 3.5f);
+                new Vector3(210f, 2f, -30f), 30f, 3.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(148f, 2f, -14f), 210f, 2.8f);
+                new Vector3(222f, 2f, -21f), 210f, 2.8f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(133f, 2f, -28f), 300f, 2.2f);
+                new Vector3(199.5f, 2f, -42f), 300f, 2.2f);
 
             // Cluster 6 – west-center
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(-140f, 2f, 30f), 270f, 3.0f);
+                new Vector3(-210f, 2f, 45f), 270f, 3.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(-132f, 2f, 24f), 90f, 3.8f);
+                new Vector3(-198f, 2f, 36f), 90f, 3.8f);
 
             // Cluster 7 – north-center
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(-20f, 2f, 130f), 15f, 2.5f);
+                new Vector3(-30f, 2f, 195f), 15f, 2.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(-12f, 2f, 138f), 165f, 3.0f);
+                new Vector3(-18f, 2f, 207f), 165f, 3.0f);
 
             // Cluster 8 – south-center
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(25f, 2f, -135f), 240f, 3.0f);
+                new Vector3(37.5f, 2f, -202.5f), 240f, 3.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(33f, 2f, -128f), 75f, 2.5f);
+                new Vector3(49.5f, 2f, -192f), 75f, 2.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(18f, 2f, -142f), 330f, 2.0f);
+                new Vector3(27f, 2f, -213f), 330f, 2.0f);
 
-            // ── 4 elevated platforms (cover) ────────────────────────
+            // ── 4 elevated platforms (cover), positions ×1.5 ────────
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_01",
-                new Vector3(160f, 2f, 120f), 0f, 2.5f);
+                new Vector3(240f, 2f, 180f), 0f, 2.5f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_02",
-                new Vector3(-155f, 2f, -115f), 90f, 2.8f);
+                new Vector3(-232.5f, 2f, -172.5f), 90f, 2.8f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_01",
-                new Vector3(-160f, 2f, 130f), 180f, 2.2f);
+                new Vector3(-240f, 2f, 195f), 180f, 2.2f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_02",
-                new Vector3(150f, 2f, -125f), 270f, 3.0f);
+                new Vector3(225f, 2f, -187.5f), 270f, 3.0f);
 
-            // ── 2 caves (major cover) ───────────────────────────────
+            // ── 2 caves (major cover), positions ×1.5 ───────────────
             // NW sector
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaCave",
-                new Vector3(-120f, 2f, 140f), 45f, 3.5f);
+                new Vector3(-180f, 2f, 210f), 45f, 3.5f);
             // SE sector
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaCave",
-                new Vector3(125f, 2f, -145f), 225f, 4.0f);
+                new Vector3(187.5f, 2f, -217.5f), 225f, 4.0f);
 
-            // ── 6 standalone large boulders (scattered cover) ───────
+            // ── 6 standalone large boulders (scattered cover), ×1.5 ──
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(60f, 2f, 50f), 0f, 4.5f);
+                new Vector3(90f, 2f, 75f), 0f, 4.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(-70f, 2f, -60f), 120f, 3.5f);
+                new Vector3(-105f, 2f, -90f), 120f, 3.5f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(-55f, 2f, 70f), 210f, 5.0f);
+                new Vector3(-82.5f, 2f, 105f), 210f, 5.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_01",
-                new Vector3(75f, 2f, -55f), 315f, 4.0f);
+                new Vector3(112.5f, 2f, -82.5f), 315f, 4.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_02",
-                new Vector3(170f, 2f, 10f), 60f, 3.0f);
+                new Vector3(255f, 2f, 15f), 60f, 3.0f);
             VolcanicPrefabHelper.PlaceMagmaRock(transform, "MagmaRock_03",
-                new Vector3(-175f, 2f, -15f), 150f, 3.5f);
+                new Vector3(-262.5f, 2f, -22.5f), 150f, 3.5f);
 
-            // ── Outer ring magma fields (new expansion zone) ────────
-            // why: anchor at r=270 + ±22 = 248..292; spawns at r~150 are well inside,
-            // but skip clusters that overlap a spawn pad just in case
+            // ── Outer ring magma fields (expansion zone, radius ×1.5: 270→405) ─
+            // why: count 6→13 anchors so the longer ring stays dense
             string[] magmaRocks = { "MagmaRock_01", "MagmaRock_02", "MagmaRock_03" };
-            for (int c = 0; c < 6; c++)
+            for (int c = 0; c < 13; c++)
             {
-                float t = (c / 6f) * Mathf.PI * 2f;
-                Vector3 anchor = new Vector3(Mathf.Cos(t) * 270f, 2f, Mathf.Sin(t) * 270f);
-                int count = Random.Range(3, 6);
+                float t = (c / 13f) * Mathf.PI * 2f;
+                Vector3 anchor = new Vector3(Mathf.Cos(t) * 405f, 2f, Mathf.Sin(t) * 405f);
+                int count = Random.Range(5, 9);
                 for (int i = 0; i < count; i++)
                 {
-                    float ox = Random.Range(-22f, 22f);
-                    float oz = Random.Range(-22f, 22f);
-                    Vector3 rockPos = new Vector3(anchor.x + ox, 2f, anchor.z + oz);
-                    bool nearSpawn = false;
-                    for (int s = 0; s < SpawnPoints.Count; s++)
-                    {
-                        var sp = SpawnPoints[s].position;
-                        float dx = rockPos.x - sp.x, dz = rockPos.z - sp.z;
-                        if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
-                    }
-                    if (nearSpawn) continue;
+                    float ox = Random.Range(-33f, 33f);
+                    float oz = Random.Range(-33f, 33f);
                     VolcanicPrefabHelper.PlaceMagmaRock(transform,
                         magmaRocks[Random.Range(0, magmaRocks.Length)],
-                        rockPos,
+                        new Vector3(anchor.x + ox, 2f, anchor.z + oz),
                         Random.Range(0f, 360f), Random.Range(2.2f, 4.0f));
                 }
             }
 
-            // ── Additional outer platforms & caves ──────────────────
+            // ── Additional outer platforms & caves, positions ×1.5 ───
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_01",
-                new Vector3( 240f, 2f,  220f), 30f, 2.8f);
+                new Vector3( 360f, 2f,  330f), 30f, 2.8f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_02",
-                new Vector3(-240f, 2f,  230f), 120f, 2.6f);
+                new Vector3(-360f, 2f,  345f), 120f, 2.6f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_01",
-                new Vector3( 250f, 2f, -230f), 210f, 3.0f);
+                new Vector3( 375f, 2f, -345f), 210f, 3.0f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaPlatform_02",
-                new Vector3(-260f, 2f, -210f), 300f, 2.4f);
+                new Vector3(-390f, 2f, -315f), 300f, 2.4f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaCave",
-                new Vector3( 280f, 2f,   40f), 90f, 3.8f);
+                new Vector3( 420f, 2f,   60f), 90f, 3.8f);
             VolcanicPrefabHelper.PlaceStaticProp(transform, "MagmaCave",
-                new Vector3(-280f, 2f,  -30f), 270f, 3.8f);
+                new Vector3(-420f, 2f,  -45f), 270f, 3.8f);
 
-            // ── Outer obsidian shard field ──────────────────────────
+            // ── Outer obsidian shard field (radius ×1.5: 200-310→300-465; count 14→32) ─
             Color obsidian = new Color(0.08f, 0.06f, 0.10f);
-            int placed = 0;
-            int attempts = 0;
-            while (placed < 14 && attempts < 60)
+            for (int i = 0; i < 32; i++)
             {
-                attempts++;
                 float t = Random.Range(0f, Mathf.PI * 2f);
-                float r = Random.Range(200f, 310f);
+                float r = Random.Range(300f, 465f);
                 float x = Mathf.Cos(t) * r + Random.Range(-10f, 10f);
                 float z = Mathf.Sin(t) * r + Random.Range(-10f, 10f);
-                bool nearSpawn = false;
-                for (int s = 0; s < SpawnPoints.Count; s++)
-                {
-                    var sp = SpawnPoints[s].position;
-                    float dx = x - sp.x, dz = z - sp.z;
-                    if (dx * dx + dz * dz < 225f) { nearSpawn = true; break; }
-                }
-                if (nearSpawn) continue;
                 float h = Random.Range(6f, 14f);
                 AddBlockUnchecked(new Vector3(x, h, z),
                     new Vector3(Random.Range(1.5f, 3.5f), h * 2f, Random.Range(1.5f, 3.5f)),
-                    obsidian, $"OuterShard_{placed}");
-                placed++;
+                    obsidian, $"OuterShard_{i}");
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS A: breakable small magma rocks scattered across the
+            // expanded mid-to-outer band. PlaceMagmaRock with maxDim<=4 stays
+            // breakable, so small scale (2.0..3.5) keeps these destructible cover.
+            // ══════════════════════════════════════════════════════
+            {
+                int mrPlaced = 0, mrAttempts = 0;
+                while (mrPlaced < 70 && mrAttempts < 700)
+                {
+                    mrAttempts++;
+                    float rx = Random.Range(-500f, 500f);
+                    float rz = Random.Range(-500f, 500f);
+                    float d = Mathf.Sqrt(rx * rx + rz * rz);
+                    if (d < 90f) continue;    // keep caldera + lava streams clear
+                    if (d > 480f) continue;   // stay inside perimeter peaks
+                    VolcanicPrefabHelper.PlaceMagmaRock(transform,
+                        magmaRocks[Random.Range(0, magmaRocks.Length)],
+                        new Vector3(rx, 2f, rz), Random.Range(0f, 360f),
+                        Random.Range(2.0f, 3.5f));
+                    mrPlaced++;
+                }
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS B: mid-band magma platforms (static cover islands)
+            // filling the gap between inner formations (±240) and outer ring (±405).
+            // ══════════════════════════════════════════════════════
+            {
+                string[] platforms = { "MagmaPlatform_01", "MagmaPlatform_02" };
+                int plPlaced = 0, plAttempts = 0;
+                while (plPlaced < 16 && plAttempts < 160)
+                {
+                    plAttempts++;
+                    float px = Random.Range(-420f, 420f);
+                    float pz = Random.Range(-420f, 420f);
+                    float d = Mathf.Sqrt(px * px + pz * pz);
+                    if (d < 150f) continue;
+                    if (d > 430f) continue;
+                    VolcanicPrefabHelper.PlaceStaticProp(transform,
+                        platforms[Random.Range(0, platforms.Length)],
+                        new Vector3(px, 2f, pz), Random.Range(0f, 360f),
+                        Random.Range(2.2f, 3.0f));
+                    plPlaced++;
+                }
             }
         }
 
         // ── VOLCANIC PROPS: trees, grass, obsidian, wood crosses ───
         private void BuildVolcanicProps()
         {
-            // why: range ±320 covers the expanded 750 arena (half-extent 375 minus buffer);
-            // also keep clear of caldera and a 12m radius around each spawn so vehicles
-            // aren't trapped against props on respawn
+            // Helper: generate a position on the arena floor, avoiding central caldera
+            // why: range ±480 (×1.5) covers the expanded 1125 arena (half-extent 562 minus buffer)
             Vector3 ArenaPos()
             {
                 float x, z;
-                int guard = 0;
-                while (true)
+                do
                 {
-                    x = Random.Range(-320f, 320f);
-                    z = Random.Range(-320f, 320f);
-                    if (Mathf.Sqrt(x * x + z * z) < 50f) { guard++; if (guard > 50) break; continue; }
-                    bool nearSpawn = false;
-                    for (int s = 0; s < SpawnPoints.Count; s++)
-                    {
-                        var sp = SpawnPoints[s].position;
-                        float dx = x - sp.x, dz = z - sp.z;
-                        if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
-                    }
-                    if (nearSpawn) { guard++; if (guard > 50) break; continue; }
-                    break;
-                }
+                    x = Random.Range(-480f, 480f);
+                    z = Random.Range(-480f, 480f);
+                } while (Mathf.Sqrt(x * x + z * z) < 50f);
                 return new Vector3(x, 2f, z);
             }
 
-            // ── MagmaTree (22-30): dead charred trees, some clustered ───
-            int treeCount = Random.Range(22, 31);
+            // ── MagmaTree (50-68 ≈ ×2.25): dead charred trees, some clustered ─
+            int treeCount = Random.Range(50, 69);
             int treesPlaced = 0;
             while (treesPlaced < treeCount)
             {
@@ -2370,8 +2750,8 @@ namespace CloseEncounters.Arena
                 }
             }
 
-            // ── MagmaGrass (34-42): volcanic scrub scattered everywhere ─
-            int grassCount = Random.Range(34, 43);
+            // ── MagmaGrass (76-96 ≈ ×2.25): volcanic scrub scattered everywhere ─
+            int grassCount = Random.Range(76, 97);
             for (int i = 0; i < grassCount; i++)
             {
                 Vector3 pos = ArenaPos();
@@ -2380,32 +2760,47 @@ namespace CloseEncounters.Arena
                 VolcanicPrefabHelper.PlaceMagmaProp(transform, "MagmaGrass", pos, rot, scl);
             }
 
-            // ── MagmaWoodCross (14-18): eerie markers near edges & caves ─
-            int crossCount = Random.Range(14, 19);
-            int crossAttempts = 0;
-            int crossPlaced = 0;
-            while (crossPlaced < crossCount && crossAttempts < crossCount * 4)
+            // ── MagmaWoodCross (31-40 ≈ ×2.25): eerie markers near edges & caves ─
+            int crossCount = Random.Range(31, 41);
+            for (int i = 0; i < crossCount; i++)
             {
-                crossAttempts++;
-                // Bias toward outer ring (60-290) for lava-edge / cave feel
+                // Bias toward outer ring (radius ×1.5: 90-435) for lava-edge / cave feel
                 float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
-                float radius = Random.Range(60f, 290f);
+                float radius = Random.Range(90f, 435f);
                 float x = Mathf.Cos(angle) * radius;
                 float z = Mathf.Sin(angle) * radius;
-                bool nearSpawn = false;
-                for (int s = 0; s < SpawnPoints.Count; s++)
-                {
-                    var sp = SpawnPoints[s].position;
-                    float dx = x - sp.x, dz = z - sp.z;
-                    if (dx * dx + dz * dz < 144f) { nearSpawn = true; break; }
-                }
-                if (nearSpawn) continue;
                 Vector3 pos = new Vector3(x, 2f, z);
 
                 float rot = Random.Range(0f, 360f);
                 float scl = Random.Range(1.5f, 2.0f);
                 VolcanicPrefabHelper.PlaceMagmaProp(transform, "MagmaWoodCross", pos, rot, scl);
-                crossPlaced++;
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS C: extra MagmaGrass + MagmaTree carpet across the
+            // newly-exposed outer band (±240..±470) so the enlarged floor reads
+            // as dense volcanic scrub rather than empty terrain. Both are
+            // breakable PlaceMagmaProp calls (small scale).
+            // ══════════════════════════════════════════════════════
+            {
+                int gPlaced = 0, gAttempts = 0;
+                while (gPlaced < 80 && gAttempts < 800)
+                {
+                    gAttempts++;
+                    float gx = Random.Range(-470f, 470f);
+                    float gz = Random.Range(-470f, 470f);
+                    float d = Mathf.Sqrt(gx * gx + gz * gz);
+                    if (d < 240f) continue;   // inner band already dense from passes above
+                    if (d > 470f) continue;
+                    Vector3 pos = new Vector3(gx, 2f, gz);
+                    if (Random.value < 0.7f)
+                        VolcanicPrefabHelper.PlaceMagmaProp(transform, "MagmaGrass", pos,
+                            Random.Range(0f, 360f), Random.Range(1.5f, 2.5f));
+                    else
+                        VolcanicPrefabHelper.PlaceMagmaProp(transform, "MagmaTree", pos,
+                            Random.Range(0f, 360f), Random.Range(1.5f, 3.0f));
+                    gPlaced++;
+                }
             }
         }
 
@@ -2476,13 +2871,14 @@ namespace CloseEncounters.Arena
                            ?? Resources.Load<GameObject>("VFX/Smoke/Steam");
             if (steamPrefab != null)
             {
+                // why: vent x/z ×1.5 to track the moved magma formations
                 Vector3[] ventPositions = {
-                    new Vector3(-150f, 8f, 120f),
-                    new Vector3(168f, 6f, -120f),
-                    new Vector3( 260f, 6f,  210f),
-                    new Vector3(-270f, 6f, -200f),
-                    new Vector3( 280f, 6f,  -40f),
-                    new Vector3(-290f, 6f,   50f),
+                    new Vector3(-225f, 8f, 180f),
+                    new Vector3(252f, 6f, -180f),
+                    new Vector3( 390f, 6f,  315f),
+                    new Vector3(-405f, 6f, -300f),
+                    new Vector3( 420f, 6f,  -60f),
+                    new Vector3(-435f, 6f,   75f),
                 };
                 for (int v = 0; v < ventPositions.Length; v++)
                 {
@@ -2532,10 +2928,10 @@ namespace CloseEncounters.Arena
 
         public override void Build()
         {
-            // ── Terrain: 750x750, 80m height (why: 2.5x playable area) ───
+            // ── Terrain: 1125x1125, 80m height (why: 1.5x scale, ~5.6x playable area) ───
             var terrain = TerrainFactory.Create(transform,
-                new Vector3(-375f, 0f, -375f), new Vector3(750f, 80f, 750f),
-                513, "HighlandsTerrain");
+                new Vector3(-562.5f, 0f, -562.5f), new Vector3(1125f, 80f, 1125f),
+                769, "HighlandsTerrain");
 
             TerrainFactory.SetHeights(terrain, (nx, nz) =>
             {
@@ -2614,19 +3010,19 @@ namespace CloseEncounters.Arena
             herdObj.transform.SetParent(transform, false);
             herdObj.transform.localPosition = Vector3.zero;
             var herd = herdObj.AddComponent<HorseHerd>();
-            herd.horseCount = 45; // why: larger arena needs more visual activity
-            herd.spawnRadius = 220f;
-            herd.roamRadius = 50f;
+            herd.horseCount = 101; // why: 1.5x arena, ~2.25x density for visual activity
+            herd.spawnRadius = 330f;
+            herd.roamRadius = 75f;
 
             // ── Spawn + bounds ─────────────────────────────────────
-            // why: spawns pushed outward into outer steppe (~230) for the bigger arena
+            // why: spawns pushed outward into outer steppe (~345) for the 1.5x arena
             AddSpawnPoints(
-                new Vector3(-200f, 5f,  170f), new Vector3( 200f, 5f,  170f),
-                new Vector3(-200f, 5f, -170f), new Vector3( 200f, 5f, -170f),
-                new Vector3(-260f, 4f,    0f), new Vector3( 260f, 4f,    0f),
-                new Vector3(   0f, 5f,  260f), new Vector3(   0f, 5f, -260f)
+                new Vector3(-300f, 5f,  255f), new Vector3( 300f, 5f,  255f),
+                new Vector3(-300f, 5f, -255f), new Vector3( 300f, 5f, -255f),
+                new Vector3(-390f, 4f,    0f), new Vector3( 390f, 4f,    0f),
+                new Vector3(   0f, 5f,  390f), new Vector3(   0f, 5f, -390f)
             );
-            AddInvisibleWalls(375f, 70f);
+            AddInvisibleWalls(562f, 70f);
 
             // ── Highland sun (soft, slightly warm) ─────────────────
             var hSun = new GameObject("HighlandsSun");
@@ -2646,8 +3042,8 @@ namespace CloseEncounters.Arena
             RenderSettings.ambientLight = new Color(0.64f, 0.66f, 0.72f);
 
             VFXManager.GroundFog(Vector3.zero, 5f);
-            VFXManager.GroundFog(new Vector3(-240f, 3f,  220f), 4f);
-            VFXManager.GroundFog(new Vector3( 240f, 3f, -220f), 4f);
+            VFXManager.GroundFog(new Vector3(-360f, 3f,  330f), 4f);
+            VFXManager.GroundFog(new Vector3( 360f, 3f, -330f), 4f);
             VFXManager.DustMotes(new Vector3(0, 5, 0), 4f);
             VFXManager.Rain(new Vector3(0, 20, 0), 2f);
         }
@@ -2655,66 +3051,82 @@ namespace CloseEncounters.Arena
         // ── MOUNTAIN ENCLOSURE: tall peaks around all edges ────────
         private void BuildMountainEnclosure()
         {
-            // why: peaks pushed to ~340 to hug the new 375 half-extent wall
+            // why: peaks pushed to ~487-517 (1.5x) to hug the new 562 half-extent wall
             // ── Center backdrop: dominant snow peak ──────────────────
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
-                new Vector3(0f, 0f, 345f), 0f, 12f);
+                new Vector3(0f, 0f, 517.5f), 0f, 12f);
 
-            // ── North wall: 6 snow/canyon mountains ──
+            // ── North wall: 9 snow/canyon mountains (extra peaks fill the longer perimeter) ──
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(-260f, 0f, 330f), 10f, 7f);
+                new Vector3(-390f, 0f, 495f), 10f, 7f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
+                new Vector3(-315f, 0f, 505f), 50f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
-                new Vector3(-140f, 0f, 340f), 45f, 7f);
+                new Vector3(-210f, 0f, 510f), 45f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3( -30f, 0f, 320f), 90f, 8f);
+                new Vector3( -45f, 0f, 480f), 90f, 8f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
+                new Vector3(  60f, 0f, 500f), 120f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3( 120f, 0f, 335f), 160f, 6f);
+                new Vector3( 180f, 0f, 502f), 160f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3( 240f, 0f, 325f), 200f, 7f);
+                new Vector3( 360f, 0f, 487f), 200f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3( 320f, 0f, 300f), 230f, 6f);
+                new Vector3( 480f, 0f, 450f), 230f, 6f);
 
-            // ── South wall ─────────────────────────────────────────
+            // ── South wall: 8 peaks ─────────────────────────────────
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(-260f, 0f, -335f), 180f, 7f);
+                new Vector3(-390f, 0f, -502f), 180f, 7f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(-270f, 0f, -512f), 150f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(-120f, 0f, -345f), 135f, 8f);
+                new Vector3(-180f, 0f, -517f), 135f, 8f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
-                new Vector3(  30f, 0f, -325f), 270f, 6f);
+                new Vector3(  45f, 0f, -487f), 270f, 6f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
+                new Vector3( 150f, 0f, -500f), 250f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3( 160f, 0f, -340f), 220f, 7f);
+                new Vector3( 240f, 0f, -510f), 220f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3( 270f, 0f, -320f), 60f, 6f);
+                new Vector3( 405f, 0f, -480f), 60f, 6f);
 
-            // ── East wall ──────────────────────────────────────────
+            // ── East wall: 6 peaks ──────────────────────────────────
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(340f, 0f, -200f), 90f, 7f);
+                new Vector3(510f, 0f, -300f), 90f, 7f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(515f, 0f, -180f), 110f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
-                new Vector3(335f, 0f,  -60f), 120f, 8f);
+                new Vector3(502f, 0f,  -90f), 120f, 8f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
-                new Vector3(345f, 0f,   80f), 75f, 6f);
-            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
-                new Vector3(335f, 0f,  220f), 150f, 7f);
-
-            // ── West wall ──────────────────────────────────────────
-            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
-                new Vector3(-345f, 0f, -200f), 0f, 7f);
+                new Vector3(517f, 0f,  120f), 75f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
-                new Vector3(-335f, 0f,  -60f), 270f, 7f);
-            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
-                new Vector3(-340f, 0f,   80f), 315f, 8f);
+                new Vector3(512f, 0f,  240f), 200f, 6f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_01",
+                new Vector3(502f, 0f,  330f), 150f, 7f);
+
+            // ── West wall: 6 peaks ──────────────────────────────────
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_05",
+                new Vector3(-517f, 0f, -300f), 0f, 7f);
             HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
-                new Vector3(-335f, 0f,  220f), 190f, 6f);
+                new Vector3(-515f, 0f, -180f), 200f, 6f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_02",
+                new Vector3(-502f, 0f,  -90f), 270f, 7f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_Snow_000",
+                new Vector3(-510f, 0f,  120f), 315f, 8f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_04",
+                new Vector3(-517f, 0f,  240f), 95f, 6f);
+            HighlandsPrefabHelper.PlaceMountain(transform, "mountain_canyon_03",
+                new Vector3(-502f, 0f,  330f), 190f, 6f);
 
             // ── Corner peaks ───────────────────────────────────────
             HighlandsPrefabHelper.PlaceMountain(transform, "IceMountain_01",
-                new Vector3( 325f, 0f,  325f), 45f, 5f);
+                new Vector3( 487f, 0f,  487f), 45f, 5f);
             HighlandsPrefabHelper.PlaceMountain(transform, "IceMountain_02",
-                new Vector3(-325f, 0f,  325f), 135f, 6f);
+                new Vector3(-487f, 0f,  487f), 135f, 6f);
             HighlandsPrefabHelper.PlaceMountain(transform, "IceMountain_03",
-                new Vector3( 325f, 0f, -325f), 315f, 5f);
+                new Vector3( 487f, 0f, -487f), 315f, 5f);
             HighlandsPrefabHelper.PlaceMountain(transform, "IceMountain_01",
-                new Vector3(-325f, 0f, -325f), 225f, 6f);
+                new Vector3(-487f, 0f, -487f), 225f, 6f);
         }
 
         // ── RIVER VALLEY: water, bridges, riverside vegetation ─────
@@ -2727,7 +3139,7 @@ namespace CloseEncounters.Arena
                 riverGO.name = "RiverWater";
                 riverGO.transform.SetParent(transform, false);
                 riverGO.transform.position = new Vector3(0f, 0.5f, 0f);
-                riverGO.transform.localScale = new Vector3(14f, 0.3f, 500f);
+                riverGO.transform.localScale = new Vector3(14f, 0.3f, 1125f);
                 Object.DestroyImmediate(riverGO.GetComponent<Collider>());
 
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -2743,44 +3155,46 @@ namespace CloseEncounters.Arena
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 SetMaterial(riverGO, mat);
             }
-            AddWaterHazard(new Vector3(0f, 0f, 0f), new Vector3(14f, 3f, 500f), "RiverHazard");
+            AddWaterHazard(new Vector3(0f, 0f, 0f), new Vector3(14f, 3f, 1125f), "RiverHazard");
 
-            // ── Stone bridges (3 crossings) ────────────────────────
+            // ── Stone bridges (5 crossings; z scaled 1.5x, +2 for the longer river) ──
             Color stone = new Color(0.55f, 0.52f, 0.48f);
-            AddBridge(new Vector3(-8f, 2f, 60f), new Vector3(8f, 2f, 60f), 8f, 1f, stone, "Bridge_N");
-            AddBridge(new Vector3(-8f, 2f, -30f), new Vector3(8f, 2f, -30f), 8f, 1f, stone, "Bridge_Center");
-            AddBridge(new Vector3(-8f, 2f, -100f), new Vector3(8f, 2f, -100f), 8f, 1f, stone, "Bridge_S");
+            AddBridge(new Vector3(-8f, 2f, 225f), new Vector3(8f, 2f, 225f), 8f, 1f, stone, "Bridge_NN");
+            AddBridge(new Vector3(-8f, 2f, 90f), new Vector3(8f, 2f, 90f), 8f, 1f, stone, "Bridge_N");
+            AddBridge(new Vector3(-8f, 2f, -45f), new Vector3(8f, 2f, -45f), 8f, 1f, stone, "Bridge_Center");
+            AddBridge(new Vector3(-8f, 2f, -150f), new Vector3(8f, 2f, -150f), 8f, 1f, stone, "Bridge_S");
+            AddBridge(new Vector3(-8f, 2f, -285f), new Vector3(8f, 2f, -285f), 8f, 1f, stone, "Bridge_SS");
 
-            // ── Riverside bushes (both banks) ──────────────────────
-            HighlandsPrefabHelper.PlaceBush(transform, "bush01", new Vector3(-12f, 1f, 130f), 0f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush03", new Vector3(-15f, 1f, 80f), 45f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush05", new Vector3(-11f, 1f, 20f), 120f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush02", new Vector3(-18f, 1f, -40f), 200f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush04", new Vector3(-13f, 1f, -90f), 70f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush06", new Vector3(-16f, 1f, -140f), 310f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush02", new Vector3(12f, 1f, 120f), 15f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush04", new Vector3(14f, 1f, 50f), 160f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush06", new Vector3(17f, 1f, -10f), 90f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush01", new Vector3(11f, 1f, -70f), 250f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush03", new Vector3(19f, 1f, -120f), 30f);
-            HighlandsPrefabHelper.PlaceBush(transform, "bush05", new Vector3(13f, 1f, -145f), 180f);
+            // ── Riverside bushes (both banks; x/z scaled 1.5x) ─────
+            HighlandsPrefabHelper.PlaceBush(transform, "bush01", new Vector3(-18f, 1f, 195f), 0f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush03", new Vector3(-22f, 1f, 120f), 45f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush05", new Vector3(-16f, 1f, 30f), 120f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush02", new Vector3(-27f, 1f, -60f), 200f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush04", new Vector3(-19f, 1f, -135f), 70f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush06", new Vector3(-24f, 1f, -210f), 310f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush02", new Vector3(18f, 1f, 180f), 15f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush04", new Vector3(21f, 1f, 75f), 160f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush06", new Vector3(25f, 1f, -15f), 90f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush01", new Vector3(16f, 1f, -105f), 250f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush03", new Vector3(28f, 1f, -180f), 30f);
+            HighlandsPrefabHelper.PlaceBush(transform, "bush05", new Vector3(19f, 1f, -217f), 180f);
 
-            // ── Riverside trees ────────────────────────────────────
-            HighlandsPrefabHelper.PlaceTree(transform, "tree01", new Vector3(-20f, 1f, 100f), 0f);
-            HighlandsPrefabHelper.PlaceTree(transform, "tree02", new Vector3(18f, 1f, 40f), 90f);
-            HighlandsPrefabHelper.PlaceTree(transform, "tree03", new Vector3(-17f, 1f, -50f), 180f);
-            HighlandsPrefabHelper.PlaceTree(transform, "tree04", new Vector3(15f, 1f, -110f), 270f);
-            HighlandsPrefabHelper.PlaceTree(transform, "tree01", new Vector3(20f, 1f, 140f), 45f);
+            // ── Riverside trees (x/z scaled 1.5x) ──────────────────
+            HighlandsPrefabHelper.PlaceTree(transform, "tree01", new Vector3(-30f, 1f, 150f), 0f);
+            HighlandsPrefabHelper.PlaceTree(transform, "tree02", new Vector3(27f, 1f, 60f), 90f);
+            HighlandsPrefabHelper.PlaceTree(transform, "tree03", new Vector3(-25f, 1f, -75f), 180f);
+            HighlandsPrefabHelper.PlaceTree(transform, "tree04", new Vector3(22f, 1f, -165f), 270f);
+            HighlandsPrefabHelper.PlaceTree(transform, "tree01", new Vector3(30f, 1f, 210f), 45f);
 
-            // ── River stones along banks ───────────────────────────
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 1", new Vector3(-9f, 1f, 110f), 30f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 2", new Vector3(9f, 1f, 70f), 150f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 3", new Vector3(-10f, 1f, 10f), 80f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 4", new Vector3(10f, 1f, -30f), 220f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 5", new Vector3(-8f, 1f, -80f), 300f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 1", new Vector3(8f, 1f, -130f), 60f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 3", new Vector3(-11f, 1f, -140f), 170f);
-            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 5", new Vector3(11f, 1f, 145f), 110f);
+            // ── River stones along banks (x/z scaled 1.5x) ─────────
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 1", new Vector3(-13f, 1f, 165f), 30f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 2", new Vector3(13f, 1f, 105f), 150f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 3", new Vector3(-15f, 1f, 15f), 80f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 4", new Vector3(15f, 1f, -45f), 220f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 5", new Vector3(-12f, 1f, -120f), 300f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 1", new Vector3(12f, 1f, -195f), 60f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 3", new Vector3(-16f, 1f, -210f), 170f);
+            HighlandsPrefabHelper.PlaceRock(transform, "Tiny Rock 5", new Vector3(16f, 1f, 217f), 110f);
         }
 
         // ── STEPPE VEGETATION: trees, bushes, grass, flowers ───────
@@ -2795,26 +3209,26 @@ namespace CloseEncounters.Arena
             // Helper: returns true if position is in the river or farm exclusion zones
             bool IsExcluded(float x, float z)
             {
-                if (x > -8f && x < 8f) return true;                          // river
-                if (x > -130f && x < -70f && z > -50f && z < 30f) return true; // farm
+                if (x > -8f && x < 8f) return true;                              // river (centred, fixed width)
+                if (x > -195f && x < -105f && z > -75f && z < 45f) return true; // farm (1.5x)
                 return false;
             }
 
             // Helper: generate a valid valley-floor position, rejection-sampling exclusions
-            // why: range ±320 fills the expanded 750 arena
+            // why: range ±480 fills the expanded 1125 arena (1.5x)
             Vector3 ValleyPos()
             {
                 float x, z;
                 do
                 {
-                    x = Random.Range(-320f, 320f);
-                    z = Random.Range(-320f, 320f);
+                    x = Random.Range(-480f, 480f);
+                    z = Random.Range(-480f, 480f);
                 } while (IsExcluded(x, z));
                 return new Vector3(x, 2f, z);
             }
 
-            // ── Scattered trees (55-65): mix of all 7 variants ──────────
-            int treeCount = Random.Range(55, 66);
+            // ── Scattered trees (124-146): mix of all 7 variants ────────
+            int treeCount = Random.Range(124, 147);
             int placed = 0;
             while (placed < treeCount)
             {
@@ -2837,13 +3251,13 @@ namespace CloseEncounters.Arena
                 }
             }
 
-            // ── Spruce groves at foothills (4-6 clusters of 5-8) ────────
-            int groveCount = Random.Range(4, 7);
+            // ── Spruce groves at foothills (9-13 clusters of 5-8; ranges 1.5x) ──
+            int groveCount = Random.Range(9, 14);
             float[] groveSigns = { -1f, 1f };
             for (int g = 0; g < groveCount; g++)
             {
-                float gx = groveSigns[g % 2] * Random.Range(180f, 280f);
-                float gz = Random.Range(-260f, 260f);
+                float gx = groveSigns[g % 2] * Random.Range(270f, 420f);
+                float gz = Random.Range(-390f, 390f);
                 int spruceCount = Random.Range(5, 9);
 
                 for (int s = 0; s < spruceCount; s++)
@@ -2860,8 +3274,8 @@ namespace CloseEncounters.Arena
                 }
             }
 
-            // ── Bushes (70-85): dense coverage with all 7 variants ──────
-            int bushCount = Random.Range(70, 86);
+            // ── Bushes (157-191): dense coverage with all 7 variants ────
+            int bushCount = Random.Range(157, 192);
             for (int i = 0; i < bushCount; i++)
             {
                 Vector3 pos = ValleyPos();
@@ -2871,8 +3285,8 @@ namespace CloseEncounters.Arena
                 HighlandsPrefabHelper.PlaceBush(transform, name, pos, rot, scl);
             }
 
-            // ── Grass patches (45-55): scattered everywhere ─────────────
-            int grassCount = Random.Range(45, 56);
+            // ── Grass patches (101-124): scattered everywhere ───────────
+            int grassCount = Random.Range(101, 125);
             for (int i = 0; i < grassCount; i++)
             {
                 Vector3 pos = ValleyPos();
@@ -2881,8 +3295,8 @@ namespace CloseEncounters.Arena
                 HighlandsPrefabHelper.PlaceFoliage(transform, "Grass", pos, rot, scl);
             }
 
-            // ── Flowers (28-36): scattered among grass ──────────────────
-            int flowerCount = Random.Range(28, 37);
+            // ── Flowers (63-81): scattered among grass ──────────────────
+            int flowerCount = Random.Range(63, 82);
             for (int i = 0; i < flowerCount; i++)
             {
                 Vector3 pos = ValleyPos();
@@ -2891,8 +3305,8 @@ namespace CloseEncounters.Arena
                 HighlandsPrefabHelper.PlaceFoliage(transform, "Flower", pos, rot, scl);
             }
 
-            // ── Stumps and logs (16-22): near tree clusters ──────────────
-            int debrisCount = Random.Range(16, 23);
+            // ── Stumps and logs (36-49): near tree clusters ──────────────
+            int debrisCount = Random.Range(36, 50);
             for (int i = 0; i < debrisCount; i++)
             {
                 Vector3 pos = ValleyPos();
@@ -2900,6 +3314,63 @@ namespace CloseEncounters.Arena
                 float scl = Random.Range(1.0f, 1.5f);
                 string debris = (Random.value < 0.5f) ? "Stump" : "Log";
                 HighlandsPrefabHelper.PlaceFoliage(transform, debris, pos, rot, scl);
+            }
+
+            // ── NEW PASS 1: Mushroom patches (40-54) for forest-floor detail ──
+            int mushroomCount = Random.Range(40, 55);
+            for (int i = 0; i < mushroomCount; i++)
+            {
+                Vector3 pos = ValleyPos();
+                float rot = Random.Range(0f, 360f);
+                float scl = Random.Range(1.0f, 2.0f);
+                HighlandsPrefabHelper.PlaceFoliage(transform, "Mushrooms Patch", pos, rot, scl);
+            }
+
+            // ── NEW PASS 2: Scattered branches (45-58) breakable ground litter ──
+            int branchCount = Random.Range(45, 59);
+            for (int i = 0; i < branchCount; i++)
+            {
+                Vector3 pos = ValleyPos();
+                float rot = Random.Range(0f, 360f);
+                float scl = Random.Range(1.0f, 1.8f);
+                HighlandsPrefabHelper.PlaceFoliage(transform, "Branch", pos, rot, scl);
+            }
+
+            // ── NEW PASS 3: Outer-steppe bush thickets (54-68) using "Bush" ──
+            int thicketCount = Random.Range(54, 69);
+            for (int i = 0; i < thicketCount; i++)
+            {
+                Vector3 pos = ValleyPos();
+                string name = bushVariants[Random.Range(0, bushVariants.Length)];
+                float rot = Random.Range(0f, 360f);
+                float scl = Random.Range(1.0f, 2.0f);
+                HighlandsPrefabHelper.PlaceBush(transform, name, pos, rot, scl);
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 6: grass + flower carpet across the newly-exposed
+            // outer steppe band (±240..±470) so the enlarged floor reads as
+            // dense pasture rather than empty terrain. Reuses ValleyPos for the
+            // river/farm exclusions, then keeps only outer-band hits.
+            // ══════════════════════════════════════════════════════
+            {
+                int fPlaced = 0, fAttempts = 0;
+                while (fPlaced < 110 && fAttempts < 1100)
+                {
+                    fAttempts++;
+                    Vector3 pos = ValleyPos();
+                    float d = Mathf.Sqrt(pos.x * pos.x + pos.z * pos.z);
+                    if (d < 240f) continue;   // inner band already dense from passes above
+                    if (d > 470f) continue;
+                    float rot = Random.Range(0f, 360f);
+                    if (Random.value < 0.65f)
+                        HighlandsPrefabHelper.PlaceFoliage(transform, "Grass", pos, rot,
+                            Random.Range(1.5f, 3.0f));
+                    else
+                        HighlandsPrefabHelper.PlaceFoliage(transform, "Flower", pos, rot,
+                            Random.Range(1.0f, 2.0f));
+                    fPlaced++;
+                }
             }
         }
 
@@ -3344,7 +3815,8 @@ namespace CloseEncounters.Arena
                 new Vector3(-10f, 2f, -80f), 125f, 1.8f);
 
             // ── OUTER RING rock field (new expansion zone) ───────────
-            // why: fills the outer steppe (200-320) so the expanded arena has cover
+            // why: radii ×1.5 (200-320 → 300-480) and counts ×2.25 so the
+            //      expanded outer steppe has cover scaled to the 1.5x arena
             string[] cliffs = { "Rock Cliff 1", "Rock Cliff 2", "Rock Cliff 3",
                                 "Rock Cliff 4", "Rock Cliff 5" };
             string[] stdRocks = { "Standard Rock 1", "Standard Rock 2", "Standard Rock 3",
@@ -3353,11 +3825,11 @@ namespace CloseEncounters.Arena
             string[] tinyRocks = { "Tiny Rock 1", "Tiny Rock 2", "Tiny Rock 3",
                                    "Tiny Rock 4", "Tiny Rock 5" };
 
-            // 8 outer cliff clusters
-            for (int c = 0; c < 8; c++)
+            // 18 outer cliff clusters (8→18 ≈ ×2.25; radii ×1.5: 315-435)
+            for (int c = 0; c < 18; c++)
             {
-                float t = (c / 8f) * Mathf.PI * 2f + Random.Range(-0.2f, 0.2f);
-                float r = Random.Range(210f, 290f);
+                float t = (c / 18f) * Mathf.PI * 2f + Random.Range(-0.2f, 0.2f);
+                float r = Random.Range(315f, 435f);
                 Vector3 anchor = new Vector3(Mathf.Cos(t) * r, 2f, Mathf.Sin(t) * r);
                 int n = Random.Range(2, 4);
                 for (int i = 0; i < n; i++)
@@ -3371,38 +3843,88 @@ namespace CloseEncounters.Arena
                 }
             }
 
-            // 18 outer standard boulders scattered
-            for (int i = 0; i < 18; i++)
+            // 40 outer standard boulders scattered (18→40 ≈ ×2.25; radii ×1.5: 300-480)
+            for (int i = 0; i < 40; i++)
             {
                 float t = Random.Range(0f, Mathf.PI * 2f);
-                float r = Random.Range(200f, 320f);
+                float r = Random.Range(300f, 480f);
                 HighlandsPrefabHelper.PlaceRock(transform,
                     stdRocks[Random.Range(0, stdRocks.Length)],
                     new Vector3(Mathf.Cos(t) * r, 2f, Mathf.Sin(t) * r),
                     Random.Range(0f, 360f), Random.Range(1.8f, 3.0f));
             }
 
-            // 10 outer ice rocks near mountain wall
-            for (int i = 0; i < 10; i++)
+            // 23 outer ice rocks near mountain wall (10→23 ≈ ×2.25; radii ×1.5: 405-480)
+            for (int i = 0; i < 23; i++)
             {
                 float t = Random.Range(0f, Mathf.PI * 2f);
-                float r = Random.Range(270f, 320f);
+                float r = Random.Range(405f, 480f);
                 HighlandsPrefabHelper.PlaceRock(transform,
                     iceRocks[Random.Range(0, iceRocks.Length)],
                     new Vector3(Mathf.Cos(t) * r, 2f, Mathf.Sin(t) * r),
                     Random.Range(0f, 360f), Random.Range(2.0f, 3.2f));
             }
 
-            // 30 outer tiny rocks for detail
-            for (int i = 0; i < 30; i++)
+            // 68 outer tiny rocks for detail (30→68 ≈ ×2.25; radii ×1.5: 285-480)
+            for (int i = 0; i < 68; i++)
             {
                 float t = Random.Range(0f, Mathf.PI * 2f);
-                float r = Random.Range(190f, 320f);
+                float r = Random.Range(285f, 480f);
                 HighlandsPrefabHelper.PlaceRock(transform,
                     tinyRocks[Random.Range(0, tinyRocks.Length)],
                     new Vector3(Mathf.Cos(t) * r + Random.Range(-6f, 6f), 2f,
                                 Mathf.Sin(t) * r + Random.Range(-6f, 6f)),
                     Random.Range(0f, 360f), Random.Range(1.0f, 2.0f));
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 4: mid-band boulder + cliff carpet filling the gap
+            // between the inner formations (±180) and the outer ring (≥285) so
+            // the enlarged steppe reads as dense cover rather than empty floor.
+            // PlaceRock on rock/cliff names stays static (landmark cover).
+            // ══════════════════════════════════════════════════════
+            {
+                int rkPlaced = 0, rkAttempts = 0;
+                while (rkPlaced < 60 && rkAttempts < 600)
+                {
+                    rkAttempts++;
+                    float rx = Random.Range(-470f, 470f);
+                    float rz = Random.Range(-470f, 470f);
+                    float d = Mathf.Sqrt(rx * rx + rz * rz);
+                    if (d < 170f) continue;   // inner formations + settlement already dense
+                    if (d > 470f) continue;   // stay inside perimeter peaks
+                    if (rx > -8f && rx < 8f) continue;   // keep river channel clear
+                    string name = (Random.value < 0.45f)
+                        ? cliffs[Random.Range(0, cliffs.Length)]
+                        : stdRocks[Random.Range(0, stdRocks.Length)];
+                    HighlandsPrefabHelper.PlaceRock(transform, name,
+                        new Vector3(rx, 2f, rz), Random.Range(0f, 360f),
+                        Random.Range(1.8f, 3.2f));
+                    rkPlaced++;
+                }
+            }
+
+            // ══════════════════════════════════════════════════════
+            // DENSITY PASS 5: tiny-rock gravel scatter across the whole expanded
+            // floor for fine ground detail (small scale, breakable-feel clutter).
+            // ══════════════════════════════════════════════════════
+            {
+                int tnPlaced = 0, tnAttempts = 0;
+                while (tnPlaced < 90 && tnAttempts < 900)
+                {
+                    tnAttempts++;
+                    float tx = Random.Range(-475f, 475f);
+                    float tz = Random.Range(-475f, 475f);
+                    float d = Mathf.Sqrt(tx * tx + tz * tz);
+                    if (d < 60f) continue;    // keep central flag area clear
+                    if (d > 475f) continue;
+                    if (tx > -8f && tx < 8f) continue;   // keep river channel clear
+                    HighlandsPrefabHelper.PlaceRock(transform,
+                        tinyRocks[Random.Range(0, tinyRocks.Length)],
+                        new Vector3(tx, 2f, tz), Random.Range(0f, 360f),
+                        Random.Range(1.0f, 2.0f));
+                    tnPlaced++;
+                }
             }
         }
     }
