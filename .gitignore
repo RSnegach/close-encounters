@@ -133,3 +133,6 @@ Close_Encounters/
 # Large single files that exceed GitHub 100MB limit
 /Assets/HabradorTornado/Resources/HabradorTornado/TornadoPrefab.prefab
 
+
+# Unity crash-recovery backups
+/[Aa]ssets/_Recovery/
