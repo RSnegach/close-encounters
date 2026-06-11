@@ -131,10 +131,54 @@ namespace CloseEncounters.Combat
             _bounceTimer = duration;
         }
 
+        // ── Combat feedback wiring ───────────────────────────────────────
+        private void OnEnable()
+        {
+            DamageSystem.OnVehicleDamaged += OnAnyVehicleDamaged;
+        }
+
+        private void OnDisable()
+        {
+            DamageSystem.OnVehicleDamaged -= OnAnyVehicleDamaged;
+        }
+
+        /// <summary>
+        /// Fires for every vehicle damage event. If WE are the victim, kick the camera and
+        /// flash the screen red; if WE dealt it, pop a hitmarker. Everything is null-guarded so
+        /// it is inert until Start() has cached _runtime and the HUD exists.
+        /// </summary>
+        private void OnAnyVehicleDamaged(CloseEncounters.Arena.VehicleRuntime victim,
+            CloseEncounters.Arena.VehicleRuntime attacker, int amount)
+        {
+            if (_runtime == null) return;
+
+            var hud = CloseEncounters.Arena.ArenaManager.Instance != null
+                ? CloseEncounters.Arena.ArenaManager.Instance.Hud : null;
+
+            if (victim == _runtime)
+            {
+                // Taking a hit: trauma scales with damage but is capped so a single big hit
+                // never maxes the shake; rapid fire stacks toward 1.
+                _shakeTrauma = Mathf.Clamp01(_shakeTrauma + Mathf.Clamp(amount / 120f, 0.1f, 0.6f));
+                if (hud != null) hud.ShowDamageFlash();
+            }
+            else if (attacker == _runtime)
+            {
+                // Landing a hit: confirmation marker.
+                if (hud != null) hud.ShowHitMarker();
+            }
+        }
+
         // ── Internal ─────────────────────────────────────────────────────
         private Rigidbody _rb;
         private Camera _cam;
         private GameObject _camPivot;
+
+        // ── Impact feedback (screenshake + hit/flash hooks) ──────────────
+        private CloseEncounters.Arena.VehicleRuntime _runtime; // this vehicle's runtime, for damage-event matching
+        private float _shakeTrauma;                              // 0..1, decays each frame; camera shake = trauma^2
+        private const float MaxShakeAngle = 5f;                  // degrees of rotational shake at full trauma
+        private const float ShakeDecaySeconds = 0.45f;           // time to fully settle from trauma 1
         private float _yaw;
         private float _pitch;
         private bool _paused;
@@ -149,6 +193,7 @@ namespace CloseEncounters.Combat
         private void Start()
         {
             _rb = GetComponent<Rigidbody>();
+            _runtime = GetComponent<CloseEncounters.Arena.VehicleRuntime>();
             _isWaterMode = GetComponent<CloseEncounters.VehiclePhysics.WaterPhysics>() != null;
 
             // Detect air mode from GameManager
@@ -321,6 +366,18 @@ namespace CloseEncounters.Combat
                     _camPivot.transform.position, desiredPos, positionSmooth * dt);
 
                 _camPivot.transform.rotation = rot;
+            }
+
+            // Impact screenshake: rotational only (additive on top of the base aim each frame,
+            // so it never accumulates or fights the camera) — cosmetic, cannot affect the sim.
+            if (_shakeTrauma > 0f)
+            {
+                float s = _shakeTrauma * _shakeTrauma;
+                _camPivot.transform.rotation = _camPivot.transform.rotation * Quaternion.Euler(
+                    Random.Range(-1f, 1f) * MaxShakeAngle * s,
+                    Random.Range(-1f, 1f) * MaxShakeAngle * s,
+                    Random.Range(-1f, 1f) * MaxShakeAngle * s);
+                _shakeTrauma = Mathf.MoveTowards(_shakeTrauma, 0f, dt / ShakeDecaySeconds);
             }
         }
 

@@ -51,7 +51,12 @@ namespace CloseEncounters.UI
         private bool _isGameOver;
 #pragma warning restore CS0414
         private float _flashTimer;
-        private const float FlashDuration = 0.25f;
+        private const float FlashDuration = 0.35f;
+
+        // --- Hitmarker (brief confirmation when the player lands a hit) ---
+        private CanvasGroup _hitMarker;
+        private float _hitMarkerTimer;
+        private const float HitMarkerDuration = 0.22f;
         private CloseEncounters.Combat.PlayerVehicleController _cachedPlayerCtrl;
         private CloseEncounters.Vehicle.Vehicle _cachedPlayerVehicle;
         private CloseEncounters.Combat.OutOfBoundsController _cachedPlayerOob;
@@ -109,6 +114,7 @@ namespace CloseEncounters.UI
             BuildBottomBar();
             BuildBoostBar();
             BuildCrosshair();
+            BuildHitMarker();
             BuildDamageFlash();
             BuildKillFeed();
             BuildGameOverLabel();
@@ -463,6 +469,44 @@ namespace CloseEncounters.UI
             _crosshairV.color = new Color(1f, 1f, 1f, 0.85f);
         }
 
+        // --- Hitmarker (four diagonal ticks, center screen) ---
+
+        private void BuildHitMarker()
+        {
+            var root = CreateUIObject("HitMarker", _canvas.transform);
+            Anchor(root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                Vector2.zero, new Vector2(40f, 40f), new Vector2(0.5f, 0.5f));
+            _hitMarker = root.AddComponent<CanvasGroup>();
+            _hitMarker.alpha = 0f;
+            _hitMarker.interactable = false;
+            _hitMarker.blocksRaycasts = false;
+
+            // Four short bars rotated into an X around the reticle.
+            float[] angles = { 45f, -45f, 45f, -45f };
+            Vector2[] offs =
+            {
+                new Vector2( 9f,  9f), new Vector2(-9f,  9f),
+                new Vector2( 9f, -9f), new Vector2(-9f, -9f),
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                var tick = CreateUIObject($"Tick_{i}", root.transform);
+                Anchor(tick, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+                    offs[i], new Vector2(10f, 3f), new Vector2(0.5f, 0.5f));
+                var img = tick.AddComponent<Image>();
+                img.color = new Color(1f, 1f, 1f, 0.95f);
+                img.raycastTarget = false;
+                tick.GetComponent<RectTransform>().localRotation = Quaternion.Euler(0f, 0f, angles[i]);
+            }
+        }
+
+        /// <summary>Pop the hitmarker (called when the player lands a hit on an enemy).</summary>
+        public void ShowHitMarker()
+        {
+            if (_hitMarker != null) _hitMarker.alpha = 1f;
+            _hitMarkerTimer = HitMarkerDuration;
+        }
+
         // --- Damage flash (fullscreen red overlay) ---
 
         private void BuildDamageFlash()
@@ -766,8 +810,16 @@ namespace CloseEncounters.UI
             if (_flashTimer > 0f)
             {
                 _flashTimer -= Time.unscaledDeltaTime;
-                float alpha = Mathf.Clamp01(_flashTimer / FlashDuration) * 0.4f;
-                _damageFlash.color = new Color(0.8f, 0f, 0f, alpha);
+                float alpha = Mathf.Clamp01(_flashTimer / FlashDuration) * 0.78f;
+                _damageFlash.color = new Color(0.85f, 0.05f, 0.05f, alpha);
+            }
+
+            // Hitmarker fade
+            if (_hitMarkerTimer > 0f)
+            {
+                _hitMarkerTimer -= Time.unscaledDeltaTime;
+                if (_hitMarker != null)
+                    _hitMarker.alpha = Mathf.Clamp01(_hitMarkerTimer / HitMarkerDuration);
             }
 
             UpdateFlightReadout();

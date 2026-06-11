@@ -603,6 +603,20 @@ namespace CloseEncounters.Combat
                 if (attacker != null)
                     attacker.ShotsHit++;
                 DamageSystem.DealDamageToVehicle(vehicle, damage, hitPoint, attacker);
+
+                // Visceral knockback on meaty hits only (>=40 dmg). Small and hard-capped so it
+                // reads as a shove without destabilizing hover/buoyancy/flight; AI physics
+                // controllers damp most of it, so it is felt mainly on the player and on ragdolls.
+                if (damage >= 40)
+                {
+                    var vrb = vehicle.GetComponent<Rigidbody>();
+                    if (vrb != null && !vrb.isKinematic)
+                        vrb.AddForce(_velocity.normalized * Mathf.Min(damage * 0.15f, 10f),
+                            ForceMode.Impulse);
+                }
+
+                // Spatial impact thud (null-safe: silent until an Audio/Impact/Hit clip exists).
+                AudioFX.Play("Audio/Impact/Hit", hitPoint, 0.6f, Random.Range(0.92f, 1.12f));
                 return;
             }
 
