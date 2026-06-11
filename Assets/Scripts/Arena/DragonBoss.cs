@@ -180,7 +180,8 @@ namespace CloseEncounters.Arena
             switch (newState)
             {
                 case DragonState.Resting:
-                    _restDuration = Random.Range(restDurationMin, restDurationMax);
+                    // Phase 2: rests half as long, so it is back in the air and attacking sooner.
+                    _restDuration = Random.Range(restDurationMin, restDurationMax) * (InPhase2 ? 0.5f : 1f);
                     _attacksSinceRest = 0;
                     SetAnimation("IdleSimple");
                     break;
@@ -324,8 +325,13 @@ namespace CloseEncounters.Arena
                 return;
             }
 
-            // Fly toward target at hunt height
-            Vector3 targetPos = _currentTarget.position;
+            // Fly toward the target at hunt height, but arc in from one side (orbit) so the
+            // dragon weaves and repositions instead of beelining — far harder to sit still and
+            // circle-strafe. Offset stays < attackRange so the attack still triggers on approach.
+            Vector3 toTarget = _currentTarget.position - transform.position;
+            toTarget.y = 0f;
+            Vector3 lateral = Vector3.Cross(Vector3.up, toTarget.normalized) * _orbitSide;
+            Vector3 targetPos = _currentTarget.position + lateral * (attackRange * 0.7f);
             targetPos.y = islandCenter.y + flyHeight * 0.75f;
             MoveAndFace(targetPos, huntSpeed);
 
@@ -352,7 +358,13 @@ namespace CloseEncounters.Arena
 
         private void PerformAttack()
         {
-            int attackType = _attackIndex % 3;
+            // Randomized attack selection (no immediate repeat) so the player cannot memorize a
+            // fixed rotation; flip the approach side so the next hunt arcs in from the opposite
+            // flank instead of re-attacking from the same spot.
+            int attackType = Random.Range(0, 3);
+            if (attackType == _lastAttackType) attackType = (attackType + 1) % 3;
+            _lastAttackType = attackType;
+            _orbitSide = -_orbitSide;
             _attackIndex++;
             _attacksSinceRest++;
 
@@ -410,7 +422,7 @@ namespace CloseEncounters.Arena
                 // Damage anything hit
                 var vr = hit.collider.GetComponentInParent<VehicleRuntime>();
                 if (vr != null && vr.IsAlive)
-                    DamageSystem.DealDamageToVehicle(vr, drakarisDamage, hit.point, skipControlParts: true);
+                    DamageSystem.DealDamageToVehicle(vr, Scaled(drakarisDamage), hit.point, skipControlParts: true);
                 // Explosion at impact
                 VFXManager.BigExplosion(hit.point, 1.5f);
                 VFXManager.LargeFlames(hit.point, 1f);
@@ -450,7 +462,7 @@ namespace CloseEncounters.Arena
             fireball.transform.position = firePos;
             var fb = fireball.AddComponent<DragonFireball>();
             fb.direction = direction;
-            fb.damage = drakarisDamage;
+            fb.damage = Scaled(drakarisDamage);
             fb.speed = 25f;
             fb.lifetime = 4f;
             fb.explosionRadius = drakarisRadius;
@@ -489,7 +501,7 @@ namespace CloseEncounters.Arena
                 {
                     // Spread bite damage across multiple parts to avoid one-shotting control modules
                     int hits = 4;
-                    int dmgPerHit = biteDamage / hits;
+                    int dmgPerHit = Scaled(biteDamage) / hits;
                     for (int h = 0; h < hits; h++)
                     {
                         Vector3 spreadPos = bitePos + Random.insideUnitSphere * 3f;
@@ -521,6 +533,14 @@ namespace CloseEncounters.Arena
         private float _swoopTargetY;
         private float _swoopStartY;
         private bool _swoopDamageDealt;
+
+        // Attack variety + repositioning
+        private int _lastAttackType = -1;   // avoid repeating the same attack back-to-back
+        private int _orbitSide = 1;          // which way the dragon arcs in on its next approach
+
+        // Phase 2 kicks in at half health: faster, angrier, hits harder.
+        private bool InPhase2 => _currentHP <= maxHP / 2;
+        private int Scaled(int dmg) => InPhase2 ? Mathf.RoundToInt(dmg * 1.4f) : dmg;
 
         private void PerformFlyingAttack()
         {
@@ -571,7 +591,7 @@ namespace CloseEncounters.Arena
                         _swoopDamageDealt = true;
                         Vector3 swoopCenter = transform.position + transform.forward * 6f;
                         swoopCenter.y = 0f; // ground level where vehicles are
-                        DamageSystem.DealAreaDamage(swoopCenter, flyingAttackRadius, flyingAttackDamage);
+                        DamageSystem.DealAreaDamage(swoopCenter, flyingAttackRadius, Scaled(flyingAttackDamage));
                         VFXManager.DustExplosion(swoopCenter, 2f);
                         Debug.Log("[DragonBoss] Flying attack swoop hit!");
                     }
@@ -587,8 +607,9 @@ namespace CloseEncounters.Arena
             {
                 CleanupFireVFX();
 
-                // After several attacks, return to island to rest
-                if (_attacksSinceRest >= 8)
+                // After several attacks, return to island to rest. Phase 2 presses the
+                // assault longer (12) before retreating.
+                if (_attacksSinceRest >= (InPhase2 ? 12 : 8))
                 {
                     EnterState(DragonState.Returning);
                 }

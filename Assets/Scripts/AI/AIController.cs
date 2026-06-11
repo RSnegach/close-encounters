@@ -1160,8 +1160,9 @@ namespace CloseEncounters.AI
                 return;
             }
 
-            // Random evade
-            if (UnityEngine.Random.value < (1f - _preset.aggression) * 0.02f)
+            // Random evade — bumped from 0.02 so Easy/Medium bots visibly jink mid-fight
+            // instead of standing still (they evaded ~1% of decisions before).
+            if (UnityEngine.Random.value < (1f - _preset.aggression) * 0.05f)
             {
                 TransitionTo(AIState.Evade);
                 return;
@@ -1185,6 +1186,9 @@ namespace CloseEncounters.AI
 
             input.fire        = ShouldFire(dist);
             input.boost       = false;
+            // Circle-strafe while engaging (matches the Flank pattern) so bots orbit their
+            // target instead of just driving straight in and out — far less turret-like.
+            input.strafe      = _flankSide * 0.45f;
             input.weaponIndex = _currentWeaponIndex;
             CurrentInput = input;
         }
