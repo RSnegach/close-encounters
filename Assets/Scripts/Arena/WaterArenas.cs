@@ -16,18 +16,32 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             AddWaterSurface(750f);
+            ConfigureWaves();   // gentle tropical swell so the surface undulates
 
             Color coral    = new Color(0.95f, 0.55f, 0.45f);
             Color coralPink = new Color(0.92f, 0.62f, 0.68f);
             Color sand     = new Color(0.92f, 0.85f, 0.65f);
             Color wetRock  = new Color(0.45f, 0.48f, 0.42f);
 
-            // why: warm golden tropical fog tint
+            // why: bright tropical day. Fog thinned + cooled so the islands and horizon
+            // read instead of a warm haze wall.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.88f, 0.78f, 0.55f);
-            RenderSettings.fogDensity = 0.0025f;
+            RenderSettings.fogColor = new Color(0.80f, 0.86f, 0.88f);
+            RenderSettings.fogDensity = 0.0016f;
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.ambientLight = new Color(0.65f, 0.62f, 0.52f);
+            RenderSettings.ambientLight = new Color(0.66f, 0.66f, 0.62f);
+
+            // Bright tropical sun (the arena had NO directional light at all).
+            var sunObj = new GameObject("TropicalSun");
+            sunObj.transform.SetParent(transform, false);
+            sunObj.transform.rotation = Quaternion.Euler(52f, 40f, 0f);
+            var sun = sunObj.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = new Color(1f, 0.97f, 0.88f);
+            sun.intensity = 1.25f;
+            sun.shadows = LightShadows.Soft;
+            RenderSettings.sun = sun;
+            BuildSky();   // bright tropical procedural sky (drives skybox ambient + sun disc)
 
             var waterSurface = transform.Find("WaterSurface");
             if (waterSurface != null)
@@ -79,6 +93,21 @@ namespace CloseEncounters.Arena
                     0.02f,
                     20f,
                     $"Island_{i}");
+            }
+
+            // Register each island as an AI navigation-avoid zone (the pure-data AI
+            // HazardZone — steer only, no damage) so boats route around the islands
+            // instead of beaching on them (same approach as the Strait of Hormuz).
+            // NOTE: TerrainFactory.GenerateIsland's position is the terrain's bottom-left
+            // CORNER, so the island's true center is corner + size/2.
+            for (int i = 0; i < islandPos.Length; i++)
+            {
+                CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+                {
+                    center = new Vector3(islandPos[i].x + islandSizes[i].x * 0.5f, 0f,
+                                         islandPos[i].z + islandSizes[i].z * 0.5f),
+                    halfExtents = new Vector3(islandSizes[i].x * 0.5f + 8f, 40f, islandSizes[i].z * 0.5f + 8f)
+                });
             }
 
             // Palm trees on each island
@@ -137,6 +166,44 @@ namespace CloseEncounters.Arena
             // Ambient VFX
             VFXManager.Fireflies(new Vector3(0, 3, 0), 5f);
             VFXManager.DustMotes(new Vector3(0, 5, 0), 3f);
+
+            // Tropical gulls wheeling over the lagoon
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 6, 320f);
+            SeabirdFlock.Create(transform, new Vector3(-200f, 0f, 200f), 4, 160f);
+        }
+
+        /// <summary>Create + tune the WaveManager for a gentle tropical swell so the
+        /// deformable water surface (added by AddWaterSurface) actually undulates.</summary>
+        private void ConfigureWaves()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null)
+            {
+                var wmObj = new GameObject("WaveManager");
+                wmObj.transform.SetParent(transform, false);
+                wm = wmObj.AddComponent<WaveManager>();
+            }
+            wm.amplitude = 0.6f; wm.wavelength = 22f; wm.speed  = 1.4f;
+            wm.amp2      = 0.3f; wm.wavelength2 = 15f; wm.speed2 = 1.0f; wm.angle2 = 0.6f;
+            wm.baseWaterY = 0f;
+        }
+
+        /// <summary>Bright tropical procedural sky; drives skybox-based ambient + sun disc.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.45f, 0.62f, 0.85f)); // bright tropical blue
+            sky.SetColor("_GroundColor", new Color(0.55f, 0.70f, 0.72f)); // sea-haze horizon
+            sky.SetFloat("_AtmosphereThickness", 1.0f);
+            sky.SetFloat("_Exposure",  1.3f);
+            sky.SetFloat("_SunSize",   0.045f);
+            sky.SetFloat("_SunSizeConvergence", 5f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 1.0f;
+            DynamicGI.UpdateEnvironment();
         }
 
         private float SampleTerrainHeight(Terrain terrain, float worldX, float worldZ)
@@ -168,13 +235,47 @@ namespace CloseEncounters.Arena
             Color blackSand  = new Color(0.12f, 0.10f, 0.10f);
             Color ash        = new Color(0.35f, 0.32f, 0.30f);
             AddWaterSurface(750f);
+            ConfigureWaves();   // heavy molten-sea swell so the surface heaves around the volcano
 
-            // why: ash-gray fog to sell the volcanic atmosphere
+            // Dark volcanic water — the base surface is tropical blue; recolor to a murky,
+            // ash-darkened sea that catches the ember glow.
+            var waterSurface = transform.Find("WaterSurface");
+            if (waterSurface != null)
+            {
+                var rend = waterSurface.GetComponent<MeshRenderer>();
+                if (rend != null && rend.sharedMaterial != null)
+                {
+                    rend.sharedMaterial.SetColor("_BaseColor", new Color(0.05f, 0.07f, 0.08f, 0.6f));
+                    rend.sharedMaterial.SetFloat("_Smoothness", 0.8f); // glassy, to mirror the embers
+                }
+                var anim = waterSurface.GetComponent<WaterBasicAnimator>();
+                if (anim != null)
+                {
+                    anim.horizonColor = new Color(0.10f, 0.09f, 0.09f, 1f);
+                    anim.waterColor   = new Color(0.05f, 0.06f, 0.07f, 1f);
+                }
+            }
+
+            // why: thick warm ash haze to sell the volcanic atmosphere
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.55f, 0.50f, 0.48f);
+            RenderSettings.fogColor = new Color(0.32f, 0.27f, 0.25f);   // darker, warmer ash than before
             RenderSettings.fogDensity = 0.0035f;
             RenderSettings.fogMode = FogMode.Exponential;
-            RenderSettings.ambientLight = new Color(0.55f, 0.50f, 0.48f);
+            RenderSettings.ambientLight = new Color(0.42f, 0.34f, 0.30f); // dim warm ash
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; // honor the ash ambient
+
+            // Low ember-tinted sun cutting through the ash.
+            var sunObj = new GameObject("VolcanicSun");
+            sunObj.transform.SetParent(transform, false);
+            sunObj.transform.rotation = Quaternion.Euler(18f, 35f, 0f); // low, raking
+            var sun = sunObj.AddComponent<Light>();
+            sun.type = LightType.Directional;
+            sun.color = new Color(1f, 0.55f, 0.32f);  // ember orange
+            sun.intensity = 0.9f;
+            sun.shadows = LightShadows.Soft;
+            RenderSettings.sun = sun;
+
+            BuildSky();
 
             // Central mountain terrain
             var peakTerrain = TerrainFactory.GenerateIsland(transform, new Vector3(-150f, -15f, -150f), new Vector3(300f, 120f, 300f), 257, "titans_peak", 80, 0.03f, 15f, "TitansPeak");
@@ -280,6 +381,73 @@ namespace CloseEncounters.Arena
             VFXManager.HeatDistortion(new Vector3(120f, 8f, 120f), 2f);
             VFXManager.HeatDistortion(new Vector3(-140f, 8f, 140f), 2f);
             VFXManager.GroundFog(Vector3.zero, 6f);
+
+            // Falling ash drifting across the whole arena (grey, slow, light wind).
+            Snowfall.Create(transform, 90f, 1500f, 700f, new Vector3(8f, 0f, 4f),
+                new Color(0.35f, 0.32f, 0.30f, 0.55f));
+
+            // Steer boats off the central volcanic peak and the six satellite islets.
+            RegisterAINavZones(isletPos, isletRad);
+        }
+
+        /// <summary>Heavy molten-sea swell. Activates the deformable water surface (added by
+        /// AddWaterSurface); without a WaveManager the sea sits dead-flat.</summary>
+        private void ConfigureWaves()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null)
+            {
+                var wmObj = new GameObject("WaveManager");
+                wmObj.transform.SetParent(transform, false);
+                wm = wmObj.AddComponent<WaveManager>();
+            }
+            wm.amplitude = 1.0f; wm.wavelength = 28f; wm.speed  = 1.8f;
+            wm.amp2      = 0.55f; wm.wavelength2 = 18f; wm.speed2 = 1.25f; wm.angle2 = 0.75f;
+            wm.baseWaterY = 0f;
+        }
+
+        /// <summary>Dark ashen procedural sky with an ember-warm horizon. Forces Flat ambient so
+        /// the dim warm RenderSettings.ambientLight set in Build is honored (a previous arena may
+        /// have left AmbientMode.Skybox).</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.20f, 0.16f, 0.16f)); // dark ash
+            sky.SetColor("_GroundColor", new Color(0.32f, 0.14f, 0.07f)); // ember-warm horizon glow
+            sky.SetFloat("_AtmosphereThickness", 1.7f);                   // thick, smoky
+            sky.SetFloat("_Exposure",  0.7f);                             // dim, brooding
+            sky.SetFloat("_SunSize",   0.05f);
+            sky.SetFloat("_SunSizeConvergence", 4f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; // keep the dim warm ash ambient
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Register the central peak and the six satellite islets as steer-only AI
+        /// nav-avoid zones so boats route around the land instead of beaching. Pure nav data —
+        /// never damages. NOTE: TerrainFactory.GenerateIsland's position is the terrain's
+        /// bottom-left CORNER, so each islet's true center = isletPos + isletRad (size = rad*2);
+        /// the central peak tile corner (-150,-150) size 300 -> center (0,0).
+        /// ClearHazardZones (ArenaManager, before every Build) keeps these from leaking.</summary>
+        private void RegisterAINavZones(Vector3[] isletPos, float[] isletRad)
+        {
+            // Central volcanic peak (300x300 terrain tile centered at origin).
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(0f, 0f, 0f),
+                halfExtents = new Vector3(150f, 60f, 150f)
+            });
+            for (int i = 0; i < isletPos.Length; i++)
+            {
+                float r = isletRad[i] + 8f;
+                CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+                {
+                    center = new Vector3(isletPos[i].x + isletRad[i], 0f, isletPos[i].z + isletRad[i]),
+                    halfExtents = new Vector3(r, 40f, r)
+                });
+            }
         }
     }
 
@@ -294,6 +462,7 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             AddWaterSurface(750f);
+            ConfigureWaves();   // cold choppy swell so the surface deforms and the icebergs actually bob
 
             // --- Arctic water color override ---
             // The base AddWaterSurface uses tropical blue; recolor to dark icy green
@@ -318,8 +487,8 @@ namespace CloseEncounters.Arena
 
             // --- Frozen atmosphere render settings ---
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.55f, 0.68f, 0.82f);
-            RenderSettings.fogDensity = 0.0045f;
+            RenderSettings.fogColor = new Color(0.62f, 0.74f, 0.85f);
+            RenderSettings.fogDensity = 0.0028f;   // thinned so the icebergs, shelves, and aurora read across the strait
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.45f, 0.55f, 0.70f);
 
@@ -405,8 +574,9 @@ namespace CloseEncounters.Arena
 
             // --- Ambient VFX ---
             VFXManager.GroundFog(Vector3.zero, 14f);
-            VFXManager.Rain(new Vector3(0, 25, 0), 10f);
-            VFXManager.DustMotes(new Vector3(0, 8, 0), 8f);   // doubles as snow particles
+            // Driving snow across the whole strait (replaces the old rain — rain reads wrong
+            // for the Arctic). Wide curtain, brisk side-wind, follows the camera.
+            Snowfall.Create(transform, 80f, 1500f, 900f, new Vector3(14f, 0f, 6f));
 
             // Steam wisps along the waterline for cold atmosphere
             var steamPrefab = Resources.Load<GameObject>("VFX/Smoke/Steam");
@@ -447,6 +617,123 @@ namespace CloseEncounters.Arena
             light.color = new Color(0.60f, 0.85f, 0.92f); // why: aurora-tinged sky
             light.intensity = 0.8f;
             light.shadows = LightShadows.Soft;
+            RenderSettings.sun = light;   // drives the procedural sky's sun disc
+
+            // Cold twilight sky + a slow aurora band overhead.
+            BuildSky();
+            BuildAurora();
+
+            // Arctic gulls wheeling over the open channel (white plumage).
+            Color gull = new Color(0.95f, 0.96f, 0.98f);
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 6, 300f, gull);
+            SeabirdFlock.Create(transform, new Vector3(-180f, 0f, 120f), 4, 150f, gull);
+
+            // Steer the AI clear of the big in-channel icebergs and the shelf fronts.
+            RegisterAINavZones(bergPositions, bergScales);
+        }
+
+        /// <summary>Create + tune the WaveManager for a cold, choppy arctic swell. This is
+        /// what makes the deformable surface move and the iceberg buoyancy come alive — without
+        /// it the icebergs fall back to a static water level and sit dead-still.</summary>
+        private void ConfigureWaves()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null)
+            {
+                var wmObj = new GameObject("WaveManager");
+                wmObj.transform.SetParent(transform, false);
+                wm = wmObj.AddComponent<WaveManager>();
+            }
+            wm.amplitude = 0.9f; wm.wavelength = 26f; wm.speed  = 1.7f;
+            wm.amp2      = 0.5f; wm.wavelength2 = 17f; wm.speed2 = 1.2f; wm.angle2 = 0.7f;
+            wm.baseWaterY = 0f;
+        }
+
+        /// <summary>Cold arctic-twilight procedural sky; drives skybox ambient + the low sun disc.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.40f, 0.52f, 0.68f)); // pale steel-blue twilight
+            sky.SetColor("_GroundColor", new Color(0.30f, 0.40f, 0.50f)); // cold sea-haze horizon
+            sky.SetFloat("_AtmosphereThickness", 1.3f);                   // thick, diffuse polar air
+            sky.SetFloat("_Exposure",  0.95f);                            // dim twilight
+            sky.SetFloat("_SunSize",   0.05f);
+            sky.SetFloat("_SunSizeConvergence", 4f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 0.85f;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>A wide, faint, slowly drifting aurora ribbon high above the strait.
+        /// Pure emissive eye-candy — no collider, well above flight ceiling.</summary>
+        private void BuildAurora()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            for (int band = 0; band < 3; band++)
+            {
+                var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                var col = quad.GetComponent<Collider>();
+                if (col != null) Object.DestroyImmediate(col);
+                quad.name = $"Aurora_{band}";
+                quad.transform.SetParent(transform, false);
+                quad.transform.localPosition = new Vector3(0f, 320f + band * 35f, -120f + band * 90f);
+                quad.transform.localRotation = Quaternion.Euler(70f, 0f, 0f);
+                quad.transform.localScale = new Vector3(1500f, 260f, 1f);
+
+                var mr = quad.GetComponent<MeshRenderer>();
+                if (shader != null)
+                {
+                    var mat = new Material(shader);
+                    // Faint green band, violet on the highest. Additive blend so it ADDS light to
+                    // the sky (glows) rather than painting an opaque sheet — RGB is kept low so the
+                    // effect stays subtle. Additive ignores alpha, so the values themselves are dim.
+                    Color tint = band == 2 ? new Color(0.16f, 0.10f, 0.30f, 1f)
+                                           : new Color(0.12f, 0.34f, 0.20f, 1f);
+                    if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", tint);
+                    mat.color = tint;
+                    // Full transparent/additive surface setup for URP (and harmless on Unlit/Color).
+                    if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);          // transparent
+                    if (mat.HasProperty("_Blend"))   mat.SetFloat("_Blend", 1f);            // additive
+                    if (mat.HasProperty("_SrcBlend")) mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                    if (mat.HasProperty("_DstBlend")) mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+                    if (mat.HasProperty("_ZWrite"))  mat.SetFloat("_ZWrite", 0f);
+                    if (mat.HasProperty("_Cull"))    mat.SetFloat("_Cull", 0f);   // double-sided: visible from below
+                    mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                    mat.DisableKeyword("_ALPHATEST_ON");
+                    mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                    mr.material = mat;
+                    mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    mr.receiveShadows = false;
+                }
+                quad.AddComponent<Rotator>().axis = Vector3.up;
+                quad.GetComponent<Rotator>().degreesPerSecond = (band % 2 == 0 ? 1.5f : -1.1f);
+            }
+        }
+
+        /// <summary>Register the larger, near-central icebergs and the two shelf fronts as
+        /// steer-only AI nav-avoid zones so boats route around them instead of grinding their
+        /// hulls along the ice. Pure nav data — never damages (the icebergs' own contact damage
+        /// is separate). Only the big, stable bergs are registered; small drifters are left to
+        /// the boats' own collision response.</summary>
+        private void RegisterAINavZones(Vector3[] bergPositions, float[] bergScales)
+        {
+            for (int i = 0; i < bergPositions.Length; i++)
+            {
+                // Only the larger bergs that sit inside the AI play area are worth a static zone;
+                // small or far-out ones aren't (a fixed AABB can't track a drifting body well).
+                if (bergScales[i] < 6f) continue;
+                if (Mathf.Abs(bergPositions[i].x) > 320f || Mathf.Abs(bergPositions[i].z) > 320f) continue;
+                float r = bergScales[i] * 0.9f + 6f;
+                CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+                {
+                    center = new Vector3(bergPositions[i].x, 0f, bergPositions[i].z),
+                    halfExtents = new Vector3(r, 40f, r)
+                });
+            }
         }
 
         /// <summary>
@@ -725,6 +1012,7 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             AddWaterSurface(900f);
+            ConfigureWaves();   // dark, heavy swell so the surface deforms under the storm
 
             // ── Districts ──
             BuildAtmosphere();
@@ -732,6 +1020,12 @@ namespace CloseEncounters.Arena
             BuildCentralIsland();
             BuildShipwrecks();
             SpawnDragon();
+
+            // Storm petrels skimming the swell below the dragon's flight ceiling.
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 5, 280f, new Color(0.22f, 0.22f, 0.26f));
+
+            // Keep boats off the central island, the four cover islands, and the dragon's roost.
+            RegisterAINavZones();
 
             // ── Spawn + bounds (expanded to give the dragon room to roam) ──
             AddSpawnRing(Vector3.zero, 600f, 8, 1f);
@@ -748,12 +1042,10 @@ namespace CloseEncounters.Arena
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.25f, 0.20f, 0.30f); // dim purple
 
-            // Try to load twilight skybox
-            var skyboxTex = Resources.Load<Texture2D>("Skybox_Twilight");
-            if (skyboxTex != null)
-            {
-                // Create skybox material from HDR cubemap if possible
-            }
+            // Deep-twilight procedural sky. (The old code loaded Skybox_Twilight but left the
+            // body empty, so RenderSettings.skybox was never set — the arena rendered under
+            // whatever sky the previous arena left, wrecking this one's dark mood.)
+            BuildSky();
 
             // Twilight directional light
             var lightObj = new GameObject("TwilightSun");
@@ -764,6 +1056,7 @@ namespace CloseEncounters.Arena
             sun.intensity = 0.6f;
             sun.transform.rotation = Quaternion.Euler(15f, -30f, 0f); // low angle sunset
             sun.shadows = LightShadows.Soft;
+            RenderSettings.sun = sun;
 
             // Darken the water surface
             var waterSurface = transform.Find("WaterSurface");
@@ -799,6 +1092,70 @@ namespace CloseEncounters.Arena
                     bolt.transform.localPosition = boltPositions[i];
                     bolt.transform.localScale = Vector3.one * 4f;
                 }
+            }
+        }
+
+        /// <summary>Dark, heavy storm swell. Activates the deformable water surface (added by
+        /// AddWaterSurface) — without a WaveManager the surface sits dead-flat.</summary>
+        private void ConfigureWaves()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null)
+            {
+                var wmObj = new GameObject("WaveManager");
+                wmObj.transform.SetParent(transform, false);
+                wm = wmObj.AddComponent<WaveManager>();
+            }
+            wm.amplitude = 1.1f; wm.wavelength = 30f; wm.speed  = 1.9f;
+            wm.amp2      = 0.6f; wm.wavelength2 = 19f; wm.speed2 = 1.3f; wm.angle2 = 0.8f;
+            wm.baseWaterY = 0f;
+        }
+
+        /// <summary>Deep-twilight procedural sky. Forces Flat ambient so the dim purple
+        /// RenderSettings.ambientLight set in BuildAtmosphere is honored (a previous arena may
+        /// have left AmbientMode.Skybox, which would otherwise brighten this lair).</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.18f, 0.14f, 0.26f)); // deep twilight purple
+            sky.SetColor("_GroundColor", new Color(0.06f, 0.05f, 0.09f)); // near-black horizon
+            sky.SetFloat("_AtmosphereThickness", 1.6f);                   // thick, hazy storm air
+            sky.SetFloat("_Exposure",  0.6f);                             // dim, brooding
+            sky.SetFloat("_SunSize",   0.04f);
+            sky.SetFloat("_SunSizeConvergence", 4f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat; // keep the dim purple ambient
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Register the central island, the four cover islands, and the dragon's roost
+        /// as steer-only AI nav-avoid zones so boats route around them instead of beaching. Pure
+        /// nav data — never damages. (Perimeter mountains sit near the boundary and are handled by
+        /// the AI's boundary avoidance.) ClearHazardZones (ArenaManager, before every Build) keeps
+        /// these from leaking into the next arena.</summary>
+        private void RegisterAINavZones()
+        {
+            // center XZ, halfExtents (terrain half-size + boat clearance). NOTE: TerrainFactory
+            // .GenerateIsland's position arg is the terrain's bottom-left CORNER, so each island's
+            // true center is corner + size/2. Central island corner (-40,-40) size 80 -> center (0,0);
+            // each size-60 cover island center = its corner + 30.
+            (Vector3 center, Vector3 half)[] zones =
+            {
+                (new Vector3(  0f, 0f,   0f), new Vector3(48f, 40f, 48f)), // central island + dragon roost
+                (new Vector3(-100f, 0f, 130f), new Vector3(38f, 40f, 38f)), // NW cover island
+                (new Vector3( 150f, 0f, -60f), new Vector3(38f, 40f, 38f)), // SE cover island
+                (new Vector3( -70f, 0f, -90f), new Vector3(38f, 40f, 38f)), // SW cover island
+                (new Vector3( 170f, 0f,  90f), new Vector3(38f, 40f, 38f)), // NE cover island
+            };
+            for (int i = 0; i < zones.Length; i++)
+            {
+                CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+                {
+                    center = zones[i].center,
+                    halfExtents = zones[i].half
+                });
             }
         }
 
@@ -1272,11 +1629,14 @@ namespace CloseEncounters.Arena
         public override void Build()
         {
             AddWaterSurface(750f);
+            ConfigureWaves();   // tuned gulf swell so the surface actually undulates
+            TintWater();        // warm gulf turquoise + sun-glint sheen
 
-            // why: warm Persian Gulf daylight palette
+            // why: warm Persian Gulf daylight palette. Fog thinned + warmed so the new
+            // procedural sky and horizon read instead of a flat opaque wall of haze.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.88f, 0.78f, 0.60f);
-            RenderSettings.fogDensity = 0.0025f;
+            RenderSettings.fogColor = new Color(0.84f, 0.80f, 0.72f);
+            RenderSettings.fogDensity = 0.0014f;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.78f, 0.70f, 0.56f);
 
@@ -1311,8 +1671,130 @@ namespace CloseEncounters.Arena
             var sun = sunObj.AddComponent<Light>();
             sun.type = LightType.Directional;
             sun.color = new Color(1f, 0.90f, 0.72f);
-            sun.intensity = 1.15f;
+            sun.intensity = 1.2f;
             sun.shadows = LightShadows.Soft;
+            RenderSettings.sun = sun;   // sun disc + lighting for the procedural sky
+
+            BuildSky();                 // hazy Persian-Gulf procedural skybox + skybox ambient
+
+            // Environmental life + AI navigation
+            BuildCoastalDetail();       // cosmetic reefs/outcrops + sparse shore greenery
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 9, 230f);
+            SeabirdFlock.Create(transform, new Vector3(360f, 0f, 120f), 6, 150f);
+            RegisterAINavZones();       // bots steer around the central island + both shores
+        }
+
+        // =================================================================
+        // Atmosphere / water tuning
+        // =================================================================
+
+        /// <summary>Hazy Persian-Gulf procedural sky; drives skybox-based ambient.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader != null)
+            {
+                var sky = new Material(shader);
+                sky.SetColor("_SkyTint",     new Color(0.55f, 0.66f, 0.80f)); // warm-hazy blue
+                sky.SetColor("_GroundColor", new Color(0.72f, 0.64f, 0.50f)); // sandy horizon
+                sky.SetFloat("_AtmosphereThickness", 1.55f);                  // gulf haze
+                sky.SetFloat("_Exposure",  1.12f);
+                sky.SetFloat("_SunSize",   0.045f);
+                sky.SetFloat("_SunSizeConvergence", 4f);
+                RenderSettings.skybox = sky;
+                RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+                RenderSettings.ambientIntensity = 1.0f;
+                DynamicGI.UpdateEnvironment();
+            }
+        }
+
+        /// <summary>Create + tune the WaveManager for a gentle long-period gulf swell.</summary>
+        private void ConfigureWaves()
+        {
+            var wm = WaveManager.Instance;
+            if (wm == null)
+            {
+                var wmObj = new GameObject("WaveManager");
+                wmObj.transform.SetParent(transform, false);
+                wm = wmObj.AddComponent<WaveManager>();
+            }
+            wm.amplitude = 0.7f;  wm.wavelength = 24f; wm.speed  = 1.5f;
+            wm.amp2      = 0.35f; wm.wavelength2 = 17f; wm.speed2 = 1.1f; wm.angle2 = 0.7f;
+            wm.baseWaterY = 0f;
+        }
+
+        /// <summary>Retint the shared water surface to a warm gulf turquoise with sheen.</summary>
+        private void TintWater()
+        {
+            var ws = transform.Find("WaterSurface");
+            if (ws == null) return;
+            var mr = ws.GetComponent<MeshRenderer>();
+            if (mr == null || mr.sharedMaterial == null) return;
+            var m = mr.sharedMaterial;
+            m.SetColor("_BaseColor", new Color(0.10f, 0.34f, 0.42f, 0.62f));
+            m.SetFloat("_Smoothness", 0.94f);
+            m.SetFloat("_Metallic", 0.05f);
+        }
+
+        // =================================================================
+        // Environmental life + dynamic hazards + AI nav
+        // =================================================================
+
+        /// <summary>Cosmetic reefs along both channel-side waterlines, a couple of
+        /// mid-channel outcrops, and sparse hardy greenery on the central island.
+        /// Reef rocks are collider-free so they add life without trapping vehicles.</summary>
+        private void BuildCoastalDetail()
+        {
+            Color reef = new Color(0.46f, 0.42f, 0.34f);
+            for (float x = -440f; x <= 440f; x += 95f)
+            {
+                StripColliders(AddRockCluster(new Vector3(x + Rng(-22f, 22f), -1.6f, 188f + Rng(-8f, 8f)), 9f, 3.2f, reef, "ReefN"));
+                StripColliders(AddRockCluster(new Vector3(x + Rng(-22f, 22f), -1.6f, -188f + Rng(-8f, 8f)), 9f, 3.0f, reef, "ReefS"));
+            }
+            StripColliders(AddRockCluster(new Vector3(160f, -1f, 70f), 12f, 4f, reef, "Outcrop_E"));
+            StripColliders(AddRockCluster(new Vector3(-160f, -1f, -70f), 12f, 4f, reef, "Outcrop_W"));
+
+            // Sparse hardy bushes around the central island slopes for a lived-in look.
+            for (int i = 0; i < 6; i++)
+            {
+                float a = i / 6f * 6.283f;
+                Vector3 p = new Vector3(Mathf.Cos(a) * 42f, 4f, Mathf.Sin(a) * 42f);
+                CityPrefabHelper.PlaceProp(transform, "Bush prefab", p, Rng(0f, 360f), Rng(0.8f, 1.4f));
+            }
+        }
+
+        private static void StripColliders(GameObject go)
+        {
+            if (go == null) return;
+            foreach (var c in go.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(c);
+        }
+
+        /// <summary>Register the in-bounds landmasses as AI navigation hazards so bots
+        /// steer around them instead of beaching. (Capes lie outside the AI bound;
+        /// the central island and both shore fronts are what bots actually reach.)</summary>
+        private void RegisterAINavZones()
+        {
+            // NOTE: TerrainFactory.GenerateIsland's position is the terrain's bottom-left CORNER,
+            // so each landmass actually sits at corner + size/2. These zones mirror the BuildTerrain
+            // calls accordingly (central island corner (0,0) size 120 -> center (60,60); north shore
+            // corner (0,300) size 1000x240 -> center (500,420); south shore corner (0,-300) size
+            // 900x220 -> center (450,-190)).
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(60f, 0f, 60f),
+                halfExtents = new Vector3(72f, 40f, 72f)   // central Hormuz island
+            });
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(500f, 0f, 420f),
+                halfExtents = new Vector3(508f, 40f, 128f) // north (Iranian) shore front
+            });
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(450f, 0f, -190f),
+                halfExtents = new Vector3(458f, 40f, 118f) // south (Omani) shore front
+            });
         }
 
         // =================================================================

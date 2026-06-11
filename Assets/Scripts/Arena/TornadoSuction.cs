@@ -54,14 +54,17 @@ namespace CloseEncounters.Arena
                     continue;
                 }
 
-                // AI air vehicles: directly override velocity
+                // AI vehicles: nudge velocity directly (their physics controllers
+                // otherwise damp out AddForce), but at parity with physics bodies and
+                // with only a slight wobble — the old 3x push + ±5°/frame spin made the
+                // tornado fling bots around uncontrollably and feel unfair.
                 var aiCtrl = rb.GetComponent<CloseEncounters.AI.AIController>();
                 if (aiCtrl != null)
                 {
                     Vector3 tornadoForce = ComputeTornadoForce(rb);
-                    rb.linearVelocity += tornadoForce * Time.fixedDeltaTime * 3f;
+                    rb.linearVelocity += tornadoForce * Time.fixedDeltaTime;
                     rb.MoveRotation(rb.rotation * Quaternion.Euler(
-                        Random.Range(-5f, 5f), Random.Range(-5f, 5f), Random.Range(-5f, 5f)));
+                        Random.Range(-1.5f, 1.5f), Random.Range(-1.5f, 1.5f), Random.Range(-1.5f, 1.5f)));
                     continue;
                 }
 

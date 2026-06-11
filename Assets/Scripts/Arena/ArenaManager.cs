@@ -160,6 +160,9 @@ namespace CloseEncounters.Arena
 
             if (_arena != null)
             {
+                // Reset AI navigation hazards so zones from a previously-played arena
+                // don't leak in; the arena re-registers its own in Build().
+                CloseEncounters.AI.AIController.ClearHazardZones();
                 _arena.Build();
                 ApplyArenaAtmospherics(_arena);
                 if (_settings.domain == "air")
@@ -195,6 +198,9 @@ namespace CloseEncounters.Arena
             _arena = FindAnyObjectByType<SceneBasedArena>();
             if (_arena != null)
             {
+                // Reset AI navigation hazards so zones from a previously-played arena
+                // don't leak in; the arena re-registers its own in Build().
+                CloseEncounters.AI.AIController.ClearHazardZones();
                 _arena.Build();
                 ApplyArenaAtmospherics(_arena);
                 if (_settings.domain == "air")

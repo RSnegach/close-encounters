@@ -137,11 +137,15 @@ namespace CloseEncounters.Arena
             dsl.shadows = LightShadows.Soft;
 
             // ── Atmosphere ──────────────────────────────────────────
+            // why: fog thinned so the mesas + canyon rim read across the vast flats
+            // (the desert should feel open, not boxed in by haze); a real sky added.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.86f, 0.74f, 0.55f); // warm dust
-            RenderSettings.fogDensity = 0.0028f; // why: slightly lighter — bigger arena should feel open
+            RenderSettings.fogColor = new Color(0.86f, 0.78f, 0.62f); // warm dust haze
+            RenderSettings.fogDensity = 0.0016f;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.78f, 0.70f, 0.55f);
+            RenderSettings.sun = dsl;
+            BuildSky();   // procedural sun-bleached desert sky (drives skybox ambient + sun disc)
 
             VFXManager.DustStorm(Vector3.zero, 8f);
             VFXManager.SandSwirls(new Vector3(0, 1, 0), 5f);
@@ -149,6 +153,60 @@ namespace CloseEncounters.Arena
             VFXManager.DustMotes(new Vector3(0, 3, 0), 6f);
             VFXManager.SandSwirls(new Vector3(-270f, 1f, 180f), 4f);
             VFXManager.SandSwirls(new Vector3( 300f, 1f,-210f), 4f);
+
+            // ── Dynamic life + AI navigation ───────────────────────
+            // Tumbleweeds rolling on the wind across the open flats
+            TumbleweedField.Create(transform, Vector3.zero, 14, 280f,
+                new Vector3(1f, 0f, 0.35f), 1.5f);
+            // Vultures wheeling over the arena (reused flock, dark plumage)
+            Color vulture = new Color(0.16f, 0.14f, 0.12f);
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 5, 240f, vulture);
+            SeabirdFlock.Create(transform, new Vector3(-200f, 0f, 150f), 3, 130f, vulture);
+            RegisterAINavZones();   // steer bots around the mesas + lethal oasis
+        }
+
+        // =================================================================
+        // Atmosphere / AI nav helpers
+        // =================================================================
+
+        /// <summary>Procedural sun-bleached desert sky: pale hot blue with a sandy
+        /// horizon and dusty haze; drives skybox-based ambient + the sun disc.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.62f, 0.66f, 0.78f)); // pale hot-sky blue
+            sky.SetColor("_GroundColor", new Color(0.78f, 0.66f, 0.46f)); // sandy horizon
+            sky.SetFloat("_AtmosphereThickness", 1.3f);                   // dusty haze
+            sky.SetFloat("_Exposure",  1.25f);                            // bright desert glare
+            sky.SetFloat("_SunSize",   0.05f);
+            sky.SetFloat("_SunSizeConvergence", 4f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 1.0f;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Register the impassable mesas and the lethal oasis pool as AI
+        /// navigation-avoid zones (the pure-data AI HazardZone — steer only, no damage)
+        /// so bots route around the cliffs instead of ramming them and don't drive into
+        /// the oasis. The 18-unit obstacle ray is far too short for 90-120u mesas.</summary>
+        private void RegisterAINavZones()
+        {
+            RegisterNavBox(new Vector3(-281f, 0f,  315f), 120f); // NW mesa
+            RegisterNavBox(new Vector3( 315f, 0f, -225f),  98f); // SE mesa
+            RegisterNavBox(new Vector3( -56f, 0f, -315f),  74f); // S-center mesa
+            RegisterNavBox(new Vector3(   0f, 0f,  112f),  34f); // lethal oasis pool
+        }
+
+        private static void RegisterNavBox(Vector3 center, float radius)
+        {
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(center.x, 0f, center.z),
+                halfExtents = new Vector3(radius, 40f, radius)
+            });
         }
 
         // ── CANYON RIM: mountain/canyon prefabs around arena edges ──
@@ -2298,19 +2356,66 @@ namespace CloseEncounters.Arena
             asl.transform.rotation = Quaternion.Euler(35f, 15f, 0f); // low arctic sun
             asl.shadows = LightShadows.Soft;
 
-            // ── Atmosphere: cold blue fog ──────────────────────────
+            // ── Atmosphere: cold polar air + sky ───────────────────
+            // why: fog thinned (was 0.005, a near-whiteout) so the snowfields, ridges
+            // and rock formations read across the tundra; a real cold sky added.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.75f, 0.82f, 0.90f);
-            RenderSettings.fogDensity = 0.005f;
+            RenderSettings.fogColor = new Color(0.80f, 0.86f, 0.92f);
+            RenderSettings.fogDensity = 0.0025f;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.62f, 0.70f, 0.82f);
+            RenderSettings.sun = asl;
+            BuildSky();   // procedural pale-cold polar sky (drives skybox ambient + sun disc)
 
             // Ambient VFX
             VFXManager.GroundFog(Vector3.zero, 6f);
             VFXManager.GroundFog(new Vector3( 300f, 1f,  300f), 4f);
             VFXManager.GroundFog(new Vector3(-300f, 1f, -300f), 4f);
-            VFXManager.Rain(new Vector3(0, 30, 0), 8f);
-            VFXManager.DustMotes(new Vector3(0, 10, 0), 5f); // snow specks feel
+            VFXManager.DustMotes(new Vector3(0, 10, 0), 5f); // fine ice-crystal sparkle
+
+            // ── Dynamic life ───────────────────────────────────────
+            // Real driving snow (replaces the thematically-wrong rain), camera-following
+            Snowfall.Create(transform, 70f, 700f, 280f, new Vector3(3f, 0f, 1f));
+            // White arctic gulls wheeling over the tundra
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 5, 240f);
+            SeabirdFlock.Create(transform, new Vector3(180f, 0f, -150f), 3, 130f);
+
+            RegisterAINavZones();   // keep bots off the slippery frozen lake
+        }
+
+        // =================================================================
+        // Atmosphere / AI nav helpers
+        // =================================================================
+
+        /// <summary>Procedural pale-cold polar sky with a snow-white horizon; drives
+        /// skybox-based ambient and the sun disc.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.58f, 0.68f, 0.82f)); // pale cold blue
+            sky.SetColor("_GroundColor", new Color(0.80f, 0.85f, 0.92f)); // snow-white horizon
+            sky.SetFloat("_AtmosphereThickness", 1.1f);                   // crisp polar air
+            sky.SetFloat("_Exposure",  1.1f);
+            sky.SetFloat("_SunSize",   0.05f);
+            sky.SetFloat("_SunSizeConvergence", 5f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 1.0f;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Register the slippery frozen lake as an AI navigation-avoid zone
+        /// (the pure-data AI HazardZone — steer only, no damage) so bots don't slide
+        /// out of control across the ice. The lake ice imparts a slide force.</summary>
+        private void RegisterAINavZones()
+        {
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(15f, 0f, -15f),
+                halfExtents = new Vector3(42f, 40f, 42f)   // frozen lake (ice radius ~35 + margin)
+            });
         }
     }
 
@@ -2387,6 +2492,57 @@ namespace CloseEncounters.Arena
                 new Vector3(   0f, 3f,  390f),  new Vector3(  0f, 3f, -390f)
             );
             AddInvisibleWalls(562f, 50f);
+
+            // ── Dynamic life + AI navigation ───────────────────────
+            // Make the volcano actually erupt: periodic fireballs + ballistic magma
+            // debris + persistent crater fire/smoke. The VolcanoEruption component was
+            // fully built but never attached, so the centrepiece did nothing.
+            var volcano = new GameObject("Volcano");
+            volcano.transform.SetParent(transform, false);
+            volcano.transform.position = new Vector3(0f, 22f, 0f); // caldera floor
+            volcano.AddComponent<VolcanoEruption>();
+
+            // Falling volcanic ash drifting on the wind (reuses the snow field, grey).
+            Snowfall.Create(transform, 80f, 760f, 220f, new Vector3(4f, 0f, 2f),
+                new Color(0.35f, 0.32f, 0.30f, 0.55f));
+
+            RegisterAINavZones();   // keep bots out of the lethal volcanic core (cone + lava)
+        }
+
+        // =================================================================
+        // Atmosphere / AI nav helpers
+        // =================================================================
+
+        /// <summary>Brooding ash-and-ember procedural sky: a dark smoke-grey dome over a
+        /// hot ember-orange horizon; drives skybox-based ambient and the glow sun disc.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.20f, 0.16f, 0.18f)); // dark ashen sky
+            sky.SetColor("_GroundColor", new Color(0.45f, 0.20f, 0.08f)); // ember-orange horizon
+            sky.SetFloat("_AtmosphereThickness", 1.7f);                   // thick ash atmosphere
+            sky.SetFloat("_Exposure",  0.95f);
+            sky.SetFloat("_SunSize",   0.06f);
+            sky.SetFloat("_SunSizeConvergence", 3f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 0.85f;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Register the volcanic core (cone + caldera + radiating lava streams)
+        /// as an AI navigation-avoid zone (the pure-data AI HazardZone — steer only, no
+        /// damage) so bots fight in the ring around the volcano instead of driving into
+        /// the lethal lava or ramming the impassable cone.</summary>
+        private void RegisterAINavZones()
+        {
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(0f, 0f, 0f),
+                halfExtents = new Vector3(120f, 60f, 120f)   // cone (radius ~100) + lava streams
+            });
         }
 
         // ── CALDERA: lava pool + streams ───────────────────────────
@@ -2808,9 +2964,11 @@ namespace CloseEncounters.Arena
         private void BuildFireAndAtmosphere()
         {
             // ── Atmosphere ─────────────────────────────────────────
+            // why: fog thinned (was 0.006) so the central volcano and its eruptions read
+            // across the arena; kept dark + warm for an ash-choked sky.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.20f, 0.12f, 0.08f); // dark volcanic haze
-            RenderSettings.fogDensity = 0.006f;
+            RenderSettings.fogColor = new Color(0.22f, 0.15f, 0.12f); // dark volcanic haze
+            RenderSettings.fogDensity = 0.0035f;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.35f, 0.25f, 0.20f); // warm dim volcanic light
 
@@ -2823,6 +2981,8 @@ namespace CloseEncounters.Arena
             sun.intensity = 0.7f;
             sun.transform.rotation = Quaternion.Euler(40f, -20f, 0f);
             sun.shadows = LightShadows.Soft;
+            RenderSettings.sun = sun;
+            BuildSky();   // brooding ash-and-ember procedural sky
 
             // ── Fire VFX at caldera crater rim (8 fires in a ring) ──
             var firePrefab = Resources.Load<GameObject>("VFX/Fire/LargeFlames");
@@ -3034,18 +3194,101 @@ namespace CloseEncounters.Arena
             hsl.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
             hsl.shadows = LightShadows.Soft;
 
-            // ── Atmosphere: moody highland mist ─────────────────────
+            // ── Atmosphere: clear high-altitude air so the peaks read ───
+            // why: the old 0.0038 mist hid the entire mountain ring — the whole point
+            // of a mountain-enclosed valley. Thinned + cooled so the enclosure + sky show.
             RenderSettings.fog = true;
-            RenderSettings.fogColor = new Color(0.70f, 0.74f, 0.78f); // muted gray-blue mist
-            RenderSettings.fogDensity = 0.0038f;
+            RenderSettings.fogColor = new Color(0.74f, 0.78f, 0.84f); // cool alpine haze
+            RenderSettings.fogDensity = 0.0022f;
             RenderSettings.fogMode = FogMode.Exponential;
             RenderSettings.ambientLight = new Color(0.64f, 0.66f, 0.72f);
+            RenderSettings.sun = hsl;
+            BuildSky();   // procedural high-alpine sky (drives skybox ambient + sun disc)
 
             VFXManager.GroundFog(Vector3.zero, 5f);
             VFXManager.GroundFog(new Vector3(-360f, 3f,  330f), 4f);
             VFXManager.GroundFog(new Vector3( 360f, 3f, -330f), 4f);
             VFXManager.DustMotes(new Vector3(0, 5, 0), 4f);
             VFXManager.Rain(new Vector3(0, 20, 0), 2f);
+
+            // ── Dynamic life + AI navigation ───────────────────────
+            BuildHearthSmoke();      // hearth smoke rising from the farm & village yurts
+            Color eagle = new Color(0.30f, 0.24f, 0.16f);
+            SeabirdFlock.Create(transform, new Vector3(0f, 0f, 0f), 5, 260f, eagle);
+            SeabirdFlock.Create(transform, new Vector3(160f, 0f, -120f), 4, 170f, eagle);
+            RegisterAINavZones();    // bias bots onto the bridges rather than into the river
+        }
+
+        // =================================================================
+        // Atmosphere / dynamic life / AI nav helpers
+        // =================================================================
+
+        /// <summary>Procedural high-alpine sky: deep thin-air blue, cool rocky horizon,
+        /// bright sun — and skybox-based ambient.</summary>
+        private void BuildSky()
+        {
+            var shader = Shader.Find("Skybox/Procedural");
+            if (shader == null) return;
+            var sky = new Material(shader);
+            sky.SetColor("_SkyTint",     new Color(0.45f, 0.58f, 0.82f)); // deep alpine blue
+            sky.SetColor("_GroundColor", new Color(0.52f, 0.55f, 0.58f)); // cool rock/snow horizon
+            sky.SetFloat("_AtmosphereThickness", 0.85f);                  // thin high-altitude air
+            sky.SetFloat("_Exposure",  1.25f);                            // bright snow-glare sun
+            sky.SetFloat("_SunSize",   0.04f);
+            sky.SetFloat("_SunSizeConvergence", 5f);
+            RenderSettings.skybox = sky;
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+            RenderSettings.ambientIntensity = 1.0f;
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>Thin wisps of hearth smoke over the farm & village yurt clusters.</summary>
+        private void BuildHearthSmoke()
+        {
+            Vector3[] hearths =
+            {
+                new Vector3(-100f, 5.5f, -10f), new Vector3(-118f, 5.5f, 12f), new Vector3(-82f, 5.5f, -32f), // farm
+                new Vector3(48f, 5.5f, 2f),     new Vector3(66f, 5.5f, 14f),   new Vector3(38f, 5.5f, -18f),   // village
+            };
+            foreach (var h in hearths)
+            {
+                var anchor = new GameObject("Hearth");
+                anchor.transform.SetParent(transform, false);
+                anchor.transform.position = h;
+                VFXManager.AttachSmoke(anchor.transform, 0.6f);
+            }
+        }
+
+        /// <summary>The N-S river bisects the valley and is a "don't-loiter" kill ditch.
+        /// Register the OPEN-WATER spans (x≈0) as AI navigation-avoid zones with a gap at
+        /// each of the 5 bridges, so bots route over the crossings instead of through the
+        /// river. Pure steering bias (the AI HazardZone struct never damages).</summary>
+        private void RegisterAINavZones()
+        {
+            float[] bridgeZ = { 225f, 90f, -45f, -150f, -285f };
+            System.Array.Sort(bridgeZ); // ascending
+            const float gap = 12f;       // clear zone each side of a bridge (deck z half ~4)
+            const float zMin = -300f, zMax = 300f; // only within the AI bound (~±300)
+
+            float cursor = zMin;
+            for (int i = 0; i < bridgeZ.Length; i++)
+            {
+                float gMin = bridgeZ[i] - gap;
+                if (gMin > cursor + 1f) AddRiverAvoid(cursor, gMin);
+                cursor = bridgeZ[i] + gap;
+            }
+            if (zMax > cursor + 1f) AddRiverAvoid(cursor, zMax);
+        }
+
+        private void AddRiverAvoid(float zStart, float zEnd)
+        {
+            float cz = (zStart + zEnd) * 0.5f;
+            float hz = (zEnd - zStart) * 0.5f;
+            CloseEncounters.AI.AIController.RegisterHazardZone(new CloseEncounters.AI.HazardZone
+            {
+                center = new Vector3(0f, 4f, cz),
+                halfExtents = new Vector3(12f, 30f, hz)
+            });
         }
 
         // ── MOUNTAIN ENCLOSURE: tall peaks around all edges ────────
@@ -3514,6 +3757,12 @@ namespace CloseEncounters.Arena
                 SetMaterial(b, MakeMaterial(blade));
                 Object.DestroyImmediate(b.GetComponent<Collider>());
             }
+
+            // Spin the sail cross like a working windmill (blades lie in the XY plane,
+            // so rotate the hub about its local Z / facing axis).
+            var spin = bladesParent.AddComponent<Rotator>();
+            spin.axis = Vector3.forward;
+            spin.degreesPerSecond = 18f;
         }
 
         // ── YURT HELPER: procedural nomadic tent ────────────────────
