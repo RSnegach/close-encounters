@@ -111,7 +111,7 @@ namespace CloseEncounters.Combat
             if (pvc != null)
             {
                 // Real player -- use their camera. Disable all other cameras.
-                var allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+                var allCams = FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
                 for (int i = 0; i < allCams.Length; i++)
                 {
                     var owner = allCams[i].GetComponentInParent<VehicleRuntime>();
@@ -121,7 +121,7 @@ namespace CloseEncounters.Combat
             else
             {
                 // AI vehicle -- create mouse-controlled chase cam
-                var allCams = FindObjectsByType<Camera>(FindObjectsSortMode.None);
+                var allCams = FindObjectsByType<Camera>(FindObjectsInactive.Exclude);
                 for (int i = 0; i < allCams.Length; i++)
                     allCams[i].enabled = false;
 

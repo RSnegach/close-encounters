@@ -298,7 +298,6 @@ namespace CloseEncounters.AI
         private bool _isAirDomain;
         private CloseEncounters.VehiclePhysics.WaterPhysics _cachedWaterPhysics;
         private CloseEncounters.VehiclePhysics.GroundPhysics _cachedGroundPhysics;
-        private bool _cachedPhysicsChecked;
 
         // ----- propulsion degradation -----
         private int _initialPropulsionCount;
@@ -327,8 +326,8 @@ namespace CloseEncounters.AI
         private Vector3 _patrolPoint;
 
         // ----- anti-dogpile focus tracker (shared across all bots) -----
-        private static readonly Dictionary<int, int> _focusCounts = new Dictionary<int, int>();
-        private int _focusedTargetId;
+        private static readonly Dictionary<EntityId, int> _focusCounts = new Dictionary<EntityId, int>();
+        private EntityId _focusedTargetId;
 
         // ----- perception / awareness (set by AICombat / damage events) -----
         private int _playerId = -1;                 // own FFA id, to ignore our own shots
@@ -340,7 +339,7 @@ namespace CloseEncounters.AI
 
         // Retaliation: remember whoever last damaged us and prioritise them briefly,
         // so a bot whips around on an off-angle attacker like a real player would.
-        private int _recentAttackerId;
+        private EntityId _recentAttackerId;
         private float _recentAttackerTimer;
         private const float RetaliationMemory = 4f;
 
@@ -353,7 +352,6 @@ namespace CloseEncounters.AI
             _rb = GetComponent<Rigidbody>();
             _cachedWaterPhysics = GetComponent<CloseEncounters.VehiclePhysics.WaterPhysics>();
             _cachedGroundPhysics = GetComponent<CloseEncounters.VehiclePhysics.GroundPhysics>();
-            _cachedPhysicsChecked = true;
 
             _preset = AIDifficultyPreset.ForLevel(difficultyLevel);
             _preset.ApplyVariance(personalityVariance);
@@ -460,7 +458,7 @@ namespace CloseEncounters.AI
         {
             if (victim == null || victim.gameObject != gameObject) return;
             if (attacker == null || attacker.gameObject == gameObject) return;
-            _recentAttackerId = attacker.transform.GetInstanceID();
+            _recentAttackerId = attacker.transform.GetEntityId();
             _recentAttackerTimer = RetaliationMemory;
         }
 
@@ -708,23 +706,23 @@ namespace CloseEncounters.AI
         }
 
         // ----- shared anti-dogpile focus accounting -----
-        private static int GetFocus(int id)
+        private static int GetFocus(EntityId id)
         {
             return _focusCounts.TryGetValue(id, out int n) ? n : 0;
         }
-        private void AcquireFocus(int id)
+        private void AcquireFocus(EntityId id)
         {
-            if (id == 0) return;
+            if (id == default(EntityId)) return;
             _focusCounts[id] = GetFocus(id) + 1;
             _focusedTargetId = id;
         }
         private void ReleaseFocus()
         {
-            if (_focusedTargetId == 0) return;
+            if (_focusedTargetId == default(EntityId)) return;
             int n = GetFocus(_focusedTargetId) - 1;
             if (n <= 0) _focusCounts.Remove(_focusedTargetId);
             else _focusCounts[_focusedTargetId] = n;
-            _focusedTargetId = 0;
+            _focusedTargetId = default(EntityId);
         }
 
         public void SetDifficulty(AIDifficultyLevel level, float variance = 0.15f)
@@ -842,8 +840,8 @@ namespace CloseEncounters.AI
                 c.hasLOS = CheckLineOfSight(myPos, t.position);
 
                 // Anti-dogpile: how many OTHER bots already focus this target.
-                int otherFocus = GetFocus(t.GetInstanceID());
-                if (t.GetInstanceID() == _focusedTargetId && otherFocus > 0) otherFocus--; // don't count self
+                int otherFocus = GetFocus(t.GetEntityId());
+                if (t.GetEntityId() == _focusedTargetId && otherFocus > 0) otherFocus--; // don't count self
 
                 // Composite score: lower is better
                 float distScore   = dist;
@@ -856,7 +854,7 @@ namespace CloseEncounters.AI
                 // Retaliation: strongly prefer whoever just shot us (scaled by
                 // aggression, so timid bots barely react and brawlers turn hard).
                 float retaliation = (_recentAttackerTimer > 0f
-                    && t.GetInstanceID() == _recentAttackerId)
+                    && t.GetEntityId() == _recentAttackerId)
                     ? -Mathf.Lerp(20f, 70f, _preset.aggression) : 0f;
 
                 c.totalScore = distScore + hpScore + threatScore + losBonus + persist
@@ -886,7 +884,7 @@ namespace CloseEncounters.AI
                 _targetPersistenceTimer = 0f;
                 // Update the shared focus registry so other bots avoid this target.
                 ReleaseFocus();
-                if (best != null) AcquireFocus(best.GetInstanceID());
+                if (best != null) AcquireFocus(best.GetEntityId());
             }
 
             CurrentTarget = best;

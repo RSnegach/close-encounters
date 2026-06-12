@@ -179,11 +179,11 @@ public class Lightning : MonoBehaviour
             //Change scale if it's a branch
             if (lightningSegments[i].isBranch)
             {
-                thisLine.SetWidth(smallWidth, smallWidth);
+                thisLine.startWidth = smallWidth; thisLine.endWidth = smallWidth;
             }
             else
             {
-                thisLine.SetWidth(width, width);
+                thisLine.startWidth = width; thisLine.endWidth = width;
             }
         }
     }

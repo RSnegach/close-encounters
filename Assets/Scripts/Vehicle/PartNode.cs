@@ -36,7 +36,6 @@ namespace CloseEncounters.Vehicle
         private MeshRenderer _meshRenderer;
         private Collider _collider;
         private Transform _wheelModel;
-        private float _wheelSpinSpeed = 720f; // degrees per second at full speed
         private System.Collections.IEnumerator _flashCoroutine;
         private Color _flashOriginalColor;
         private bool _flashOriginalCached;
