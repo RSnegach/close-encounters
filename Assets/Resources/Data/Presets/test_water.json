@@ -27,6 +27,8 @@
     {"id": "fuel_tank",        "gridPosition": [6, 1, 8]},
     {"id": "fuel_tank",        "gridPosition": [5, 1, 7]},
     {"id": "light_armor",      "gridPosition": [6, 1, 9]},
-    {"id": "light_armor",      "gridPosition": [5, 1, 9]}
+    {"id": "light_armor",      "gridPosition": [5, 1, 9]},
+    {"id": "turbine",          "gridPosition": [5, 0, 12]},
+    {"id": "turbine",          "gridPosition": [6, 0, 12]}
   ]
 }
