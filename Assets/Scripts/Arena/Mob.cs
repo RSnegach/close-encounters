@@ -284,7 +284,7 @@ namespace CloseEncounters.Arena
                     float angle = (360f / 10) * c * Mathf.Deg2Rad;
                     Vector3 offset = new Vector3(Mathf.Cos(angle), Random.Range(0.2f, 1f), Mathf.Sin(angle)) * 0.5f;
                     var chunks = Object.Instantiate(chunkPrefab, center + offset, Random.rotation);
-                    chunks.transform.localScale = Vector3.one * 2f;
+                    chunks.transform.localScale = Vector3.one * 4f;   // 2x to match 2x-size mobs
                     // Color bright red
                     foreach (var ps in chunks.GetComponentsInChildren<ParticleSystem>())
                     {
@@ -302,7 +302,7 @@ namespace CloseEncounters.Arena
             }
 
             // Cinematic explosion for impact feel
-            VFXManager.SmallExplosion(center, 1f);
+            VFXManager.SmallExplosion(center, 2f);   // 2x to match 2x-size mobs
 
             // Destroy the mob instantly
             Object.Destroy(gameObject, 0.05f);

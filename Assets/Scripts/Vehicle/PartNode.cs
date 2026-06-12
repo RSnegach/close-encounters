@@ -139,7 +139,7 @@ namespace CloseEncounters.Vehicle
             {
                 return;
             }
-            else if ((id == "heavy_cannon") && TryCreateFromPrefab("Models/DefenceCannon", new Vector3(0.8f, 1.0f, 0.8f)))
+            else if ((id == "heavy_cannon") && TryCreateFromPrefab("Models/NavalCannon", 0.012f))
             {
                 return;
             }

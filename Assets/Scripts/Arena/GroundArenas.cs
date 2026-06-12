@@ -803,7 +803,9 @@ namespace CloseEncounters.Arena
                 waterGO.transform.SetParent(transform, false);
                 // Surface at y-0.8 (well below the deck), filling the wider trench.
                 waterGO.transform.position = new Vector3(0f, -2.4f, 0f);
-                waterGO.transform.localScale = new Vector3(560f, 3.2f, 36f);
+                // Span the FULL carved canal length (terrain ~1125 wide, walls at +/-562) so the
+                // water reaches both ends instead of stopping at +/-280 and leaving dry trench.
+                waterGO.transform.localScale = new Vector3(1120f, 3.2f, 36f);
                 Object.DestroyImmediate(waterGO.GetComponent<Collider>());
 
                 var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
@@ -818,6 +820,12 @@ namespace CloseEncounters.Arena
                 mat.renderQueue = 3000;
                 mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
                 SetMaterial(waterGO, mat);
+
+                // Make it read as moving water rather than a static slab — scrolling-UV
+                // animator (same component the open-water arenas use).
+                var canalAnim = waterGO.AddComponent<CloseEncounters.VehiclePhysics.WaterBasicAnimator>();
+                canalAnim.waterColor   = new Color(0.10f, 0.32f, 0.40f, 0.55f);
+                canalAnim.horizonColor = new Color(0.16f, 0.42f, 0.50f, 0.55f);
             }
             // ── Canal kill-water ───────────────────────────────────
             // One continuous hazard filling the trench BELOW deck level (top y0.3;
@@ -826,7 +834,7 @@ namespace CloseEncounters.Arena
             // carve gaps around the bridges anymore.
             float[] bridgeX = { -140f, -60f, 0f, 60f, 140f };
             AddWaterHazard(new Vector3(0f, -1.85f, 0f),
-                new Vector3(560f, 4.3f, 36f), "CanalHazard");
+                new Vector3(1120f, 4.3f, 36f), "CanalHazard");
 
             // ── Bridges (5 crossings) ──────────────────────────────
             // Each deck is a flat slab whose TOP sits exactly at street level (y1) and
@@ -859,6 +867,10 @@ namespace CloseEncounters.Arena
 
             // ── City-wide props: trees, furniture, street objects ───
             BuildCityProps();
+
+            // Remove anything that spawned inside a bridge crossing corridor so every
+            // bridge entrance stays drivable (waterfront blockers, etc.).
+            ClearBridgeCorridors();
 
             // ── Spawn points — pushed outward into new outskirts (avoids canal z=-15..15) ──
             AddSpawnPoints(
@@ -1331,29 +1343,28 @@ namespace CloseEncounters.Arena
             // Towers straddle the origin. Tower A sits at x=-30, Tower B at x=+30
             // so the player spawns near the center surrounded by the crash site.
             // Scale 6.5× vs. the old 3.5× — much taller landmark.
+            // Moved to the north canal bank (z=50). The old z=0 sat the towers IN the canal,
+            // and their wide footprints ran straight into the centre + middle bridges. Bridges
+            // only exist within |z|<28, so z=50 keeps this a central riverside landmark while
+            // leaving every crossing clear.
             CityPrefabHelper.PlaceBuilding(transform, "Building_I_1_prefab",
-                new Vector3(-30f, 1f, 0f), 0f, 6.5f);
+                new Vector3(-30f, 1f, 50f), 0f, 6.5f);
             CityPrefabHelper.PlaceBuilding(transform, "Building_I_2_Prefab",
-                new Vector3( 30f, 1f, 0f), 18f, 6.5f);
+                new Vector3( 30f, 1f, 50f), 18f, 6.5f);
 
-            // ── Fighters clearly protruding from the towers ────────────
-            // Tower A fighter: enters the east face, body diagonal, nose buried
-            // in the tower core, tail sticking out into open air at x=-17.
-            // why: yaw 90° so the fighter's long axis runs east-west into the wall
-            SpawnCrashedFighter(new Vector3(-17f, 55f, 3f), new Vector3(12f, 90f, -8f), 5f);
+            // ── Fighters clearly protruding from the towers (z follows the towers) ──
+            SpawnCrashedFighter(new Vector3(-17f, 55f, 53f), new Vector3(12f, 90f, -8f), 5f);
+            SpawnCrashedFighter(new Vector3( 17f, 68f, 46f), new Vector3(-8f, -85f, 15f), 5f);
 
-            // Tower B fighter: enters the west face at a different angle and altitude
-            SpawnCrashedFighter(new Vector3( 17f, 68f, -4f), new Vector3(-8f, -85f, 15f), 5f);
-
-            // ── Debris / rubble around the new centered tower bases ──
+            // ── Debris / rubble around the tower bases (z follows the towers) ──
             Color debris = new Color(0.5f, 0.5f, 0.5f);
-            AddRockCluster(new Vector3(-45f, 1f, -8f), 10f, 2.5f, debris, "Debris_A1");
-            AddRockCluster(new Vector3(-40f, 1f,  10f), 8f, 2.0f, debris, "Debris_A2");
-            AddRockCluster(new Vector3(-55f, 1f,   5f), 7f, 1.8f, debris, "Debris_A3");
-            AddRockCluster(new Vector3( 45f, 1f,  -6f), 10f, 2.5f, debris, "Debris_B1");
-            AddRockCluster(new Vector3( 40f, 1f,  12f), 8f, 2.0f, debris, "Debris_B2");
-            AddRockCluster(new Vector3( 55f, 1f,   4f), 7f, 1.8f, debris, "Debris_B3");
-            AddRockCluster(new Vector3( 48f, 1f, -18f), 6f, 1.5f, debris, "Debris_B4");
+            AddRockCluster(new Vector3(-45f, 1f, 42f), 10f, 2.5f, debris, "Debris_A1");
+            AddRockCluster(new Vector3(-40f, 1f, 60f), 8f, 2.0f, debris, "Debris_A2");
+            AddRockCluster(new Vector3(-55f, 1f, 55f), 7f, 1.8f, debris, "Debris_A3");
+            AddRockCluster(new Vector3( 45f, 1f, 44f), 10f, 2.5f, debris, "Debris_B1");
+            AddRockCluster(new Vector3( 40f, 1f, 62f), 8f, 2.0f, debris, "Debris_B2");
+            AddRockCluster(new Vector3( 55f, 1f, 54f), 7f, 1.8f, debris, "Debris_B3");
+            AddRockCluster(new Vector3( 48f, 1f, 32f), 6f, 1.5f, debris, "Debris_B4");
 
             // ── Skyline backdrop — tall dark silhouette blocks at arena edges (1.5x pos, wider spans) ─
             Color skyline = new Color(0.25f, 0.25f, 0.30f);
@@ -1391,6 +1402,35 @@ namespace CloseEncounters.Arena
 
             // Canal-edge barriers are now breakable guardrails built along the new
             // (widened) canal lip in BuildCanalDetail — see AddBreakableGuardrail.
+        }
+
+        // Deletes any building that spawned inside a bridge crossing corridor so no bridge
+        // entrance is blocked. Bridges run N-S at x = {-140,-60,0,60,140} (deck 16 wide) and
+        // only exist within |z| < 28; this clears the deck width plus the on-ramp approach band.
+        private void ClearBridgeCorridors()
+        {
+            float[] bridgeX = { -140f, -60f, 0f, 60f, 140f };
+            const float clearHalfX = 16f;      // deck half (8) + building clearance margin
+            const float corridorHalfZ = 40f;   // bridge ends at z=28; also clear the approach
+            var doomed = new System.Collections.Generic.List<GameObject>();
+            foreach (Transform child in transform)
+            {
+                if (child == null) continue;
+                if (child.name.IndexOf("Building", System.StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+                Vector3 p = child.localPosition;
+                if (Mathf.Abs(p.z) > corridorHalfZ) continue;
+                for (int b = 0; b < bridgeX.Length; b++)
+                {
+                    if (Mathf.Abs(p.x - bridgeX[b]) < clearHalfX)
+                    {
+                        doomed.Add(child.gameObject);
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < doomed.Count; i++)
+                if (doomed[i] != null) Object.Destroy(doomed[i]);
         }
 
         // ── CITY PROPS: trees, benches, bins, traffic, vending, mail/ATM ──
@@ -3467,31 +3507,37 @@ namespace CloseEncounters.Arena
                     x = Random.Range(-480f, 480f);
                     z = Random.Range(-480f, 480f);
                 } while (IsExcluded(x, z));
-                return new Vector3(x, 2f, z);
+                return new Vector3(x, GroundY(x, z), z);   // snap to terrain so props don't float/sink
             }
 
             // ── Scattered trees (124-146): mix of all 7 variants ────────
-            int treeCount = Random.Range(124, 147);
-            int placed = 0;
-            while (placed < treeCount)
+            // Enforce a minimum spacing (shared with the spruce groves below) so trees never
+            // spawn right on top of each other, and rely on ValleyPos's terrain-snapped Y so
+            // none float or sink. Clustering removed — it produced overlapping trunks.
+            var treePts = new System.Collections.Generic.List<Vector2>();
+            const float minTreeDist = 7f;
+            System.Func<float, float, bool> treeSpotOk = (tx, tz) =>
             {
-                // Occasionally place a cluster of 2-3 trees
-                int clusterSize = (Random.value < 0.35f) ? Random.Range(2, 4) : 1;
-                Vector3 anchor = ValleyPos();
+                var q = new Vector2(tx, tz);
+                for (int i = 0; i < treePts.Count; i++)
+                    if ((treePts[i] - q).sqrMagnitude < minTreeDist * minTreeDist) return false;
+                return true;
+            };
 
-                for (int c = 0; c < clusterSize && placed < treeCount; c++)
-                {
-                    float ox = (c == 0) ? 0f : Random.Range(-6f, 6f);
-                    float oz = (c == 0) ? 0f : Random.Range(-6f, 6f);
-                    Vector3 pos = new Vector3(anchor.x + ox, 2f, anchor.z + oz);
-                    if (IsExcluded(pos.x, pos.z)) continue;
+            int treeCount = Random.Range(124, 147);
+            int placed = 0, attempts = 0;
+            while (placed < treeCount && attempts < treeCount * 15)
+            {
+                attempts++;
+                Vector3 pos = ValleyPos();   // already terrain-snapped Y
+                if (IsExcluded(pos.x, pos.z) || !treeSpotOk(pos.x, pos.z)) continue;
 
-                    string name = treeVariants[Random.Range(0, treeVariants.Length)];
-                    float rot = Random.Range(0f, 360f);
-                    float scl = Random.Range(1.0f, 2.0f);
-                    HighlandsPrefabHelper.PlaceTree(transform, name, pos, rot, scl);
-                    placed++;
-                }
+                string name = treeVariants[Random.Range(0, treeVariants.Length)];
+                float rot = Random.Range(0f, 360f);
+                float scl = Random.Range(1.0f, 2.0f);
+                HighlandsPrefabHelper.PlaceTree(transform, name, pos, rot, scl);
+                treePts.Add(new Vector2(pos.x, pos.z));
+                placed++;
             }
 
             // ── Spruce groves at foothills (9-13 clusters of 5-8; ranges 1.5x) ──
@@ -3507,13 +3553,14 @@ namespace CloseEncounters.Arena
                 {
                     float sx = gx + Random.Range(-10f, 10f);
                     float sz = gz + Random.Range(-10f, 10f);
-                    if (IsExcluded(sx, sz)) continue;
+                    if (IsExcluded(sx, sz) || !treeSpotOk(sx, sz)) continue;
 
                     string spruce = (Random.value < 0.5f) ? "Spruce 1" : "Spruce 2";
                     float rot = Random.Range(0f, 360f);
                     float scl = Random.Range(1.5f, 2.5f);
                     HighlandsPrefabHelper.PlaceTree(transform, spruce,
-                        new Vector3(sx, 2f, sz), rot, scl);
+                        new Vector3(sx, GroundY(sx, sz), sz), rot, scl);
+                    treePts.Add(new Vector2(sx, sz));
                 }
             }
 
@@ -3775,14 +3822,25 @@ namespace CloseEncounters.Arena
             new Color(0.50f, 0.40f, 0.30f), // brown
         };
 
+        // World-space ground height at (x,z) on the active terrain, for snapping props.
+        private static float GroundY(float x, float z)
+        {
+            var t = Terrain.activeTerrain;
+            if (t == null) return 0f;
+            return t.SampleHeight(new Vector3(x, 0f, z)) + t.transform.position.y;
+        }
+
         private void CreateYurt(Vector3 pos, float radius, float wallHeight, float roofHeight, string label)
         {
-            // Hemisphere: sphere sunk halfway into the ground
+            // Dome resting ON the ground: sphere centre at terrain height so the top hemisphere
+            // is the visible roof (bottom half hidden under terrain), instead of the whole sphere
+            // being sunk a full radius underground.
             Color col = _hemiColors[Mathf.Abs(label.GetHashCode()) % _hemiColors.Length];
-            AddSphere(new Vector3(pos.x, pos.y - radius, pos.z), radius, col, label);
+            float groundY = GroundY(pos.x, pos.z);
+            AddSphere(new Vector3(pos.x, groundY, pos.z), radius, col, label);
 
-            // Flag on top of each yurt
-            SpawnFlag(new Vector3(pos.x, pos.y + 0.5f, pos.z), 3f, label + "_Flag");
+            // Flag planted at the dome apex.
+            SpawnFlag(new Vector3(pos.x, groundY + radius * 0.85f, pos.z), 3f, label + "_Flag");
         }
 
         private static Texture2D _kyrgyzFlagTex;
@@ -3872,45 +3930,24 @@ namespace CloseEncounters.Arena
             float poleHeight = flagScale * 3f;
             AddCylinder(pos + Vector3.up * (poleHeight * 0.5f), 0.08f, poleHeight, poleColor, label + "_Pole");
 
-            // Flag from prefab
-            var flagPrefab = Resources.Load<GameObject>("Models/Flag");
-            if (flagPrefab != null)
-            {
-                var flag = Object.Instantiate(flagPrefab, transform);
-                flag.name = label;
-                flag.transform.localPosition = pos + Vector3.up * (poleHeight * 0.85f);
-                flag.transform.localScale = Vector3.one * flagScale * 0.5f;
-                flag.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-
-                // Apply Kyrgyz flag texture
-                Texture2D flagTex = GetKyrgyzFlag();
-                foreach (var rend in flag.GetComponentsInChildren<Renderer>())
-                {
-                    foreach (var mat in rend.materials)
-                    {
-                        if (mat != null)
-                        {
-                            mat.mainTexture = flagTex;
-                            if (mat.HasProperty("_BaseMap"))
-                                mat.SetTexture("_BaseMap", flagTex);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Fallback: flat red quad with yellow circle
-                var flagObj = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                flagObj.name = label;
-                flagObj.transform.SetParent(transform, false);
-                flagObj.transform.localPosition = pos + Vector3.up * (poleHeight * 0.85f) + Vector3.right * flagScale * 0.3f;
-                flagObj.transform.localScale = new Vector3(flagScale * 0.6f, flagScale * 0.4f, 1f);
-                var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-                mat.mainTexture = GetKyrgyzFlag();
-                if (mat.HasProperty("_BaseMap")) mat.SetTexture("_BaseMap", GetKyrgyzFlag());
-                SetMaterial(flagObj, mat);
-                Object.DestroyImmediate(flagObj.GetComponent<Collider>());
-            }
+            // Banner: a thin vertical cloth panel hanging off the upper pole. (The old
+            // Models/Flag prefab rendered as a flat HORIZONTAL disc; a thin box gives a proper
+            // double-sided vertical banner that reads as a flag.)
+            var flagObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            flagObj.name = label;
+            flagObj.transform.SetParent(transform, false);
+            float fw = flagScale * 1.6f;   // banner length out from the pole
+            float fh = flagScale * 1.0f;   // banner drop
+            flagObj.transform.localPosition = pos
+                + Vector3.up * (poleHeight - fh * 0.55f)
+                + Vector3.right * (fw * 0.5f);
+            flagObj.transform.localScale = new Vector3(fw, fh, 0.06f);
+            var flagMat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            var flagTex = GetKyrgyzFlag();
+            flagMat.mainTexture = flagTex;
+            if (flagMat.HasProperty("_BaseMap")) flagMat.SetTexture("_BaseMap", flagTex);
+            SetMaterial(flagObj, flagMat);
+            Object.DestroyImmediate(flagObj.GetComponent<Collider>());
         }
 
         // ── ROCK FORMATIONS: boulders, cliffs, scattered rocks ─────

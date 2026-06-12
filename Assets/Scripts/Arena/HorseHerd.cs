@@ -37,7 +37,7 @@ namespace CloseEncounters.Arena
                 var horse = Instantiate(prefab, pos,
                     Quaternion.Euler(0f, Random.Range(0f, 360f), 0f));
                 horse.name = $"Horse_{i}";
-                horse.transform.localScale = Vector3.one * 1.2f;
+                horse.transform.localScale = Vector3.one * 2.4f;   // 2x bigger horses
 
                 // Fix URP materials
                 CityPrefabHelper.FixURPMaterials(horse.transform);
