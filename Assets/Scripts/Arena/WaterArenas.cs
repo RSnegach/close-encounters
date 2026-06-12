@@ -1655,8 +1655,19 @@ namespace CloseEncounters.Arena
             BuildDecorAndProps();
             BuildShipwrecks();
 
-            // Tight central spawn so players start in the channel and see both shores
-            AddSpawnRing(Vector3.zero, 200f, 8, 1f);
+            // Explicit open-water spawns in the channel, kept clear of the central island
+            // (x 0..120, z 0..120), the shore terrains (|z| >= 300) and the reef lines (z ~ +/-188)
+            // so boats never start on land.
+            AddSpawnPoints(
+                new Vector3(-220f, 1f,    0f),
+                new Vector3(-180f, 1f,  140f),
+                new Vector3(-180f, 1f, -140f),
+                new Vector3( 220f, 1f, -150f),
+                new Vector3( 300f, 1f,  120f),
+                new Vector3(-300f, 1f, -120f),
+                new Vector3( 160f, 1f, -150f),
+                new Vector3(-120f, 1f,  150f)
+            );
             AddInvisibleWalls(750f, 50f);
 
             // Ambient VFX
@@ -1731,7 +1742,9 @@ namespace CloseEncounters.Arena
             var mr = ws.GetComponent<MeshRenderer>();
             if (mr == null || mr.sharedMaterial == null) return;
             var m = mr.sharedMaterial;
-            m.SetColor("_BaseColor", new Color(0.10f, 0.34f, 0.42f, 0.62f));
+            // Brighter, more opaque gulf turquoise — the old near-black 0.62-alpha tint washed
+            // out against the tan fog and read as "no water there".
+            m.SetColor("_BaseColor", new Color(0.16f, 0.52f, 0.62f, 0.82f));
             m.SetFloat("_Smoothness", 0.94f);
             m.SetFloat("_Metallic", 0.05f);
         }
@@ -2096,9 +2109,11 @@ namespace CloseEncounters.Arena
                 {
                     SetField(comp, "patrolWaypoints", waypoints);
                     SetField(comp, "patrolSpeed", 8f);
-                    SetField(comp, "detectionRange", 100f);
-                    SetField(comp, "damagePerShot", 25);
-                    SetField(comp, "fireInterval", 4f);
+                    SetField(comp, "detectionRange", 70f);       // was 100 — engages only when closer
+                    SetField(comp, "damagePerShot", 18);         // was 25
+                    SetField(comp, "fireInterval", 5f);          // was 4 — fires less often
+                    SetField(comp, "pursueBreakoffTime", 10f);   // was 20 — gives up sooner
+                    SetField(comp, "leadTargets", false);        // drop the 50-unit aim prediction
                 }
             }
             else

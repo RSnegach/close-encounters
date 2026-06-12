@@ -147,7 +147,7 @@ namespace CloseEncounters.Arena
             Vector3 flatTo = new Vector3(chase.x - transform.position.x, 0f, chase.z - transform.position.z);
             if (flatTo.sqrMagnitude < 0.01f) return;
             Vector3 dir = flatTo.normalized;
-            transform.position += dir * patrolSpeed * 1.6f * _speedMultiplier * dt;
+            transform.position += dir * patrolSpeed * 1.2f * _speedMultiplier * dt;   // was 1.6 — leave the player room to escape
             Quaternion target = Quaternion.LookRotation(dir, Vector3.up);
             transform.rotation = Quaternion.Slerp(transform.rotation, target, dt);
             if (Vector3.Distance(transform.position, _target.position) > detectionRange * 2f)
