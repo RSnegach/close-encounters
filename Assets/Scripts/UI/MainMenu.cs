@@ -98,6 +98,13 @@ namespace CloseEncounters.UI
             titleTmp.color = COLOR_ACCENT;
             titleTmp.alignment = TextAlignmentOptions.Center;
             titleTmp.fontStyle = FontStyles.Bold;
+            titleTmp.characterSpacing = 6f;   // airier, more deliberate title
+
+            // Accent underline beneath the title — shared identity cue with the results card.
+            var titleRule = CreateUIObject("TitleUnderline", titleGo.transform);
+            Anchor(titleRule, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                new Vector2(0f, 6f), new Vector2(300f, 3f), new Vector2(0.5f, 0.5f));
+            titleRule.AddComponent<Image>().color = COLOR_ACCENT;
 
             // Spacer
             var spacer = CreateUIObject("Spacer", _menuVBox.transform);
@@ -488,14 +495,16 @@ namespace CloseEncounters.UI
             go.AddComponent<LayoutElement>().preferredHeight = 48f;
 
             var img = go.AddComponent<Image>();
-            img.color = COLOR_SECONDARY;
+            img.color = Color.white;   // real colors come from the ColorBlock so hover/press tint correctly
+
+            // Soft drop shadow for elevation off the background.
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(2f, -2f);
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
-            var colors = btn.colors;
-            colors.highlightedColor = Lighten(COLOR_SECONDARY, 0.15f);
-            colors.pressedColor = COLOR_ACCENT;
-            btn.colors = colors;
+            btn.colors = MenuButtonColors(COLOR_SECONDARY, COLOR_ACCENT);
 
             var txtGo = CreateUIObject("Label", go.transform);
             StretchFull(txtGo);
@@ -516,13 +525,11 @@ namespace CloseEncounters.UI
             rt.sizeDelta = new Vector2(90f, 36f);
 
             var img = go.AddComponent<Image>();
-            img.color = bgColor;
+            img.color = Color.white;
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
-            var colors = btn.colors;
-            colors.highlightedColor = Lighten(bgColor, 0.15f);
-            btn.colors = colors;
+            btn.colors = MenuButtonColors(bgColor, Darken(bgColor, 0.12f));
 
             var txtGo = CreateUIObject("Label", go.transform);
             StretchFull(txtGo);
@@ -585,10 +592,11 @@ namespace CloseEncounters.UI
                 pos, new Vector2(100f, 36f), new Vector2(0.5f, 0.5f));
 
             var img = go.AddComponent<Image>();
-            img.color = COLOR_SECONDARY;
+            img.color = Color.white;
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
+            btn.colors = MenuButtonColors(COLOR_SECONDARY, COLOR_ACCENT);
             btn.onClick.AddListener(onClick);
 
             var txtGo = CreateUIObject("T", go.transform);
@@ -603,6 +611,22 @@ namespace CloseEncounters.UI
         // =================================================================
         // Helpers
         // =================================================================
+
+        /// <summary>Consistent button state colors: hover lightens, press flashes the given
+        /// color, disabled dims, and transitions ease over a short fade instead of snapping.
+        /// Pair with a white target Image so these colors show true (the block tints multiply).</summary>
+        private ColorBlock MenuButtonColors(Color normal, Color pressed)
+        {
+            var c = ColorBlock.defaultColorBlock;
+            c.normalColor      = normal;
+            c.highlightedColor = Lighten(normal, 0.15f);
+            c.pressedColor     = pressed;
+            c.selectedColor    = normal;
+            c.disabledColor    = new Color(0.18f, 0.18f, 0.24f, 1f);
+            c.colorMultiplier  = 1f;
+            c.fadeDuration     = 0.12f;
+            return c;
+        }
 
         private static Color Lighten(Color c, float amount)
         {

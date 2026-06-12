@@ -68,7 +68,6 @@ namespace CloseEncounters.UI
         // ── Action buttons ───────────────────────────────────────────────
         private Button _readyBtn;
         private TextMeshProUGUI _readyBtnText;
-        private Image _readyBtnImage;
         private Button _startBtn;
         private Button _backBtn;
 
@@ -120,6 +119,9 @@ namespace CloseEncounters.UI
             Anchor(panel, new Vector2(0.03f, 0.12f), new Vector2(0.52f, 0.88f),
                 Vector2.zero, Vector2.zero, new Vector2(0f, 1f));
             panel.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.18f, 0.9f);
+            var panelEdge = panel.AddComponent<Outline>();
+            panelEdge.effectColor = new Color(0.45f, 0.5f, 0.65f, 0.22f);  // faint cool edge for definition
+            panelEdge.effectDistance = new Vector2(1.5f, -1.5f);
 
             float y = -16f;
             const float rowH = 46f;
@@ -213,6 +215,9 @@ namespace CloseEncounters.UI
             Anchor(panel, new Vector2(0.55f, 0.12f), new Vector2(0.97f, 0.88f),
                 Vector2.zero, Vector2.zero, new Vector2(0f, 1f));
             panel.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.18f, 0.9f);
+            var panelEdge = panel.AddComponent<Outline>();
+            panelEdge.effectColor = new Color(0.45f, 0.5f, 0.65f, 0.22f);  // faint cool edge for definition
+            panelEdge.effectDistance = new Vector2(1.5f, -1.5f);
 
             // Header
             var header = CreateUIObject("PlayersHeader", panel.transform);
@@ -224,6 +229,13 @@ namespace CloseEncounters.UI
             htxt.color = Color.white;
             htxt.alignment = TextAlignmentOptions.Center;
             htxt.fontStyle = FontStyles.Bold;
+            htxt.characterSpacing = 8f;
+
+            // Accent divider under the header — matches the menu/results identity.
+            var headerRule = CreateUIObject("PlayersRule", panel.transform);
+            Anchor(headerRule, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                new Vector2(0f, -42f), new Vector2(140f, 2f), new Vector2(0.5f, 1f));
+            headerRule.AddComponent<Image>().color = COLOR_ACCENT;
 
             // Scroll view for player list
             var scrollGo = CreateUIObject("PlayerScroll", panel.transform);
@@ -269,13 +281,11 @@ namespace CloseEncounters.UI
         {
             // Ready button
             _readyBtn = CreateBottomButton("ReadyBtn", "Ready", 0.35f, OnReadyPressed);
-            _readyBtnImage = _readyBtn.GetComponent<Image>();
             _readyBtnText = _readyBtn.GetComponentInChildren<TextMeshProUGUI>();
 
             // Start Match button (host/solo only)
             _startBtn = CreateBottomButton("StartBtn", "Start Match", 0.65f, OnStartPressed);
-            var startImg = _startBtn.GetComponent<Image>();
-            if (startImg != null) startImg.color = COLOR_ACCENT;
+            _startBtn.colors = ActionColors(COLOR_ACCENT);   // primary action — coral
 
             bool isSolo = GameManager.Instance == null ||
                           GameManager.Instance.Settings.mode == "solo";
@@ -387,8 +397,7 @@ namespace CloseEncounters.UI
             // Update button text and color
             if (_readyBtnText != null)
                 _readyBtnText.text = _isReady ? "Unready" : "Ready";
-            if (_readyBtnImage != null)
-                _readyBtnImage.color = _isReady ? COLOR_GREEN : COLOR_SECONDARY;
+            _readyBtn.colors = ActionColors(_isReady ? COLOR_GREEN : COLOR_SECONDARY);
 
             // In solo mode auto-enable start
             bool isSolo = GameManager.Instance == null ||
@@ -828,6 +837,24 @@ namespace CloseEncounters.UI
             return slider;
         }
 
+        /// <summary>Action-button state colors against a white target Image: hover lightens,
+        /// press darkens, disabled dims, transitions ease. Recompute when the base color changes
+        /// (Ready -> green, Start -> accent) so hover/press track the new base.</summary>
+        private static ColorBlock ActionColors(Color normal)
+        {
+            var c = ColorBlock.defaultColorBlock;
+            c.normalColor      = normal;
+            c.highlightedColor = new Color(Mathf.Clamp01(normal.r + 0.15f),
+                                           Mathf.Clamp01(normal.g + 0.15f),
+                                           Mathf.Clamp01(normal.b + 0.15f), 1f);
+            c.pressedColor     = new Color(normal.r * 0.7f, normal.g * 0.7f, normal.b * 0.7f, 1f);
+            c.selectedColor    = normal;
+            c.disabledColor    = new Color(0.2f, 0.2f, 0.25f, 1f);
+            c.colorMultiplier  = 1f;
+            c.fadeDuration     = 0.12f;
+            return c;
+        }
+
         private Button CreateBottomButton(string name, string label, float anchorX,
             UnityEngine.Events.UnityAction onClick)
         {
@@ -836,14 +863,16 @@ namespace CloseEncounters.UI
                 Vector2.zero, new Vector2(200f, 48f), new Vector2(0.5f, 0.5f));
 
             var img = go.AddComponent<Image>();
-            img.color = COLOR_SECONDARY;
+            img.color = Color.white;   // real colors come from the ColorBlock (tints multiply)
+
+            // Soft drop shadow for elevation.
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(2f, -2f);
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
-            var colors = btn.colors;
-            colors.highlightedColor = new Color(0.3f, 0.3f, 0.42f, 1f);
-            colors.pressedColor = new Color(0.45f, 0.4f, 0.2f, 1f);
-            btn.colors = colors;
+            btn.colors = ActionColors(COLOR_SECONDARY);
             btn.onClick.AddListener(onClick);
 
             var txtGo = CreateUIObject("Label", go.transform);

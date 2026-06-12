@@ -87,21 +87,27 @@ namespace CloseEncounters.UI
             _winnerName = winnerName;
 
             // Outcome banner
+            Color accent;
             switch (outcome)
             {
                 case Outcome.Victory:
                     _headingText.text = "VICTORY";
-                    _headingText.color = COLOR_GREEN;
+                    accent = COLOR_GREEN;
                     break;
                 case Outcome.Defeated:
                     _headingText.text = "DEFEATED";
-                    _headingText.color = COLOR_RED;
+                    accent = COLOR_RED;
                     break;
                 default:
                     _headingText.text = "DRAW";
-                    _headingText.color = COLOR_YELLOW;
+                    accent = COLOR_YELLOW;
                     break;
             }
+            _headingText.color = accent;
+            // Tint the card accent (outline + underline) to match the outcome — green win,
+            // red loss, yellow draw — so the whole card reads the result at a glance.
+            if (_cardOutline != null) _cardOutline.effectColor = accent;
+            if (_underlineImg != null) _underlineImg.color = accent;
 
             _winnerText.text = string.IsNullOrEmpty(winnerName)
                 ? "No clear winner"
@@ -140,6 +146,9 @@ namespace CloseEncounters.UI
         // Layout — the card shell (banner, winner ribbon, paged body, nav, buttons)
         // =================================================================
 
+        private Outline _cardOutline;   // outline + underline get tinted to the match outcome color
+        private Image _underlineImg;
+
         private void BuildCard()
         {
             var card = CreateUIObject("Card", _rootGroup.transform);
@@ -147,9 +156,14 @@ namespace CloseEncounters.UI
                 Vector2.zero, CardSize, new Vector2(0.5f, 0.5f));
             card.AddComponent<Image>().color = COLOR_PANEL;
 
-            var outline = card.AddComponent<Outline>();
-            outline.effectColor = COLOR_ACCENT;
-            outline.effectDistance = new Vector2(2f, -2f);
+            // Drop shadow lifts the card off the dimmed backdrop.
+            var cardShadow = card.AddComponent<Shadow>();
+            cardShadow.effectColor = new Color(0f, 0f, 0f, 0.6f);
+            cardShadow.effectDistance = new Vector2(0f, -8f);
+
+            _cardOutline = card.AddComponent<Outline>();
+            _cardOutline.effectColor = COLOR_ACCENT;
+            _cardOutline.effectDistance = new Vector2(2f, -2f);
             _cardRect.localScale = Vector3.one * ScaleFrom;
 
             // ── Outcome banner (accent bar across the top) ──
@@ -172,11 +186,12 @@ namespace CloseEncounters.UI
             StretchFull(_winnerText.gameObject);
             _winnerText.rectTransform.offsetMax = new Vector2(0f, -76f);
 
-            // Accent underline beneath the banner
+            // Accent underline beneath the banner (tinted to the outcome in SetResults)
             var underline = CreateUIObject("Underline", card.transform);
             Anchor(underline, new Vector2(0f, 1f), new Vector2(1f, 1f),
                 new Vector2(0f, -128f), new Vector2(0f, 3f), new Vector2(0.5f, 1f));
-            underline.AddComponent<Image>().color = COLOR_ACCENT;
+            _underlineImg = underline.AddComponent<Image>();
+            _underlineImg.color = COLOR_ACCENT;
 
             // ── Player name + pager tag row ──
             var nameRow = CreateUIObject("NameRow", card.transform);
@@ -338,14 +353,18 @@ namespace CloseEncounters.UI
                 new Vector2(x, -10f), new Vector2(54f, 54f), new Vector2(0.5f, 0.5f));
 
             var img = go.AddComponent<Image>();
-            img.color = COLOR_PANEL2;
+            img.color = Color.white;   // colors come from the ColorBlock so hover shows true accent
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
-            var c = btn.colors;
-            c.highlightedColor = COLOR_ACCENT;
-            c.pressedColor = new Color(COLOR_ACCENT.r * 0.7f, COLOR_ACCENT.g * 0.7f, COLOR_ACCENT.b * 0.7f);
-            c.disabledColor = new Color(COLOR_PANEL2.r, COLOR_PANEL2.g, COLOR_PANEL2.b, 0.35f);
+            var c = ColorBlock.defaultColorBlock;
+            c.normalColor      = COLOR_PANEL2;
+            c.highlightedColor = COLOR_ACCENT;   // was multiplied dark; now a clean accent on hover
+            c.pressedColor     = new Color(COLOR_ACCENT.r * 0.7f, COLOR_ACCENT.g * 0.7f, COLOR_ACCENT.b * 0.7f, 1f);
+            c.selectedColor    = COLOR_PANEL2;
+            c.disabledColor    = new Color(COLOR_PANEL2.r, COLOR_PANEL2.g, COLOR_PANEL2.b, 0.35f);
+            c.colorMultiplier  = 1f;
+            c.fadeDuration     = 0.12f;
             btn.colors = c;
             btn.onClick.AddListener(onClick);
 
@@ -489,13 +508,24 @@ namespace CloseEncounters.UI
         {
             var go = CreateUIObject("Btn_" + label, parent);
             var img = go.AddComponent<Image>();
-            img.color = bgColor;
+            img.color = Color.white;   // colors come from the ColorBlock (tints multiply)
+
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.4f);
+            shadow.effectDistance = new Vector2(2f, -2f);
 
             var btn = go.AddComponent<Button>();
             btn.targetGraphic = img;
-            var c = btn.colors;
-            c.highlightedColor = new Color(bgColor.r + 0.12f, bgColor.g + 0.12f, bgColor.b + 0.12f);
-            c.pressedColor = new Color(bgColor.r * 0.7f, bgColor.g * 0.7f, bgColor.b * 0.7f);
+            var c = ColorBlock.defaultColorBlock;
+            c.normalColor      = bgColor;
+            c.highlightedColor = new Color(Mathf.Clamp01(bgColor.r + 0.12f),
+                                           Mathf.Clamp01(bgColor.g + 0.12f),
+                                           Mathf.Clamp01(bgColor.b + 0.12f), 1f);
+            c.pressedColor     = new Color(bgColor.r * 0.7f, bgColor.g * 0.7f, bgColor.b * 0.7f, 1f);
+            c.selectedColor    = bgColor;
+            c.disabledColor    = new Color(0.2f, 0.2f, 0.25f, 1f);
+            c.colorMultiplier  = 1f;
+            c.fadeDuration     = 0.12f;
             btn.colors = c;
             btn.onClick.AddListener(onClick);
 
