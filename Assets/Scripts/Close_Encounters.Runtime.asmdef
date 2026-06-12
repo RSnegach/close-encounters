@@ -5,7 +5,9 @@
         "Unity.TextMeshPro",
         "Unity.RenderPipelines.Core.Runtime",
         "Unity.RenderPipelines.Universal.Runtime",
-        "IslandGenerator"
+        "IslandGenerator",
+        "Unity.Netcode.Runtime",
+        "Facepunch Transport for Netcode for GameObjects"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
