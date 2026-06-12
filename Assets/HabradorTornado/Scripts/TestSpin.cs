@@ -10,8 +10,6 @@ public class TestSpin : MonoBehaviour
     public float speedY = 1f; 
     public float radius = 15f;
 
-    float angle = 0f;
-
 
 	void Start ()
     {

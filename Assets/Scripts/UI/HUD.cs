@@ -614,7 +614,7 @@ namespace CloseEncounters.UI
                 if (hbText != null)
                     hbText.text = _healthbarsOn ? "HEALTHBARS: ON" : "HEALTHBARS: OFF";
                 // Toggle all floating healthbar objects in the scene
-                var allHealthbars = FindObjectsByType<FloatingHealthbar>(FindObjectsSortMode.None);
+                var allHealthbars = FindObjectsByType<FloatingHealthbar>(FindObjectsInactive.Exclude);
                 foreach (var hb in allHealthbars)
                     hb.gameObject.SetActive(_healthbarsOn);
             });

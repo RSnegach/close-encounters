@@ -120,7 +120,7 @@ namespace CloseEncounters.Combat
             s_wallBuffer.Clear();
 
             // why: ArenaBase names walls "ArenaWall_0..3"; some older code uses "InvisibleWall*"
-            var allColliders = FindObjectsByType<BoxCollider>(FindObjectsSortMode.None);
+            var allColliders = FindObjectsByType<BoxCollider>(FindObjectsInactive.Exclude);
             for (int i = 0; i < allColliders.Length; i++)
             {
                 var c = allColliders[i];

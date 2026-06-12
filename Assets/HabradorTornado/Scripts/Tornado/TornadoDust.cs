@@ -79,7 +79,7 @@ public class TornadoDust : MonoBehaviour
         debugCylinder.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
 
         //If we do this here then we can change the number of particles dynamically
-        m_Particles = new ParticleSystem.Particle[groundPS.maxParticles];
+        m_Particles = new ParticleSystem.Particle[groundPS.main.maxParticles];
 
         RotateParticles();
 

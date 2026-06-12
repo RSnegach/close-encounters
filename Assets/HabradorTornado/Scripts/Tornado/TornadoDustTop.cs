@@ -41,7 +41,7 @@ public class TornadoDustTop : MonoBehaviour
         groundPS = groundPSObj.GetComponent<ParticleSystem>();
 
         //If we do this once here then wa cant change the number of particles dynamically
-        m_Particles = new ParticleSystem.Particle[groundPS.maxParticles];
+        m_Particles = new ParticleSystem.Particle[groundPS.main.maxParticles];
 
         oldCenterPos = transform.position;
     }

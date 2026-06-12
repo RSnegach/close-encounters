@@ -120,7 +120,7 @@ namespace CloseEncounters.Arena
             SpawnWaterColumn(pos);
             SpawnShockwaveRing(pos);
 
-            var all = FindObjectsByType<SeaMine>(FindObjectsSortMode.None);
+            var all = FindObjectsByType<SeaMine>(FindObjectsInactive.Exclude);
             for (int i = 0; i < all.Length; i++)
             {
                 var m = all[i];

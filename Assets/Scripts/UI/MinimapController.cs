@@ -131,14 +131,14 @@ namespace CloseEncounters.UI
                 AddBlip(all[i].transform, c, 8f, BlipKind.Player);
             }
             // Hostile units
-            foreach (var t in GameObject.FindObjectsByType<ShoreTurret>(FindObjectsSortMode.None))
+            foreach (var t in GameObject.FindObjectsByType<ShoreTurret>(FindObjectsInactive.Exclude))
                 if (t != null && !HasBlipFor(t.transform)) AddBlip(t.transform, new Color(1f, 0.5f, 0.1f, 1f), 6f, BlipKind.Hostile);
-            foreach (var w in GameObject.FindObjectsByType<Warship>(FindObjectsSortMode.None))
+            foreach (var w in GameObject.FindObjectsByType<Warship>(FindObjectsInactive.Exclude))
                 if (w != null && !HasBlipFor(w.transform)) AddBlip(w.transform, new Color(1f, 0.2f, 0.1f, 1f), 9f, BlipKind.Hostile);
-            foreach (var m in GameObject.FindObjectsByType<SeaMine>(FindObjectsSortMode.None))
+            foreach (var m in GameObject.FindObjectsByType<SeaMine>(FindObjectsInactive.Exclude))
                 if (m != null && !HasBlipFor(m.transform)) AddBlip(m.transform, new Color(1f, 0.9f, 0.1f, 1f), 4f, BlipKind.Hostile);
             // Objective markers
-            foreach (var wm in GameObject.FindObjectsByType<WorldMarker>(FindObjectsSortMode.None))
+            foreach (var wm in GameObject.FindObjectsByType<WorldMarker>(FindObjectsInactive.Exclude))
                 if (wm != null && !HasBlipFor(wm.transform)) AddBlip(wm.transform, wm.color, 10f, BlipKind.Objective);
         }
 
