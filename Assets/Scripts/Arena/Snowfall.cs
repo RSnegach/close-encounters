@@ -11,6 +11,7 @@ namespace CloseEncounters.Arena
     public class Snowfall : MonoBehaviour
     {
         private float _height;
+        private Camera _cam;   // cached: Camera.main is a tagged-object search; do it once, not every frame
 
         public static Snowfall Create(Transform parent, float emitHeight, float areaSize, float rate,
             Vector3 wind, Color? color = null)
@@ -79,9 +80,11 @@ namespace CloseEncounters.Arena
 
         private void LateUpdate()
         {
-            var cam = Camera.main;
-            if (cam == null) return;
-            Vector3 p = cam.transform.position;
+            // Re-resolve only while we have no camera (it is created at vehicle spawn, after the
+            // arena builds, and replaced per arena). Once found, this never searches again.
+            if (_cam == null) _cam = Camera.main;
+            if (_cam == null) return;
+            Vector3 p = _cam.transform.position;
             transform.position = new Vector3(p.x, _height, p.z);
         }
     }

@@ -10,6 +10,7 @@ namespace CloseEncounters.Arena
     public class SeabirdFlock : MonoBehaviour
     {
         private Transform[] _birds;
+        private Transform[] _wing0, _wing1;   // cached wings per bird (avoids GetChild every frame)
         private float[] _phase, _radius, _height, _speed;
         private Vector3 _center;
 
@@ -28,6 +29,8 @@ namespace CloseEncounters.Arena
             _center = center;
             count = Mathf.Max(1, count);
             _birds  = new Transform[count];
+            _wing0  = new Transform[count];
+            _wing1  = new Transform[count];
             _phase  = new float[count];
             _radius = new float[count];
             _height = new float[count];
@@ -41,8 +44,8 @@ namespace CloseEncounters.Arena
             {
                 var b = new GameObject($"Gull_{i}");
                 b.transform.SetParent(transform, false);
-                CreateWing(b.transform, mat, -1f);
-                CreateWing(b.transform, mat,  1f);
+                _wing0[i] = CreateWing(b.transform, mat, -1f);
+                _wing1[i] = CreateWing(b.transform, mat,  1f);
                 _birds[i]  = b.transform;
                 _phase[i]  = Random.Range(0f, 6.283f);
                 _radius[i] = Random.Range(spread * 0.4f, spread);
@@ -51,7 +54,7 @@ namespace CloseEncounters.Arena
             }
         }
 
-        private static void CreateWing(Transform parent, Material mat, float side)
+        private static Transform CreateWing(Transform parent, Material mat, float side)
         {
             var w = GameObject.CreatePrimitive(PrimitiveType.Cube);
             Object.DestroyImmediate(w.GetComponent<Collider>());
@@ -60,6 +63,7 @@ namespace CloseEncounters.Arena
             w.transform.localPosition = new Vector3(side * 1.3f, 0f, 0f);
             w.transform.localRotation = Quaternion.Euler(0f, 0f, side * 18f);
             if (mat != null) w.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            return w.transform;
         }
 
         private void Update()
@@ -80,13 +84,10 @@ namespace CloseEncounters.Arena
                 if (fwd.sqrMagnitude > 1e-4f)
                     bt.rotation = Quaternion.LookRotation(fwd.normalized, Vector3.up);
 
-                // Wing flap
+                // Wing flap (cached wing transforms — no per-frame GetChild)
                 float flap = Mathf.Sin(t * 6f + _phase[i]) * 15f;
-                if (bt.childCount >= 2)
-                {
-                    bt.GetChild(0).localRotation = Quaternion.Euler(0f, 0f,  18f + flap);
-                    bt.GetChild(1).localRotation = Quaternion.Euler(0f, 0f, -18f - flap);
-                }
+                if (_wing0[i] != null) _wing0[i].localRotation = Quaternion.Euler(0f, 0f,  18f + flap);
+                if (_wing1[i] != null) _wing1[i].localRotation = Quaternion.Euler(0f, 0f, -18f - flap);
             }
         }
     }
